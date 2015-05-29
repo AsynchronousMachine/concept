@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <forward_list>
+#include <queue>
 #include <map>
 
 #include <boost/thread/shared_mutex.hpp>
@@ -37,8 +39,8 @@ class DataObjectBase
     protected:
         // A data object should have a name to identify it by humans
         std::string _name;
-        // This should be a at least a list to hold all data objects linked to that
-        DataObjectBase* _ptr=nullptr;
+        // This should be a at least a simple list to hold all data objects linked to that
+        std::forward_list<DataObjectBase*> linkedDOs;
         // This is a pointer to a function which is called if the content of data object linked to has been changed
         CallbackType* _cb=nullptr;
         // Some constructors
@@ -53,11 +55,15 @@ class DataObjectBase
         // Get out the DO name for humans
         const std::string& getName() const { return _name; }
         // Link a DO to that DO
-        void registerLink(DataObjectBase* ptr) { _ptr = ptr; std::cout << "Link " << ptr->getName() << " to " << getName() << std::endl; }
+        void registerLink(DataObjectBase* ptr) { linkedDOs.push_front(ptr); std::cout << "Link " << ptr->getName() << " to " << getName() << std::endl; }
+        // Remove a link to a DO by pointer to DO
+        void unregisterLink(DataObjectBase* ptr) { /*todo*/ }
+        // Remove a link to a DO by name
+        void unregisterLink(std::string name) { /*todo*/ }
         // Store a callback function it is called if the content of the DO linked to has been changed
         void registerCallback(CallbackType* cb=nullptr) { _cb = cb; }
-        // Access to the DO which is linked to, needed by the reactor
-        DataObjectBase* getLinkedDO() { return _ptr; }
+        // Access to the DOs which are linked to, needed by the reactor
+        std::forward_list<DataObjectBase*>& getLinkedDOs() { return linkedDOs; }
         // Access to the registered callback function, needed by the reactor
         void call(DataObjectBase* ptr) { (*_cb)(ptr); }
 };
@@ -82,7 +88,7 @@ template <typename T> class DataObject : public DataObjectBase
             using type = boost::null_mutex;
         };
 
-        // Content to handle
+        // Content to handleor rather
         T _content;
         // Make it easier to name it
         using mutex_t = typename mutex<T>::type;
@@ -122,14 +128,28 @@ template <typename T> class DataObject : public DataObjectBase
 class AsynchronousMachine
 {
     protected:
-        // This should be a at least a list to hold all data objects which content has been changed
-        DataObjectBase* _ptr;
+        // This should be a at least a queue to hold all data objects which content has been changed or rather triggered
+        std::queue<DataObjectBase*> triggeredDOs;
 
     public:
         // Announce the change of content to the reactor
-        void trigger(DataObjectBase* ptr) { _ptr = ptr; std::cout << "Trigger DO " << ptr->getName() << std::endl; }
-        // Call the registered callback function to notify the DO like DO2.CALL(&DO1)
-        void execute() { _ptr->getLinkedDO()->call(_ptr); }
+        void trigger(DataObjectBase* ptr) { triggeredDOs.push(ptr); std::cout << "Trigger DO " << ptr->getName() << std::endl; }
+
+        // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
+        void execute()
+        {
+            while(!triggeredDOs.empty())
+            {
+                DataObjectBase* &_ptr = triggeredDOs.front();
+                triggeredDOs.pop();
+
+                std::forward_list<DataObjectBase*>& linkedDOs = _ptr->getLinkedDOs();
+
+                std::for_each(linkedDOs.begin(), linkedDOs.end(),
+                              [_ptr](DataObjectBase* ptr){std::cout << "I am DO " << ptr->getName() << std::endl; ptr->call(_ptr); });
+            }
+
+        }
 };
 
 // A callback function
@@ -160,6 +180,7 @@ int main(void)
 
     DataObject<int> do1;
     DataObject<int> do2("World");
+    DataObject<int> do3("World2");
 
     do1.setName(h);
 
@@ -167,9 +188,14 @@ int main(void)
     std::cout << do2.getName() << std::endl;
 
     // Link together: do1<int> -------> do2<int>
-    do2.registerCallback(my_cb);
-    // Register a callback to call if content of DO1 has been changed
     do1.registerLink(&do2);
+    // Register a callback to call if content of DO1 has been changed
+    do2.registerCallback(my_cb);
+
+    // Link together: do1<int> -------> do3<int>
+    do1.registerLink(&do3);
+    // Register a callback to call if content of DO1 has been changed
+    do3.registerCallback(my_cb);
 
     // Access content consistently, wrapper with dummy mutex
     do1.set([](int &i){ i = 1; });
@@ -180,22 +206,26 @@ int main(void)
     asm1.trigger(&do1); // Because of changed content of do1
 
     // Complex DO
-    DataObject<std::vector<int>> do3("Vector");
-	do3.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
-	do3.get([](const std::vector<int> &v){ std::cout << v[0] << ',' << v[1] << '\n'; });
+    DataObject<std::vector<int>> do4("Vector");
+	do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
+	do4.get([](const std::vector<int> &v){ std::cout << v[0] << ',' << v[1] << '\n'; });
 
     // More complex DO
     int tmp = 0;
-	DataObject<std::map<std::string, int>> do4;
-	do4.set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 21}}; });
-	do4.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
-	do4.set([](std::map<std::string, int> &v){ v["1"] = v.at("1") + 1; });
-	do4.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
-    do4.get([&tmp](const std::map<std::string, int> &v){ tmp = v.at("1") + 2; });
+	DataObject<std::map<std::string, int>> do5;
+	do5.set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 21}}; });
+	do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
+	do5.set([](std::map<std::string, int> &v){ v["1"] = v.at("1") + 1; });
+	do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
+    do5.get([&tmp](const std::map<std::string, int> &v){ tmp = v.at("1") + 2; });
     std::cout << tmp << '\n';
 
-    // Simulate the job of ASM with dDO2.CALL(&DO1)
-    // Should notify all callbacks if all DOs linked to
+    // Simulates changes of DO content faster than executable inside the reactor
+	//do1.set([](int &i){ i = 10; });
+	//asm1.trigger(&do1); // Because of changed content of do1
+
+    // Simulate the job of ASM with DO2.CALL(&DO1) and DO3.CALL(&DO1)
+    // Should notify all callbacks of all DOs linked to
     asm1.execute();
 
     exit(0);
