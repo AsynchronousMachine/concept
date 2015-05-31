@@ -7,6 +7,7 @@
 #include <forward_list>
 #include <queue>
 #include <map>
+#include <type_traits>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/null_mutex.hpp>
@@ -113,11 +114,11 @@ template <typename T> class DataObject : public DataObjectBase
         // Const member function to avoid that a non-const reference is passed to the visitor
         // as that would allow the visitor to change the data_ member
         template <class Visitor>
-        void get(Visitor visitor) const
+        typename std::result_of<Visitor(T)>::type get(Visitor visitor) const
         {
             // Shared lock to support concurrent access from multiple visitors in different threads
             boost::shared_lock_guard<mutex_t> lock(mutex_);
-            visitor(_content);
+            return visitor(_content);
         }
 
         // General access to the content by reference
