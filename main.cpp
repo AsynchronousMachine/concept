@@ -41,6 +41,7 @@ class DataObjectBase
         // A data object should have a name to identify it by humans
         std::string _name;
         // This should be a at least a simple list to hold all data objects linked to that
+        // A mutex for exlusive access will properly also necessary
         std::forward_list<DataObjectBase*> linkedDOs;
         // This is a pointer to a function which is called if the content of data object linked to has been changed
         CallbackType* _cb=nullptr;
@@ -64,6 +65,8 @@ class DataObjectBase
         // Store a callback function it is called if the content of the DO linked to has been changed
         void registerCallback(CallbackType* cb=nullptr) { _cb = cb; }
         // Access to the DOs which are linked to, needed by the reactor
+        // Or is it better to has ASM as friend here?
+        // A mutex for exlusive access will properly also necessary
         std::forward_list<DataObjectBase*>& getLinkedDOs() { return linkedDOs; }
         // Access to the registered callback function, needed by the reactor
         void call(DataObjectBase* ptr) { (*_cb)(ptr); }
@@ -123,25 +126,38 @@ template <typename T> class DataObject : public DataObjectBase
 class AsynchronousMachine
 {
     protected:
+        // Protect the list of triggered DOs
+        boost::mutex triggeredDOs_mutex;
         // This should be a at least a queue to hold all data objects which content has been changed or rather triggered
         std::queue<DataObjectBase*> triggeredDOs;
 
     public:
         // Announce the change of content to the reactor
-        void trigger(DataObjectBase* ptr) { triggeredDOs.push(ptr); std::cout << "Trigger DO " << ptr->getName() << std::endl; }
+        void trigger(DataObjectBase* ptr)
+        {
+            boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
+            triggeredDOs.push(ptr);
+        }
 
         // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
         void execute()
         {
             while(!triggeredDOs.empty())
             {
-                DataObjectBase* &_ptr = triggeredDOs.front();
-                triggeredDOs.pop();
+                DataObjectBase* do_ptr = nullptr;
 
-                std::forward_list<DataObjectBase*>& linkedDOs = _ptr->getLinkedDOs();
+                {
+                    boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
+                    // What happens if triggered DO is no longer valid?
+                    do_ptr = triggeredDOs.front();
+                    triggeredDOs.pop();
+                }
+
+                std::forward_list<DataObjectBase*>& linkedDOs = do_ptr->getLinkedDOs();
 
                 std::for_each(linkedDOs.begin(), linkedDOs.end(),
-                              [_ptr](DataObjectBase* ptr){std::cout << "I am DO " << ptr->getName() << std::endl; ptr->call(_ptr); });
+                              // What happens if linkedDOs are no longer valid?
+                              [do_ptr](DataObjectBase* ptr){std::cout << "I am DO " << ptr->getName() << std::endl; ptr->call(do_ptr); });
             }
 
         }
