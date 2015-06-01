@@ -73,10 +73,6 @@ class DataObjectBase
 template <typename T> class DataObject : public DataObjectBase
 {
     private:
-        // Helper templates to difference locked or not locked accesses
-        template <bool B, class M = void>
-        using enable_if_t = typename std::enable_if<B, M>::type;
-
         template <class M, class Enable = void>
         struct mutex
         {
@@ -84,16 +80,17 @@ template <typename T> class DataObject : public DataObjectBase
         };
 
         template <class M>
-        struct mutex<M, enable_if_t<std::is_integral<M>::value>>
+        struct mutex<M, std::enable_if_t<std::is_integral<M>::value>>
         {
             using type = boost::null_mutex;
         };
 
-        // Content to handleor rather
-        T _content;
         // Make it easier to name it
         using mutex_t = typename mutex<T>::type;
-        // Mtable mutex_ member as it needs to be modified in the const member function get()
+
+        // Content to handleor rather
+        T _content;
+        // Mutable mutex_ member as it needs to be modified in the const member function get()
         mutable mutex_t mutex_;
 
     public:
@@ -114,15 +111,12 @@ template <typename T> class DataObject : public DataObjectBase
         // Const member function to avoid that a non-const reference is passed to the visitor
         // as that would allow the visitor to change the data_ member
         template <class Visitor>
-        typename std::result_of<Visitor(T)>::type get(Visitor visitor) const
+        std::result_of_t<Visitor(T)> get(Visitor visitor) const
         {
             // Shared lock to support concurrent access from multiple visitors in different threads
             boost::shared_lock_guard<mutex_t> lock(mutex_);
             return visitor(_content);
         }
-
-        // General access to the content by reference
-        //T& get() { return _content; }
 };
 
 // A simple reactor
@@ -167,6 +161,9 @@ void my_cb(DataObjectBase* ptr)
 // Helper for data access
 void fi(int i) {std::cout << i << '\n';}
 
+// Helper for data access with return value
+int fir(int i) {return i+1;}
+
 // Alternate helper for data access
 struct cb
 {
@@ -203,6 +200,7 @@ int main(void)
 	do1.get(fi);
 	do1.set([](int &i){ i = i + 1; });
 	do1.get(cbi);
+	std::cout << do1.get(fir) << '\n';
 
     asm1.trigger(&do1); // Because of changed content of do1
 
