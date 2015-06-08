@@ -9,6 +9,7 @@
 #include <map>
 #include <type_traits>
 #include <algorithm>
+#include <functional>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/null_mutex.hpp>
@@ -53,26 +54,32 @@ template <typename T> class DataObject
 
         // Content to handleor rather
         T _content;
+
         // Mutable mutex_ member as it needs to be modified in the const member function get()
         mutable mutex_t mutex_;
 
-        // Make it easier to handle the callback function
-        using CallbackType = void(DataObject<T>*);
-
         // A data object should have a name to identify it by humans
         std::string _name;
+
         // This should be a at least a simple list to hold all data objects linked to that
         // A mutex for exlusive access will properly also necessary
-        std::forward_list<std::function<void(DataObject<T>*)>*> linkedDOs;
-        // This is a pointer to a function which is called if the content of data object linked to has been changed
-        std::function<CallbackType> _cb;
+        std::forward_list<std::function<void(DataObject<T>&)>> linkedDOs;
 
     public:
         // Some constructors
         DataObject() = default;
         DataObject(std::string name) : _name(name) {}
+
+        // Non-copyable
+        DataObject(const DataObject&) = delete;
+        DataObject &operator=(const DataObject&) = delete;
+
+        // Non-movable
+        DataObject(DataObject&&) = delete;
+        DataObject &operator=(DataObject&&) = delete;
+
         // Necessary if someone want to inherit from that
-        virtual ~DataObject() {}
+        virtual ~DataObject() = default;
 
         template <class Visitor>
         void set(Visitor visitor)
@@ -94,26 +101,29 @@ template <typename T> class DataObject
 
         // Set the DO name explicitly
         void setName(std::string name) { _name = name; }
+
         // Get out the DO name for humans
         const std::string& getName() const { return _name; }
+
         // Link a DO to that DO
-        template <typename U>
-        void registerLink(DataObject<U>* ptr)
+        template <template <class V> class U, class V>
+        typename std::enable_if<std::is_base_of<DataObject<V>, U<V>>::value>::type registerLink(U<V> &d)
         {
-            linkedDOs.push_front(&ptr->_cb);
-            std::cout << "Link " << ptr->getName() << " to " << getName() << std::endl;
+            linkedDOs.push_front(std::bind(&U<V>::call, &d, std::placeholders::_1));
+            std::cout << "Link " << d.getName() << " to " << getName() << std::endl;
         }
+
         // Remove a link to a DO by pointer to DO
         template <typename U>
         void unregisterLink(DataObject<U>* ptr) { /*todo*/ }
+
         // Remove a link to a DO by name
         void unregisterLink(std::string name) { /*todo*/ }
-        // Store a callback function it is called if the content of the DO linked to has been changed
-        void registerCallback(CallbackType* cb) { _cb = cb; }
+
         // Called by reactor
         void notify_all()
         {
-            std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](std::function<void(DataObject<T>*)> *f){ (*f)(this); });
+            std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](std::function<void(DataObject<T>&)> f){ f(*this); });
         }
 };
 
@@ -153,16 +163,18 @@ class AsynchronousMachine
         }
 };
 
-// A callback function
-void my_cb(DataObject<int>* ptr)
+template <class T>
+struct Printer : DataObject<T>
 {
-    int tmp = 0;
+    Printer() = default;
+    Printer(std::string name) : DataObject<T>(name) {}
 
-    ptr->get([&tmp](int i){ tmp = i; });
-
-    std::cout << "Got DO.name: " << ptr->getName() << std::endl;
-    std::cout << "Got DO.value: " << tmp << std::endl;
-}
+    void call(DataObject<int> &d)
+    {
+        std::cout << "Got DO.name: " << d.getName() << std::endl;
+        d.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+    }
+};
 
 // Helper for data access
 void fi(int i) {std::cout << i << '\n';}
@@ -183,8 +195,8 @@ int main(void)
     std::string h("Hello");
 
     DataObject<int> do1;
-    DataObject<int> do2("World");
-    DataObject<int> do3("World2");
+    Printer<double> do2("World");
+    Printer<std::string> do3("World2");
 
     do1.setName(h);
 
@@ -192,14 +204,10 @@ int main(void)
     std::cout << do2.getName() << std::endl;
 
     // Link together: do1<int> -------> do2<int>
-    do1.registerLink(&do2);
-    // Register a callback to call if content of DO1 has been changed
-    do2.registerCallback(my_cb);
+    do1.registerLink(do2);
 
     // Link together: do1<int> -------> do3<int>
-    do1.registerLink(&do3);
-    // Register a callback to call if content of DO1 has been changed
-    do3.registerCallback(my_cb);
+    do1.registerLink(do3);
 
     // Access content consistently, wrapper with dummy mutex
     do1.set([](int &i){ i = 1; });
