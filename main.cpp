@@ -107,7 +107,7 @@ template <typename T> class DataObject
 
         // Link a DO to that DO
         template <template <class V> class U, class V>
-        typename std::enable_if<std::is_base_of<DataObject<V>, U<V>>::value>::type registerLink(U<V> &d)
+        std::enable_if_t<std::is_base_of<DataObject<V>, U<V>>::value> registerLink(U<V> &d)
         {
             linkedDOs.push_front(std::bind(&U<V>::call, &d, std::placeholders::_1));
             std::cout << "Link " << d.getName() << " to " << getName() << std::endl;
@@ -176,6 +176,19 @@ struct Printer : DataObject<T>
     }
 };
 
+template <class T>
+struct UnPrinter : DataObject<T>
+{
+    UnPrinter() = default;
+    UnPrinter(std::string name) : DataObject<T>(name) {}
+
+    void call(DataObject<double> &d)
+    {
+        std::cout << "Got DO.name: " << d.getName() << std::endl;
+        d.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+    }
+};
+
 // Helper for data access
 void fi(int i) {std::cout << i << '\n';}
 
@@ -198,6 +211,8 @@ int main(void)
     Printer<double> do2("World");
     Printer<std::string> do3("World2");
 
+    UnPrinter<double> do31("World3");
+
     do1.setName(h);
 
     std::cout << do1.getName() << std::endl;
@@ -208,6 +223,10 @@ int main(void)
 
     // Link together: do1<int> -------> do3<int>
     do1.registerLink(do3);
+
+    // Link together: do1<int> -------> do21<int>
+    // Will not compile due to wrong interface type of call(DataObject<double> &d) because DO1 is of type int
+    //do1.registerLink(do31);
 
     // Access content consistently, wrapper with dummy mutex
     do1.set([](int &i){ i = 1; });
