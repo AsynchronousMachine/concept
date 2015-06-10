@@ -58,8 +58,8 @@ template <typename T> class DataObject
         // Mutable mutex_ member as it needs to be modified in the const member function get()
         mutable mutex_t mutex_;
 
-        // A data object should have a name to identify it by humans
-        std::string _name;
+        // A data object should have a constant name to identify it
+        const std::string _name;
 
         // This should be a at least a simple list to hold all data objects linked to that
         // A mutex for exlusive access will properly also necessary
@@ -67,8 +67,7 @@ template <typename T> class DataObject
 
     public:
         // Some constructors
-        DataObject() = default;
-        DataObject(std::string name) : _name(name) {}
+        DataObject(const std::string name) : _name(name) {} // You have to choose a name
 
         // Non-copyable
         DataObject(const DataObject&) = delete;
@@ -99,9 +98,6 @@ template <typename T> class DataObject
             return visitor(_content);
         }
 
-        // Set the DO name explicitly
-        void setName(std::string name) { _name = name; }
-
         // Get out the DO name for humans
         const std::string& getName() const { return _name; }
 
@@ -118,6 +114,7 @@ template <typename T> class DataObject
         void unregisterLink(DataObject<U>* ptr) { /*todo*/ }
 
         // Remove a link to a DO by name
+        // Get out
         void unregisterLink(std::string name) { /*todo*/ }
 
         // Called by reactor
@@ -166,7 +163,6 @@ class AsynchronousMachine
 template <class T>
 struct Printer : DataObject<T>
 {
-    Printer() = default;
     Printer(std::string name) : DataObject<T>(name) {}
 
     void call(DataObject<int> &d)
@@ -179,7 +175,6 @@ struct Printer : DataObject<T>
 template <class T>
 struct UnPrinter : DataObject<T>
 {
-    UnPrinter() = default;
     UnPrinter(std::string name) : DataObject<T>(name) {}
 
     void call(DataObject<double> &d)
@@ -205,15 +200,11 @@ int main(void)
 {
     AsynchronousMachine asm1;
 
-    std::string h("Hello");
-
-    DataObject<int> do1;
+    DataObject<int> do1("Hello");
     Printer<double> do2("World");
     Printer<std::string> do3("World2");
 
     UnPrinter<double> do31("World3");
-
-    do1.setName(h);
 
     std::cout << do1.getName() << std::endl;
     std::cout << do2.getName() << std::endl;
@@ -222,6 +213,7 @@ int main(void)
     do1.registerLink(do2);
 
     // Link together: do1<int> -------> do3<int>
+        // Get out
     do1.registerLink(do3);
 
     // Link together: do1<int> -------> do21<int>
@@ -237,6 +229,7 @@ int main(void)
 
     asm1.trigger(&do1); // Because of changed content of do1
 
+        // Get out
     // Complex DO
     DataObject<std::vector<int>> do4("Vector");
 	do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
@@ -244,7 +237,7 @@ int main(void)
 
     // More complex DO
     int tmp = 0;
-	DataObject<std::map<std::string, int>> do5;
+	DataObject<std::map<std::string, int>> do5("Map");
 	do5.set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 21}}; });
 	do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
 	do5.set([](std::map<std::string, int> &v){ v["1"] = v.at("1") + 1; });
