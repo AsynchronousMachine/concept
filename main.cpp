@@ -102,10 +102,10 @@ template <typename T> class DataObject
         const std::string& getName() const { return _name; }
 
         // Link a DO to that DO
-        template <template <class V> class U, class V>
-        std::enable_if_t<std::is_base_of<DataObject<V>, U<V>>::value> registerLink(U<V> &d)
+        template <typename U, typename Callback>
+        void registerLink(DataObject<U> &d, Callback cb)
         {
-            linkedDOs.push_front(std::bind(&U<V>::call, &d, std::placeholders::_1));
+            linkedDOs.push_front([cb, &d](DataObject<T>& d2){ cb(d2, d); });
             std::cout << "Link " << d.getName() << " to " << getName() << std::endl;
         }
 
@@ -160,29 +160,17 @@ class AsynchronousMachine
         }
 };
 
-template <class T>
-struct Printer : DataObject<T>
+void my_cb(DataObject<int> &do1, DataObject<double> &do2)
 {
-    Printer(std::string name) : DataObject<T>(name) {}
+    std::cout << "Got DO.name: " << do1.getName() << std::endl;
+    do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+}
 
-    void call(DataObject<int> &d)
-    {
-        std::cout << "Got DO.name: " << d.getName() << std::endl;
-        d.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
-    }
-};
-
-template <class T>
-struct UnPrinter : DataObject<T>
+void my_cb2(DataObject<int> &do1, DataObject<std::string> &do2)
 {
-    UnPrinter(std::string name) : DataObject<T>(name) {}
-
-    void call(DataObject<double> &d)
-    {
-        std::cout << "Got DO.name: " << d.getName() << std::endl;
-        d.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
-    }
-};
+    std::cout << "Got DO.name: " << do1.getName() << std::endl;
+    do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+}
 
 // Helper for data access
 void fi(int i) {std::cout << i << '\n';}
@@ -201,20 +189,18 @@ int main(void)
     AsynchronousMachine asm1;
 
     DataObject<int> do1("Hello");
-    Printer<double> do2("World");
-    Printer<std::string> do3("World2");
-
-    UnPrinter<double> do31("World3");
+    DataObject<double> do2("World");
+    DataObject<std::string> do3("World2");
 
     std::cout << do1.getName() << std::endl;
     std::cout << do2.getName() << std::endl;
 
     // Link together: do1<int> -------> do2<int>
-    do1.registerLink(do2);
+    do1.registerLink(do2, my_cb);
 
     // Link together: do1<int> -------> do3<int>
         // Get out
-    do1.registerLink(do3);
+    do1.registerLink(do3, my_cb2);
 
     // Link together: do1<int> -------> do21<int>
     // Will not compile due to wrong interface type of call(DataObject<double> &d) because DO1 is of type int
