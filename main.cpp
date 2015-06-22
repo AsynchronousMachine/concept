@@ -36,6 +36,8 @@
 // Template class for arbitrary  content
 template <typename T> class DataObject
 {
+    friend class AsynchronousMachine;
+
     private:
         template <class M, class Enable = void>
         struct mutex
@@ -65,15 +67,21 @@ template <typename T> class DataObject
         // A mutex for exlusive access will properly also necessary
         std::forward_list<std::function<void(DataObject<T>&)>> linkedDOs;
 
+        // Only called by reactor
+        void notify_all()
+        {
+            std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](std::function<void(DataObject<T>&)> f){ f(*this); });
+        }
+
     public:
-        // Some constructors
+        // Only one constructor
         DataObject(const std::string name) : _name(name) {} // You have to choose a name
 
         // Non-copyable
         DataObject(const DataObject&) = delete;
         DataObject &operator=(const DataObject&) = delete;
 
-        // Non-movable
+        // Non-movablemichael reil
         DataObject(DataObject&&) = delete;
         DataObject &operator=(DataObject&&) = delete;
 
@@ -103,10 +111,10 @@ template <typename T> class DataObject
 
         // Link a DO to that DO
         template <typename U, typename Callback>
-        void registerLink(DataObject<U> &d, Callback cb)
+        void registerLink(DataObject<U> &d2, Callback cb)
         {
-            linkedDOs.push_front([cb, &d](DataObject<T>& d2){ cb(d2, d); });
-            std::cout << "Link " << d.getName() << " to " << getName() << std::endl;
+            linkedDOs.push_front([cb, &d2](DataObject<T>& d1){ cb(d1, d2); });
+            std::cout << "Link " << d2.getName() << " to " << getName() << std::endl;
         }
 
         // Remove a link to a DO by pointer to DO
@@ -116,12 +124,6 @@ template <typename T> class DataObject
         // Remove a link to a DO by name
         // Get out
         void unregisterLink(std::string name) { /*todo*/ }
-
-        // Called by reactor
-        void notify_all()
-        {
-            std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](std::function<void(DataObject<T>&)> f){ f(*this); });
-        }
 };
 
 // A simple reactor
@@ -162,12 +164,21 @@ class AsynchronousMachine
 
 void my_cb(DataObject<int> &do1, DataObject<double> &do2)
 {
+    std::cout << "My DO.name: " << do2.getName() << std::endl;
     std::cout << "Got DO.name: " << do1.getName() << std::endl;
     do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
 }
 
 void my_cb2(DataObject<int> &do1, DataObject<std::string> &do2)
 {
+    std::cout << "My DO.name: " << do2.getName() << std::endl;
+    std::cout << "Got DO.name: " << do1.getName() << std::endl;
+    do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+}
+
+void my_cb3(DataObject<double> &do1, DataObject<std::string> &do2)
+{
+    std::cout << "My DO.name: " << do2.getName() << std::endl;
     std::cout << "Got DO.name: " << do1.getName() << std::endl;
     do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
 }
@@ -195,16 +206,15 @@ int main(void)
     std::cout << do1.getName() << std::endl;
     std::cout << do2.getName() << std::endl;
 
-    // Link together: do1<int> -------> do2<int>
+    // Link together: do1<int> -------> do2<double>
     do1.registerLink(do2, my_cb);
 
-    // Link together: do1<int> -------> do3<int>
-        // Get out
+    // Link together: do1<int> -------> do3<string>
     do1.registerLink(do3, my_cb2);
 
-    // Link together: do1<int> -------> do21<int>
-    // Will not compile due to wrong interface type of call(DataObject<double> &d) because DO1 is of type int
-    //do1.registerLink(do31);
+    // Link together: do1<double> -------> do3<string>
+    // Will not compile due to wrong data type of callback parameter
+    //do1.registerLink(do3, my_cb3);
 
     // Access content consistently, wrapper with dummy mutex
     do1.set([](int &i){ i = 1; });
