@@ -81,7 +81,7 @@ template <typename T> class DataObject
         DataObject(const DataObject&) = delete;
         DataObject &operator=(const DataObject&) = delete;
 
-        // Non-movablemichael reil
+        // Non-movable
         DataObject(DataObject&&) = delete;
         DataObject &operator=(DataObject&&) = delete;
 
@@ -195,6 +195,43 @@ struct cb
     void operator() (int i) {std::cout << i << '\n';}
 } cbi;
 
+class Module1
+{
+    private:
+        // A module should have a constant name to identify it
+        const std::string _name;
+
+    public:
+        // Only one constructor
+        Module1(const std::string name) : _name(name), do1("DO1"), do2("DO2") {} // You have to choose a name
+        DataObject<int> do1;
+        DataObject<std::string> do2;
+};
+
+class Module2
+{
+    private:
+        // A module should have a constant name to identify it
+        const std::string _name;
+
+        int dummy = 1;
+
+    public:
+        // Only one constructor
+        Module2(const std::string name) : _name(name), do3("DO3"), do4("DO4") {} // You have to choose a name
+        DataObject<int> do3;
+        DataObject<std::string> do4;
+
+
+        void Link1(DataObject<int> &do1, DataObject<std::string> &do2)
+        {
+            std::cout << "My DO.name: " << do2.getName() << std::endl;
+            std::cout << "Got DO.name: " << do1.getName() << std::endl;
+            do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+            std::cout << "Dummy: " << dummy << std::endl;
+        }
+};
+
 int main(void)
 {
     AsynchronousMachine asm1;
@@ -216,7 +253,8 @@ int main(void)
     // Will not compile due to wrong data type of callback parameter
     //do1.registerLink(do3, my_cb3);
 
-    // Access content consistently, wrapper with dummy mutex
+    // Access content consistently, wra
+    // A module should have a constant name to identify itpper with dummy mutex
     do1.set([](int &i){ i = 1; });
 	do1.get(fi);
 	do1.set([](int &i){ i = i + 1; });
@@ -225,7 +263,7 @@ int main(void)
 
     asm1.trigger(&do1); // Because of changed content of do1
 
-        // Get out
+    // Get out
     // Complex DO
     DataObject<std::vector<int>> do4("Vector");
 	do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
@@ -244,6 +282,22 @@ int main(void)
     // Simulates changes of DO content faster than executable inside the reactor
 	//do1.set([](int &i){ i = 10; });
 	//asm1.trigger(&do1); // Because of changed content of do1
+
+    // Simulate the job of ASM with DO2.CALL(&DO1) and DO3.CALL(&DO1)
+    // Should notify all callbacks of all DOs linked to
+    asm1.execute();
+
+    std::cout << "++++++++++++++++" << std::endl;
+
+    // A module should have a constant name to identify it
+    Module1 Hello("Hello");
+    Module2 World("World");
+
+    // Link together
+    Hello.do1.registerLink(World.do4, [&World](DataObject<int> &do1, DataObject<std::string> &do2){ World.Link1(do1, do2); });
+
+    Hello.do1.set([](int &i){ i = 10; });
+    asm1.trigger(&Hello.do1); // Because of changed content of do1
 
     // Simulate the job of ASM with DO2.CALL(&DO1) and DO3.CALL(&DO1)
     // Should notify all callbacks of all DOs linked to
