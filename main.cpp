@@ -18,7 +18,7 @@
 
 // Concept of data object
 //
-// Data objects (aka DO) are container to hold data (content) and a callback function as a notifier
+// Data objects (aka DO) are container to hold data (content) and a callback function (link) as a notifier
 // DOs can be linked together
 // DOs can be locked and unlocked to handle there content consistently
 // The associated functions must be called if the content of the linked DO has been changed
@@ -29,9 +29,28 @@
 
 // Concept of reactor
 //
-// All registered callback functions should be called within the reactor
+// All registered callback functions (links) should be called within the reactor
 // This decouples the changing and the notify process based on that
 // This allows the introduction of priorities how important a change has been notified
+
+// Concept of module
+//
+// A module groups DOs and callbacks/links to gether and give them a common environment.
+// A callback/link can access all members or methods of its module. The module can have a more
+// complex state than a DO.
+//
+// Module
+//    private
+//        +-----DO1
+//        +-----DO2
+//        +-----...
+//    public
+//        +-----DO3
+//        +-----DO4 
+//        +-----...
+//        +-----Cb/Link1
+//        +-----Cb/Link2
+//        +-----...
 
 // Template class for arbitrary  content
 template <typename T> class DataObject
@@ -214,7 +233,7 @@ class Module2
         // A module should have a constant name to identify it
         const std::string _name;
 
-        int dummy = 1;
+        int dummy = 1; // This is evt. not thread save depends on type
 
     public:
         // Only one constructor
@@ -256,34 +275,34 @@ int main(void)
     // Access content consistently, wra
     // A module should have a constant name to identify itpper with dummy mutex
     do1.set([](int &i){ i = 1; });
-	do1.get(fi);
-	do1.set([](int &i){ i = i + 1; });
-	do1.get(cbi);
-	std::cout << do1.get(fir) << '\n';
+    do1.get(fi);
+    do1.set([](int &i){ i = i + 1; });
+    do1.get(cbi);
+    std::cout << do1.get(fir) << '\n';
 
     asm1.trigger(&do1); // Because of changed content of do1
 
     // Get out
     // Complex DO
     DataObject<std::vector<int>> do4("Vector");
-	do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
-	do4.get([](const std::vector<int> &v){ std::cout << v[0] << ',' << v[1] << '\n'; });
+    do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
+    do4.get([](const std::vector<int> &v){ std::cout << v[0] << ',' << v[1] << '\n'; });
 
     // More complex DO
     int tmp = 0;
-	DataObject<std::map<std::string, int>> do5("Map");
-	do5.set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 21}}; });
-	do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
-	do5.set([](std::map<std::string, int> &v){ v["1"] = v.at("1") + 1; });
-	do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
+    DataObject<std::map<std::string, int>> do5("Map");
+    do5.set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 21}}; });
+    do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
+    do5.set([](std::map<std::string, int> &v){ v["1"] = v.at("1") + 1; });
+    do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
     do5.get([&tmp](const std::map<std::string, int> &v){ tmp = v.at("1") + 2; });
     std::cout << tmp << '\n';
 
     // Simulates changes of DO content faster than executable inside the reactor
-	//do1.set([](int &i){ i = 10; });
-	//asm1.trigger(&do1); // Because of changed content of do1
+    //do1.set([](int &i){ i = 10; });
+    //asm1.trigger(&do1); // Because of changed content of do1
 
-    // Simulate the job of ASM with DO2.CALL(&DO1) and DO3.CALL(&DO1)
+    // Simulate the job of ASM
     // Should notify all callbacks of all DOs linked to
     asm1.execute();
 
@@ -299,7 +318,7 @@ int main(void)
     Hello.do1.set([](int &i){ i = 10; });
     asm1.trigger(&Hello.do1); // Because of changed content of do1
 
-    // Simulate the job of ASM with DO2.CALL(&DO1) and DO3.CALL(&DO1)
+    // Simulate the job of ASM
     // Should notify all callbacks of all DOs linked to
     asm1.execute();
 
