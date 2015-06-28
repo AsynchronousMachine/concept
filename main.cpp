@@ -46,7 +46,7 @@
 //        +-----...
 //    public
 //        +-----DO3
-//        +-----DO4 
+//        +-----DO4
 //        +-----...
 //        +-----Cb/Link1
 //        +-----Cb/Link2
@@ -73,7 +73,7 @@ template <typename T> class DataObject
         // Make it easier to name it
         using mutex_t = typename mutex<T>::type;
 
-        // Content to handleor rather
+        // Content to handle
         T _content;
 
         // Mutable mutex_ member as it needs to be modified in the const member function get()
@@ -159,7 +159,7 @@ class AsynchronousMachine
         template <class T>
         void trigger(DataObject<T>* ptr)
         {
-            std::cout << "Trigger DO " << ptr->getName() << std::endl;
+            std::cout << "Trigger " << ptr->getName() << std::endl;
             boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
             triggeredDOs.push([ptr](){ ptr->notify_all(); });
         }
@@ -214,6 +214,7 @@ struct cb
     void operator() (int i) {std::cout << i << '\n';}
 } cbi;
 
+// Missing reflection to access content
 class Module1
 {
     private:
@@ -227,27 +228,38 @@ class Module1
         DataObject<std::string> do2;
 };
 
+// Missing reflection to access content
 class Module2
 {
     private:
         // A module should have a constant name to identify it
         const std::string _name;
+        const std::string _cmd;
+        static constexpr int _state = 1;
 
-        int dummy = 1; // This is evt. not thread save depends on type
+        DataObject<int> do3; // Access is fully thread safe
 
     public:
-        // Only one constructor
-        Module2(const std::string name) : _name(name), do3("DO3"), do4("DO4") {} // You have to choose a name
-        DataObject<int> do3;
-        DataObject<std::string> do4;
+        DataObject<int> do1;
+        DataObject<std::string> do2;
 
+        // Only one constructor
+        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3"), do1("DO1"), do2("DO2")
+        {
+            do1.set([](int &i){ i = _state; });
+            do2.set([this](std::string &s){ s = _cmd; });
+            do3.set([](int &i){ i = 11; });
+        }
 
         void Link1(DataObject<int> &do1, DataObject<std::string> &do2)
         {
             std::cout << "My DO.name: " << do2.getName() << std::endl;
             std::cout << "Got DO.name: " << do1.getName() << std::endl;
             do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
-            std::cout << "Dummy: " << dummy << std::endl;
+            std::cout << "State: " << _state << std::endl;
+            do2.get([](std::string s){ std::cout << "Internal DO2.value: " << s << std::endl; });
+            do3.set([](int &i){ ++i; });
+            do3.get([](int i){ std::cout << "Internal DO3.value: " << i << std::endl; });
         }
 };
 
@@ -272,8 +284,7 @@ int main(void)
     // Will not compile due to wrong data type of callback parameter
     //do1.registerLink(do3, my_cb3);
 
-    // Access content consistently, wra
-    // A module should have a constant name to identify itpper with dummy mutex
+    // Access content consistently
     do1.set([](int &i){ i = 1; });
     do1.get(fi);
     do1.set([](int &i){ i = i + 1; });
@@ -282,7 +293,6 @@ int main(void)
 
     asm1.trigger(&do1); // Because of changed content of do1
 
-    // Get out
     // Complex DO
     DataObject<std::vector<int>> do4("Vector");
     do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
@@ -313,7 +323,7 @@ int main(void)
     Module2 World("World");
 
     // Link together
-    Hello.do1.registerLink(World.do4, [&World](DataObject<int> &do1, DataObject<std::string> &do2){ World.Link1(do1, do2); });
+    Hello.do1.registerLink(World.do2, [&World](DataObject<int> &do1, DataObject<std::string> &do2){ World.Link1(do1, do2); });
 
     Hello.do1.set([](int &i){ i = 10; });
     asm1.trigger(&Hello.do1); // Because of changed content of do1
