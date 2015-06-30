@@ -52,6 +52,12 @@
 //        +-----Cb/Link2
 //        +-----...
 
+// Still open topics
+// What happens if triggered DO is no longer valid when called inside reactor?
+// How to access DOs and Callbacks/Links from outside of module if only a text based description of that module is available?
+// ...
+
+
 // Template class for arbitrary  content
 template <typename T> class DataObject
 {
@@ -73,14 +79,14 @@ template <typename T> class DataObject
         // Make it easier to name it
         using mutex_t = typename mutex<T>::type;
 
+        // A data object should have a constant name to identify it
+        const std::string _name;
+
         // Content to handle
         T _content;
 
         // Mutable mutex_ member as it needs to be modified in the const member function get()
         mutable mutex_t mutex_;
-
-        // A data object should have a constant name to identify it
-        const std::string _name;
 
         // This should be a at least a simple list to hold all data objects linked to that
         // A mutex for exlusive access will properly also necessary
@@ -93,8 +99,8 @@ template <typename T> class DataObject
         }
 
     public:
-        // Only one constructor
-        DataObject(const std::string name) : _name(name) {} // You have to choose a name
+        DataObject(const std::string name) : _name(name) {}
+        DataObject(const std::string name, T content) : _name(name), _content(content) {}
 
         // Non-copyable
         DataObject(const DataObject&) = delete;
@@ -244,11 +250,10 @@ class Module2
         DataObject<std::string> do2;
 
         // Only one constructor
-        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3"), do1("DO1"), do2("DO2")
+        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11), do1("DO1"), do2("DO2")
         {
             do1.set([](int &i){ i = _state; });
             do2.set([this](std::string &s){ s = _cmd; });
-            do3.set([](int &i){ i = 11; });
         }
 
         void Link1(DataObject<int> &do1, DataObject<std::string> &do2)
@@ -267,7 +272,7 @@ int main(void)
 {
     AsynchronousMachine asm1;
 
-    DataObject<int> do1("Hello");
+    DataObject<int> do1("Hello", 9);
     DataObject<double> do2("World");
     DataObject<std::string> do3("World2");
 
@@ -285,6 +290,7 @@ int main(void)
     //do1.registerLink(do3, my_cb3);
 
     // Access content consistently
+    do1.get(fi);
     do1.set([](int &i){ i = 1; });
     do1.get(fi);
     do1.set([](int &i){ i = i + 1; });
@@ -300,13 +306,15 @@ int main(void)
 
     // More complex DO
     int tmp = 0;
-    DataObject<std::map<std::string, int>> do5("Map");
-    do5.set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 21}}; });
+    DataObject<std::map<std::string, int>> do5("Map", std::map<std::string, int>{{"3", 23}, {"4", 24}});
+    do5.get([](const std::map<std::string, int> &v){ for (auto& m : v) {std::cout << m.first << " has value " << m.second << '\n';} } );
+    do5.set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 43}}; });
     do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
     do5.set([](std::map<std::string, int> &v){ v["1"] = v.at("1") + 1; });
     do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
     do5.get([&tmp](const std::map<std::string, int> &v){ tmp = v.at("1") + 2; });
     std::cout << tmp << '\n';
+    do5.get([](const std::map<std::string, int> &v){ for (auto& m : v) {std::cout << m.first << " has value " << m.second << '\n';} } );
 
     // Simulates changes of DO content faster than executable inside the reactor
     //do1.set([](int &i){ i = 10; });
