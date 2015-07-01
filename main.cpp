@@ -57,6 +57,54 @@
 // How to access DOs and Callbacks/Links from outside of module if only a text based description of that module is available?
 // ...
 
+// Forward declaration
+template <typename T> class DataObject;
+
+// A simple reactor
+class AsynchronousMachine
+{
+    protected:
+        // Protect the list of triggered DOs
+        boost::mutex triggeredDOs_mutex;
+        // This should be a at least a queue to hold all data objects which content has been changed or rather triggered
+        std::queue<std::function<void()>> triggeredDOs;
+
+    public:
+        // Announce the change of content to the reactor
+        template <class T>
+        void trigger(DataObject<T>* ptr)
+        {
+            std::cout << "Trigger " << ptr->getName() << std::endl;
+            boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
+            triggeredDOs.push([ptr](){ ptr->notify_all(); ptr->_asm = nullptr; });
+            ptr->_asm = this;
+        }
+
+        // Remove a trigger
+        template <class T>
+        void untrigger(DataObject<T>* ptr)
+        {
+            std::cout << "Untrigger " << ptr->getName() << std::endl;
+            // TODO: Implementation incomplete (clears triggeredDOs for now instead of only removing the slot for ptr)
+            triggeredDOs = std::queue<std::function<void()>>{};
+        }
+
+        // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
+        void execute()
+        {
+            while(!triggeredDOs.empty())
+            {
+                std::function<void()> f;
+                {
+                    boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
+                    // What happens if triggered DO is no longer valid?
+                    f = triggeredDOs.front();
+                    triggeredDOs.pop();
+                }
+                f();
+            }
+        }
+};
 
 // Template class for arbitrary  content
 template <typename T> class DataObject
@@ -92,6 +140,9 @@ template <typename T> class DataObject
         // A mutex for exlusive access will properly also necessary
         std::forward_list<std::function<void(DataObject<T>&)>> linkedDOs;
 
+        // Asynchronous machine with a trigger on this data object
+        AsynchronousMachine *_asm = nullptr;
+
         // Only called by reactor
         void notify_all()
         {
@@ -111,7 +162,11 @@ template <typename T> class DataObject
         DataObject &operator=(DataObject&&) = delete;
 
         // Necessary if someone want to inherit from that
-        virtual ~DataObject() = default;
+        virtual ~DataObject()
+        {
+            if (_asm)
+                _asm->untrigger(this);
+        };
 
         template <class Visitor>
         void set(Visitor visitor)
@@ -149,42 +204,6 @@ template <typename T> class DataObject
         // Remove a link to a DO by name
         // Get out
         void unregisterLink(std::string name) { /*todo*/ }
-};
-
-// A simple reactor
-class AsynchronousMachine
-{
-    protected:
-        // Protect the list of triggered DOs
-        boost::mutex triggeredDOs_mutex;
-        // This should be a at least a queue to hold all data objects which content has been changed or rather triggered
-        std::queue<std::function<void()>> triggeredDOs;
-
-    public:
-        // Announce the change of content to the reactor
-        template <class T>
-        void trigger(DataObject<T>* ptr)
-        {
-            std::cout << "Trigger " << ptr->getName() << std::endl;
-            boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-            triggeredDOs.push([ptr](){ ptr->notify_all(); });
-        }
-
-        // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
-        void execute()
-        {
-            while(!triggeredDOs.empty())
-            {
-                std::function<void()> f;
-                {
-                    boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-                    // What happens if triggered DO is no longer valid?
-                    f = triggeredDOs.front();
-                    triggeredDOs.pop();
-                }
-                f();
-            }
-        }
 };
 
 void my_cb(DataObject<int> &do1, DataObject<double> &do2)
@@ -250,10 +269,8 @@ class Module2
         DataObject<std::string> do2;
 
         // Only one constructor
-        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11), do1("DO1"), do2("DO2")
+        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11), do1("DO1", _state), do2("DO2", "Init")
         {
-            do1.set([](int &i){ i = _state; });
-            do2.set([this](std::string &s){ s = _cmd; });
         }
 
         void Link1(DataObject<int> &do1, DataObject<std::string> &do2)
@@ -340,6 +357,13 @@ int main(void)
     // Should notify all callbacks of all DOs linked to
     asm1.execute();
 
+    std::cout << "++++++++++++++++" << std::endl;
+
+    {
+        DataObject<int> do6("Test", 0);
+        asm1.trigger(&do6);
+    }
+    asm1.execute();
+
     exit(0);
 }
-
