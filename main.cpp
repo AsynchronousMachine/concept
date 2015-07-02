@@ -57,6 +57,7 @@
 // How to access DOs and Callbacks/Links from outside of module if only a text based description of that module is available?
 // ...
 
+enum PRIORITIES {HIGH=0, MIDDLE=1, LOW=2, MAX_PRIO=3};
 
 // Template class for arbitrary  content
 template <typename T> class DataObject
@@ -88,14 +89,17 @@ template <typename T> class DataObject
         // Mutable mutex_ member as it needs to be modified in the const member function get()
         mutable mutex_t mutex_;
 
+        // Protect the list of linked DOs
+        boost::mutex linkedDOs_mutex[MAX_PRIO];
+
         // This should be a at least a simple list to hold all data objects linked to that
-        // A mutex for exlusive access will properly also necessary
-        std::forward_list<std::function<void(DataObject<T>&)>> linkedDOs;
+        std::forward_list<std::function<void(DataObject<T>&)>> linkedDOs[MAX_PRIO];
 
         // Only called by reactor
-        void notify_all()
+        void notify_all(int prio)
         {
-            std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](std::function<void(DataObject<T>&)> f){ f(*this); });
+            boost::lock_guard<boost::mutex> lock(linkedDOs_mutex[prio]);
+            std::for_each(linkedDOs[prio].begin(), linkedDOs[prio].end(), [this](std::function<void(DataObject<T>&)> f){ f(*this); });
         }
 
     public:
@@ -131,14 +135,15 @@ template <typename T> class DataObject
             return visitor(_content);
         }
 
-        // Get out the DO name for humans
+        // Get out the DO name for humansfor(int n : {0,1,2,3,4,5})
         const std::string& getName() const { return _name; }
 
         // Link a DO to that DO
         template <typename U, typename Callback>
-        void registerLink(DataObject<U> &d2, Callback cb)
+        void registerLink(DataObject<U> &d2, Callback cb, PRIORITIES prio = LOW)
         {
-            linkedDOs.push_front([cb, &d2](DataObject<T>& d1){ cb(d1, d2); });
+            boost::lock_guard<boost::mutex> lock(linkedDOs_mutex[prio]);
+            linkedDOs[prio].push_front([cb, &d2](DataObject<T>& d1){ cb(d1, d2); });
             std::cout << "Link " << d2.getName() << " to " << getName() << std::endl;
         }
 
@@ -156,9 +161,9 @@ class AsynchronousMachine
 {
     protected:
         // Protect the list of triggered DOs
-        boost::mutex triggeredDOs_mutex;
+        boost::mutex triggeredDOs_mutex[MAX_PRIO];
         // This should be a at least a queue to hold all data objects which content has been changed or rather triggered
-        std::queue<std::function<void()>> triggeredDOs;
+        std::queue<std::function<void()>> triggeredDOs[MAX_PRIO];
 
     public:
         // Announce the change of content to the reactor
@@ -166,21 +171,41 @@ class AsynchronousMachine
         void trigger(DataObject<T>* ptr)
         {
             std::cout << "Trigger " << ptr->getName() << std::endl;
-            boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-            triggeredDOs.push([ptr](){ ptr->notify_all(); });
+
+            for(int prio = LOW; prio < MAX_PRIO; ++prio)
+            {
+                boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex[prio]);
+                if(!ptr->linkedDOs[prio].empty())
+                {
+                    triggeredDOs[prio].push([prio, ptr](){ ptr->notify_all(prio); });
+                    // Trigger a synchronisation element like a counting semaphore to release a waiting thread
+                }
+            }
         }
 
         // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
-        void execute()
+        // These method is typically called with in a thread related with priority "prio"
+        // This thread is waiting on a synchronisation element like a counting semaphore
+        void execute(PRIORITIES prio = LOW)
         {
-            while(!triggeredDOs.empty())
+            bool empty = false;
+
+            while(!empty)
             {
                 std::function<void()> f;
                 {
-                    boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-                    // What happens if triggered DO is no longer valid?
-                    f = triggeredDOs.front();
-                    triggeredDOs.pop();
+                    boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex[prio]);
+                    if(!triggeredDOs[prio].empty())
+                    {
+                        f = triggeredDOs[prio].front();
+                        triggeredDOs[prio].pop();
+                    }
+                    else
+                    {
+                        empty = true;
+                        continue;
+                    }
+
                 }
                 f();
             }
@@ -320,7 +345,7 @@ int main(void)
     //do1.set([](int &i){ i = 10; });
     //asm1.trigger(&do1); // Because of changed content of do1
 
-    // Simulate the job of ASM
+    // Simulate the job of ASM, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs linked to
     asm1.execute();
 
@@ -336,7 +361,7 @@ int main(void)
     Hello.do1.set([](int &i){ i = 10; });
     asm1.trigger(&Hello.do1); // Because of changed content of do1
 
-    // Simulate the job of ASM
+    // Simulate the job of ASM, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs linked to
     asm1.execute();
 
