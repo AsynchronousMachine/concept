@@ -77,11 +77,11 @@ class AsynchronousMachine
     public:
         // Announce the change of content to the reactor
         template <class T>
-        void trigger(SharedDataObject<T> data_object)
+        void trigger(const SharedDataObject<T> &data_object)
         {
             std::cout << "Trigger " << data_object->getName() << std::endl;
-            boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
             std::weak_ptr<DataObject<T>> weak_ptr = data_object;
+            boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
             triggeredDOs.push([weak_ptr](){
                 auto shared_ptr = weak_ptr.lock();
                 if (shared_ptr)
@@ -148,8 +148,8 @@ template <typename T> class DataObject : public std::enable_shared_from_this<Dat
         }
 
     public:
-        DataObject(const std::string name) : _name(name) {}
-        DataObject(const std::string name, T content) : _name(name), _content(content) {}
+        explicit DataObject(std::string name) : _name(std::move(name)) {}
+        DataObject(std::string name, T content) : _name(std::move(name)), _content(std::move(content)) {}
 
         // Non-copyable
         DataObject(const DataObject&) = delete;
@@ -185,9 +185,9 @@ template <typename T> class DataObject : public std::enable_shared_from_this<Dat
 
         // Link a DO to that DO
         template <typename U, typename Callback>
-        void registerLink(SharedDataObject<U> &d2, Callback cb)
+        void registerLink(SharedDataObject<U> &d2, Callback &&callback)
         {
-            linkedDOs.push_front([cb, &d2](SharedDataObject<T> d1){ cb(d1, d2); });
+            linkedDOs.push_front([cb = std::forward<Callback>(callback), &d2](SharedDataObject<T> d1){ cb(d1, d2); });
             std::cout << "Link " << d2->getName() << " to " << getName() << std::endl;
         }
 
@@ -242,7 +242,7 @@ class Module1
 
     public:
         // Only one constructor
-        Module1(const std::string name) : _name(name), do1(std::make_shared<DataObject<int>>("DO1")), do2(std::make_shared<DataObject<std::string>>("DO2")) {} // You have to choose a name
+        Module1(std::string name) : _name(std::move(name)), do1(std::make_shared<DataObject<int>>("DO1")), do2(std::make_shared<DataObject<std::string>>("DO2")) {} // You have to choose a name
         SharedDataObject<int> do1;
         SharedDataObject<std::string> do2;
 };
@@ -263,7 +263,7 @@ class Module2
         SharedDataObject<std::string> do2;
 
         // Only one constructor
-        Module2(const std::string name) : _name(name), _cmd("Init"), do3(std::make_shared<DataObject<int>>("DO3", 11)), do1(std::make_shared<DataObject<int>>("DO1", _state)), do2(std::make_shared<DataObject<std::string>>("DO2", "Init"))
+        Module2(std::string name) : _name(std::move(name)), _cmd("Init"), do3(std::make_shared<DataObject<int>>("DO3", 11)), do1(std::make_shared<DataObject<int>>("DO1", _state)), do2(std::make_shared<DataObject<std::string>>("DO2", "Init"))
         {
         }
 
