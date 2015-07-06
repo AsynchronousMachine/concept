@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <thread>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/null_mutex.hpp>
@@ -54,7 +55,6 @@
 //        +-----...
 
 // Still open topics
-// What happens if triggered DO is no longer valid when called inside reactor?
 // How to access DOs and Callbacks/Links from outside of module if only a text based description of that module is available?
 // ...
 
@@ -81,16 +81,14 @@ class AsynchronousMachine
         {
             std::cout << "Trigger " << data_object->getName() << std::endl;
             boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-            triggeredDOs.push([data_object](){ data_object->notify_all(); });
-        }
-
-        // Remove a trigger
-        template <class T>
-        void untrigger(SharedDataObject<T> data_object)
-        {
-            std::cout << "Untrigger " << data_object->getName() << std::endl;
-            // TODO: Implementation incomplete (clears triggeredDOs for now instead of only removing the slot for ptr)
-            triggeredDOs = std::queue<std::function<void()>>{};
+            std::weak_ptr<DataObject<T>> weak_ptr = data_object;
+            triggeredDOs.push([weak_ptr](){
+                auto shared_ptr = weak_ptr.lock();
+                if (shared_ptr)
+                    shared_ptr->notify_all();
+                else
+                    std::cout << "weak_ptr is empty\n";
+            });
         }
 
         // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
@@ -101,7 +99,6 @@ class AsynchronousMachine
                 std::function<void()> f;
                 {
                     boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-                    // What happens if triggered DO is no longer valid?
                     f = triggeredDOs.front();
                     triggeredDOs.pop();
                 }
