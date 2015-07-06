@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <algorithm>
 #include <functional>
+#include <memory>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/null_mutex.hpp>
@@ -60,6 +61,10 @@
 // Forward declaration
 template <typename T> class DataObject;
 
+// For convenience
+template <typename T>
+using SharedDataObject = std::shared_ptr<DataObject<T>>;
+
 // A simple reactor
 class AsynchronousMachine
 {
@@ -72,19 +77,18 @@ class AsynchronousMachine
     public:
         // Announce the change of content to the reactor
         template <class T>
-        void trigger(DataObject<T>* ptr)
+        void trigger(SharedDataObject<T> data_object)
         {
-            std::cout << "Trigger " << ptr->getName() << std::endl;
+            std::cout << "Trigger " << data_object->getName() << std::endl;
             boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-            triggeredDOs.push([ptr](){ ptr->notify_all(); ptr->_asm = nullptr; });
-            ptr->_asm = this;
+            triggeredDOs.push([data_object](){ data_object->notify_all(); });
         }
 
         // Remove a trigger
         template <class T>
-        void untrigger(DataObject<T>* ptr)
+        void untrigger(SharedDataObject<T> data_object)
         {
-            std::cout << "Untrigger " << ptr->getName() << std::endl;
+            std::cout << "Untrigger " << data_object->getName() << std::endl;
             // TODO: Implementation incomplete (clears triggeredDOs for now instead of only removing the slot for ptr)
             triggeredDOs = std::queue<std::function<void()>>{};
         }
@@ -107,7 +111,7 @@ class AsynchronousMachine
 };
 
 // Template class for arbitrary  content
-template <typename T> class DataObject
+template <typename T> class DataObject : public std::enable_shared_from_this<DataObject<T>>
 {
     friend class AsynchronousMachine;
 
@@ -138,15 +142,12 @@ template <typename T> class DataObject
 
         // This should be a at least a simple list to hold all data objects linked to that
         // A mutex for exlusive access will properly also necessary
-        std::forward_list<std::function<void(DataObject<T>&)>> linkedDOs;
-
-        // Asynchronous machine with a trigger on this data object
-        AsynchronousMachine *_asm = nullptr;
+        std::forward_list<std::function<void(SharedDataObject<T>)>> linkedDOs;
 
         // Only called by reactor
         void notify_all()
         {
-            std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](std::function<void(DataObject<T>&)> f){ f(*this); });
+            std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](std::function<void(SharedDataObject<T>)> f){ f(this->shared_from_this()); });
         }
 
     public:
@@ -162,11 +163,7 @@ template <typename T> class DataObject
         DataObject &operator=(DataObject&&) = delete;
 
         // Necessary if someone want to inherit from that
-        virtual ~DataObject()
-        {
-            if (_asm)
-                _asm->untrigger(this);
-        };
+        virtual ~DataObject() = default;
 
         template <class Visitor>
         void set(Visitor visitor)
@@ -191,40 +188,40 @@ template <typename T> class DataObject
 
         // Link a DO to that DO
         template <typename U, typename Callback>
-        void registerLink(DataObject<U> &d2, Callback cb)
+        void registerLink(SharedDataObject<U> &d2, Callback cb)
         {
-            linkedDOs.push_front([cb, &d2](DataObject<T>& d1){ cb(d1, d2); });
-            std::cout << "Link " << d2.getName() << " to " << getName() << std::endl;
+            linkedDOs.push_front([cb, &d2](SharedDataObject<T> d1){ cb(d1, d2); });
+            std::cout << "Link " << d2->getName() << " to " << getName() << std::endl;
         }
 
         // Remove a link to a DO by pointer to DO
         template <typename U>
-        void unregisterLink(DataObject<U>* ptr) { /*todo*/ }
+        void unregisterLink(SharedDataObject<U> data_object) { /*todo*/ }
 
         // Remove a link to a DO by name
         // Get out
         void unregisterLink(std::string name) { /*todo*/ }
 };
 
-void my_cb(DataObject<int> &do1, DataObject<double> &do2)
+void my_cb(SharedDataObject<int> &do1, SharedDataObject<double> &do2)
 {
-    std::cout << "My DO.name: " << do2.getName() << std::endl;
-    std::cout << "Got DO.name: " << do1.getName() << std::endl;
-    do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+    std::cout << "My DO.name: " << do2->getName() << std::endl;
+    std::cout << "Got DO.name: " << do1->getName() << std::endl;
+    do1->get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
 }
 
-void my_cb2(DataObject<int> &do1, DataObject<std::string> &do2)
+void my_cb2(SharedDataObject<int> &do1, SharedDataObject<std::string> &do2)
 {
-    std::cout << "My DO.name: " << do2.getName() << std::endl;
-    std::cout << "Got DO.name: " << do1.getName() << std::endl;
-    do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+    std::cout << "My DO.name: " << do2->getName() << std::endl;
+    std::cout << "Got DO.name: " << do1->getName() << std::endl;
+    do1->get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
 }
 
-void my_cb3(DataObject<double> &do1, DataObject<std::string> &do2)
+void my_cb3(SharedDataObject<double> &do1, SharedDataObject<std::string> &do2)
 {
-    std::cout << "My DO.name: " << do2.getName() << std::endl;
-    std::cout << "Got DO.name: " << do1.getName() << std::endl;
-    do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+    std::cout << "My DO.name: " << do2->getName() << std::endl;
+    std::cout << "Got DO.name: " << do1->getName() << std::endl;
+    do1->get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
 }
 
 // Helper for data access
@@ -248,9 +245,9 @@ class Module1
 
     public:
         // Only one constructor
-        Module1(const std::string name) : _name(name), do1("DO1"), do2("DO2") {} // You have to choose a name
-        DataObject<int> do1;
-        DataObject<std::string> do2;
+        Module1(const std::string name) : _name(name), do1(std::make_shared<DataObject<int>>("DO1")), do2(std::make_shared<DataObject<std::string>>("DO2")) {} // You have to choose a name
+        SharedDataObject<int> do1;
+        SharedDataObject<std::string> do2;
 };
 
 // Missing reflection to access content
@@ -262,76 +259,78 @@ class Module2
         const std::string _cmd;
         static constexpr int _state = 1;
 
-        DataObject<int> do3; // Access is fully thread safe
+        SharedDataObject<int> do3; // Access is fully thread safe
 
     public:
-        DataObject<int> do1;
-        DataObject<std::string> do2;
+        SharedDataObject<int> do1;
+        SharedDataObject<std::string> do2;
 
         // Only one constructor
-        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11), do1("DO1", _state), do2("DO2", "Init")
+        Module2(const std::string name) : _name(name), _cmd("Init"), do3(std::make_shared<DataObject<int>>("DO3", 11)), do1(std::make_shared<DataObject<int>>("DO1", _state)), do2(std::make_shared<DataObject<std::string>>("DO2", "Init"))
         {
         }
 
-        void Link1(DataObject<int> &do1, DataObject<std::string> &do2)
+        void Link1(SharedDataObject<int> &do1, SharedDataObject<std::string> &do2)
         {
-            std::cout << "My DO.name: " << do2.getName() << std::endl;
-            std::cout << "Got DO.name: " << do1.getName() << std::endl;
-            do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+            std::cout << "My DO.name: " << do2->getName() << std::endl;
+            std::cout << "Got DO.name: " << do1->getName() << std::endl;
+            do1->get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
             std::cout << "State: " << _state << std::endl;
-            do2.get([](std::string s){ std::cout << "Internal DO2.value: " << s << std::endl; });
-            do3.set([](int &i){ ++i; });
-            do3.get([](int i){ std::cout << "Internal DO3.value: " << i << std::endl; });
+            do2->get([](std::string s){ std::cout << "Internal DO2.value: " << s << std::endl; });
+            do3->set([](int &i){ ++i; });
+            do3->get([](int i){ std::cout << "Internal DO3.value: " << i << std::endl; });
         }
 };
+
+constexpr int Module2::_state;
 
 int main(void)
 {
     AsynchronousMachine asm1;
 
-    DataObject<int> do1("Hello", 9);
-    DataObject<double> do2("World");
-    DataObject<std::string> do3("World2");
+    SharedDataObject<int> do1 = std::make_shared<DataObject<int>>("Hello", 9);
+    SharedDataObject<double> do2 = std::make_shared<DataObject<double>>("World");
+    SharedDataObject<std::string> do3 = std::make_shared<DataObject<std::string>>("World2");
 
-    std::cout << do1.getName() << std::endl;
-    std::cout << do2.getName() << std::endl;
+    std::cout << do1->getName() << std::endl;
+    std::cout << do2->getName() << std::endl;
 
     // Link together: do1<int> -------> do2<double>
-    do1.registerLink(do2, my_cb);
+    do1->registerLink(do2, my_cb);
 
     // Link together: do1<int> -------> do3<string>
-    do1.registerLink(do3, my_cb2);
+    do1->registerLink(do3, my_cb2);
 
     // Link together: do1<double> -------> do3<string>
     // Will not compile due to wrong data type of callback parameter
     //do1.registerLink(do3, my_cb3);
 
     // Access content consistently
-    do1.get(fi);
-    do1.set([](int &i){ i = 1; });
-    do1.get(fi);
-    do1.set([](int &i){ i = i + 1; });
-    do1.get(cbi);
-    std::cout << do1.get(fir) << '\n';
+    do1->get(fi);
+    do1->set([](int &i){ i = 1; });
+    do1->get(fi);
+    do1->set([](int &i){ i = i + 1; });
+    do1->get(cbi);
+    std::cout << do1->get(fir) << '\n';
 
-    asm1.trigger(&do1); // Because of changed content of do1
+    asm1.trigger(do1); // Because of changed content of do1
 
     // Complex DO
-    DataObject<std::vector<int>> do4("Vector");
-    do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
-    do4.get([](const std::vector<int> &v){ std::cout << v[0] << ',' << v[1] << '\n'; });
+    SharedDataObject<std::vector<int>> do4 = std::make_shared<DataObject<std::vector<int>>>("Vector");
+    do4->set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
+    do4->get([](const std::vector<int> &v){ std::cout << v[0] << ',' << v[1] << '\n'; });
 
     // More complex DO
     int tmp = 0;
-    DataObject<std::map<std::string, int>> do5("Map", std::map<std::string, int>{{"3", 23}, {"4", 24}});
-    do5.get([](const std::map<std::string, int> &v){ for (auto& m : v) {std::cout << m.first << " has value " << m.second << '\n';} } );
-    do5.set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 43}}; });
-    do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
-    do5.set([](std::map<std::string, int> &v){ v["1"] = v.at("1") + 1; });
-    do5.get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
-    do5.get([&tmp](const std::map<std::string, int> &v){ tmp = v.at("1") + 2; });
+    SharedDataObject<std::map<std::string, int>> do5 = std::make_shared<DataObject<std::map<std::string, int>>>("Map", std::map<std::string, int>{{"3", 23}, {"4", 24}});
+    do5->get([](const std::map<std::string, int> &v){ for (auto& m : v) {std::cout << m.first << " has value " << m.second << '\n';} } );
+    do5->set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 43}}; });
+    do5->get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
+    do5->set([](std::map<std::string, int> &v){ v["1"] = v.at("1") + 1; });
+    do5->get([](const std::map<std::string, int> &v){ std::cout << v.at("1") << ',' << v.at("2") << '\n'; });
+    do5->get([&tmp](const std::map<std::string, int> &v){ tmp = v.at("1") + 2; });
     std::cout << tmp << '\n';
-    do5.get([](const std::map<std::string, int> &v){ for (auto& m : v) {std::cout << m.first << " has value " << m.second << '\n';} } );
+    do5->get([](const std::map<std::string, int> &v){ for (auto& m : v) {std::cout << m.first << " has value " << m.second << '\n';} } );
 
     // Simulates changes of DO content faster than executable inside the reactor
     //do1.set([](int &i){ i = 10; });
@@ -348,10 +347,10 @@ int main(void)
     Module2 World("World");
 
     // Link together
-    Hello.do1.registerLink(World.do2, [&World](DataObject<int> &do1, DataObject<std::string> &do2){ World.Link1(do1, do2); });
+    Hello.do1->registerLink(World.do2, [&World](SharedDataObject<int> &do1, SharedDataObject<std::string> &do2){ World.Link1(do1, do2); });
 
-    Hello.do1.set([](int &i){ i = 10; });
-    asm1.trigger(&Hello.do1); // Because of changed content of do1
+    Hello.do1->set([](int &i){ i = 10; });
+    asm1.trigger(Hello.do1); // Because of changed content of do1
 
     // Simulate the job of ASM
     // Should notify all callbacks of all DOs linked to
@@ -360,8 +359,10 @@ int main(void)
     std::cout << "++++++++++++++++" << std::endl;
 
     {
-        DataObject<int> do6("Test", 0);
-        asm1.trigger(&do6);
+        SharedDataObject<int> do6 = std::make_shared<DataObject<int>>("Test", 6);
+        SharedDataObject<int> do7 = std::make_shared<DataObject<int>>("Test2", 7);
+        do6->registerLink(do7, [](SharedDataObject<int> &do1, SharedDataObject<int> &do2){ do1->get([](int i){ std::cout << i << '\n'; }); });
+        asm1.trigger(do6);
     }
     asm1.execute();
 
