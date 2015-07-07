@@ -15,6 +15,9 @@
 #include <boost/thread/null_mutex.hpp>
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
+#include <boost/fusion/container.hpp>
+#include <boost/fusion/container/generation.hpp>
+#include <boost/fusion/sequence.hpp>
 
 // Concept of data object
 //
@@ -232,6 +235,18 @@ class Module1
         Module1(const std::string name) : _name(name), do1("DO1"), do2("DO2") {} // You have to choose a name
         DataObject<int> do1;
         DataObject<std::string> do2;
+
+        auto getDataObjects()
+        {
+            // Returns boost::fusion::vector<DataObject<int>&, DataObject<std::string>&>
+            return boost::fusion::vector_tie(do1, do2);
+        }
+
+        auto getLinks()
+        {
+            // Returns boost::fusion::vector<>
+            return boost::fusion::make_vector();
+        }
 };
 
 // Missing reflection to access content
@@ -265,6 +280,20 @@ class Module2
             do2.get([](std::string s){ std::cout << "Internal DO2.value: " << s << std::endl; });
             do3.set([](int &i){ ++i; });
             do3.get([](int i){ std::cout << "Internal DO3.value: " << i << std::endl; });
+        }
+
+        auto getDataObjects()
+        {
+            // Returns boost::fusion::vector<DataObject<int>&, DataObject<std::string>&>
+            return boost::fusion::vector_tie(do1, do2);
+        }
+
+        auto getLinks()
+        {
+            using namespace std::placeholders;
+            std::function<void(DataObject<int>&, DataObject<std::string>&)> f = std::bind(&Module2::Link1, this, _1, _2);
+            // Returns boost::fusion::vector<std::function<void(DataObject<int>&, DataObject<std::string>&)>>
+            return boost::fusion::make_vector(f);
         }
 };
 
@@ -330,11 +359,22 @@ int main(void)
     Module1 Hello("Hello");
     Module2 World("World");
 
-    // Link together
-    Hello.do1.registerLink(World.do2, [&World](DataObject<int> &do1, DataObject<std::string> &do2){ World.Link1(do1, do2); });
+    // Link together Hello.do1 and World.do2 via Word.Link1
+    auto HelloDOs = Hello.getDataObjects();
+    auto WorldDOs = World.getDataObjects();
 
-    Hello.do1.set([](int &i){ i = 10; });
-    asm1.trigger(&Hello.do1); // Because of changed content of do1
+    auto &HelloDO1 = boost::fusion::at_c<0>(HelloDOs);
+    auto &WorldDO2 = boost::fusion::at_c<1>(WorldDOs);
+
+    auto HelloLinks = Hello.getLinks();
+    auto WorldLinks = World.getLinks();
+
+    auto Link1 = boost::fusion::at_c<0>(WorldLinks);
+
+    HelloDO1.registerLink(WorldDO2, [Link1](auto &do1, auto &do2) { Link1(do1, do2); });
+
+    HelloDO1.set([](int &i){ i = 10; });
+    asm1.trigger(&HelloDO1); // Because of changed content of do1
 
     // Simulate the job of ASM
     // Should notify all callbacks of all DOs linked to
