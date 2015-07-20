@@ -15,9 +15,22 @@
 #include <boost/thread/null_mutex.hpp>
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
-#include <boost/fusion/container.hpp>
-#include <boost/fusion/container/generation.hpp>
-#include <boost/fusion/sequence.hpp>
+#include <boost/type_erasure/any.hpp>
+#include <boost/type_erasure/any_cast.hpp>
+#include <boost/type_erasure/member.hpp>
+#include <boost/type_erasure/placeholder.hpp>
+#include <boost/type_erasure/callable.hpp>
+#include <boost/type_erasure/builtin.hpp>
+
+BOOST_TYPE_ERASURE_MEMBER((has_getName), getName, 0)
+
+using data_object_type = boost::type_erasure::any<boost::mpl::vector<boost::type_erasure::typeid_<>, has_getName<const std::string&()>>, boost::type_erasure::_self&>;
+using link_type = boost::type_erasure::any<boost::mpl::vector<boost::type_erasure::copy_constructible<>, boost::type_erasure::callable<void(data_object_type, data_object_type)>>>;
+
+BOOST_TYPE_ERASURE_MEMBER((has_getDataObjects), getDataObjects, 0)
+BOOST_TYPE_ERASURE_MEMBER((has_getLinks), getLinks, 0)
+
+using module_type = boost::type_erasure::any<boost::mpl::vector<has_getName<const std::string&()>, has_getDataObjects<std::vector<data_object_type>()>, has_getLinks<std::map<std::string, link_type>()>>, boost::type_erasure::_self&>;
 
 // Concept of data object
 //
@@ -235,16 +248,16 @@ class Module1
         DataObject<int> do1;
         DataObject<std::string> do2;
 
-        auto getDataObjects()
+        const std::string& getName() const { return _name; }
+
+        std::vector<data_object_type> getDataObjects()
         {
-            // Returns boost::fusion::vector<DataObject<int>&, DataObject<std::string>&>
-            return boost::fusion::vector_tie(do1, do2);
+            return std::vector<data_object_type>{do1, do2};
         }
 
-        auto getLinks()
+        std::map<std::string, link_type> getLinks()
         {
-            // Returns boost::fusion::vector<>
-            return boost::fusion::make_vector();
+            return std::map<std::string, link_type>{};
         }
 };
 
@@ -262,6 +275,8 @@ class Module2
     public:
         DataObject<int> do1;
         DataObject<std::string> do2;
+
+        const std::string& getName() const { return _name; }
 
         // Only one constructor
         Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11), do1("DO1"), do2("DO2")
@@ -285,17 +300,24 @@ class Module2
         {
         }
 
-        auto getDataObjects()
+        std::vector<data_object_type> getDataObjects()
         {
-            // Returns boost::fusion::vector of references to DOs
-            return boost::fusion::vector_tie(do1, do2);
+            return std::vector<data_object_type>{do1, do2};
         }
 
-        auto getLinks()
+        std::map<std::string, link_type> getLinks()
         {
-            //return boost::fusion::vector of Links
-            return boost::fusion::make_vector([this](DataObject<int> &do1, DataObject<std::string> &do2) { Module2::Link1(do1, do2); },
-                                              [this](DataObject<int> &do1, DataObject<int> &do2) { Module2::Link2(do1, do2); });
+            link_type l1 = [this](data_object_type lhs, data_object_type rhs){
+                DataObject<int> &do1 = boost::type_erasure::any_cast<DataObject<int>&>(lhs); // throws boost::bad_any_cast if casting fails
+                DataObject<std::string> &do2 = boost::type_erasure::any_cast<DataObject<std::string>&>(rhs); // throws boost::bad_any_cast if casting fails
+                Link1(do1, do2);
+            };
+            link_type l2 = [this](data_object_type lhs, data_object_type rhs){
+                DataObject<int> &do1 = boost::type_erasure::any_cast<DataObject<int>&>(lhs); // throws boost::bad_any_cast if casting fails
+                DataObject<int> &do2 = boost::type_erasure::any_cast<DataObject<int>&>(rhs); // throws boost::bad_any_cast if casting fails
+                Link2(do1, do2);
+            };
+            return std::map<std::string, link_type>{{"Link1", l1}, {"Link2", l2}};
         }
 };
 
@@ -361,26 +383,36 @@ int main(void)
     Module1 Hello("Hello");
     Module2 World("World");
 
+    std::vector<module_type> modules;
+    modules.push_back(Hello);
+    modules.push_back(World);
+
+    // Lookup modules Hello and World
+    auto HelloMod = *std::find_if(modules.begin(), modules.end(), [](auto &m){ return m.getName() == "Hello"; });
+    auto WorldMod = *std::find_if(modules.begin(), modules.end(), [](auto &m){ return m.getName() == "World"; });
+
     // Link together Hello.do1 and World.do2 via Word.Link1
-    auto HelloDOs = Hello.getDataObjects();
-    auto WorldDOs = World.getDataObjects();
+    auto HelloDOs = HelloMod.getDataObjects();
+    auto WorldDOs = WorldMod.getDataObjects();
 
-    auto &HelloDO1 = boost::fusion::at_c<0>(HelloDOs);
-    auto &WorldDO2 = boost::fusion::at_c<1>(WorldDOs);
+    auto HelloDO1 = *std::find_if(HelloDOs.begin(), HelloDOs.end(), [](auto &d){ return d.getName() == "DO1"; });
+    auto WorldDO2 = *std::find_if(WorldDOs.begin(), WorldDOs.end(), [](auto &d){ return d.getName() == "DO2"; });
 
-    auto HelloLinks = Hello.getLinks();
-    auto WorldLinks = World.getLinks();
+    auto HelloLinks = HelloMod.getLinks();
+    auto WorldLinks = WorldMod.getLinks();
 
-    auto Link1 = boost::fusion::at_c<0>(WorldLinks);
+    auto Link1 = WorldLinks.find("Link1")->second;
 
-    HelloDO1.registerLink(WorldDO2, [Link1](auto &do1, auto &do2) { Link1(do1, do2); });
+    Link1(HelloDO1, WorldDO2);
 
-    HelloDO1.set([](int &i){ i = 10; });
-    asm1.trigger(&HelloDO1); // Because of changed content of do1
+    // HelloDO1.registerLink(WorldDO2, [Link1](auto &do1, auto &do2) { Link1(do1, do2); });
+    //
+    // HelloDO1.set([](int &i){ i = 10; });
+    // asm1.trigger(&HelloDO1); // Because of changed content of do1
 
     // Simulate the job of ASM
     // Should notify all callbacks of all DOs linked to
-    asm1.execute();
+    //asm1.execute();
 
     exit(0);
 }
