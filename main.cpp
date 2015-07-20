@@ -282,18 +282,21 @@ class Module2
             do3.get([](int i){ std::cout << "Internal DO3.value: " << i << std::endl; });
         }
 
+        void Link2(DataObject<int> &do1, DataObject<int> &do2)
+        {
+        }
+
         auto getDataObjects()
         {
-            // Returns boost::fusion::vector<DataObject<int>&, DataObject<std::string>&>
+            // Returns boost::fusion::vector of references to DOs
             return boost::fusion::vector_tie(do1, do2);
         }
 
         auto getLinks()
         {
-            using namespace std::placeholders;
-            std::function<void(DataObject<int>&, DataObject<std::string>&)> f = std::bind(&Module2::Link1, this, _1, _2);
-            // Returns boost::fusion::vector<std::function<void(DataObject<int>&, DataObject<std::string>&)>>
-            return boost::fusion::make_vector(f);
+            //return boost::fusion::vector of Links
+            return boost::fusion::make_vector([this](DataObject<int> &do1, DataObject<std::string> &do2) { Module2::Link1(do1, do2); },
+                                              [this](DataObject<int> &do1, DataObject<int> &do2) { Module2::Link2(do1, do2); });
         }
 };
 
