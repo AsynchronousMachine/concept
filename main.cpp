@@ -21,26 +21,26 @@
 
 // Concept of data object
 //
-// Data objects (aka DO) are container to hold data (content) and a callback function (link) as a notifier
-// DOs can be linked together
-// DOs can be locked and unlocked to handle there content consistently
-// The associated functions must be called if the content of the linked DO has been changed
+// A Data object (aka DO) is a container to hold content (data)
+// DOs can be linked together (source vrs. destination)
+// A DO (source) holds references to callback functions (aka LINKs) to their linked DOs (destination) too
+// The content of a DO can only be accessed in a locked state due to a visitor idiom
+// The associated callback functions (LINKSs) are grouped and called via a notifier function if the content of the source DO has been changed
 //
-// DO1 --------------> DO2    DO1 is linked to DO2
+// DO1 ------(LINK1)-----> DO2          DO1 is linked via LINK1 to DO2
 //        |
-//        +----------> DO3    Also DO1 is linked to DO3
-
+//        +--(LINK2)-----> DO3          DO1 is linked via LINK2 to DO3, too
+//
 // Concept of reactor
 //
-// All registered callback functions (links) should be called within the reactor
+// All registered callback functions (LINKs) should be called within the reactor
 // This decouples the changing and the notify process based on that
 // This allows the introduction of priorities how important a change has been notified
 
 // Concept of module
 //
-// A module groups DOs and callbacks/links to gether and give them a common environment.
-// A callback/link can access all members or methods of its module. The module can have a more
-// complex state than a DO.
+// A module groups DOs and callbacks functions (LINKs) together and give them a common environment.
+// A LINK can access all members or methods of its module. The module can have a more complex state than a DO.
 //
 // Module
 //    private
@@ -51,13 +51,12 @@
 //        +-----DO3
 //        +-----DO4
 //        +-----...
-//        +-----Cb/Link1
-//        +-----Cb/Link2
+//        +-----LINK1
+//        +-----LINK2
 //        +-----...
 
 // Still open topics
-// What happens if triggered DO is no longer valid when called inside reactor?
-// How to access DOs and Callbacks/Links from outside of module if only a text based description of that module is available?
+// How to access DOs and LINKs from outside of the module if only a text based description of that module is available?
 // ...
 
 
