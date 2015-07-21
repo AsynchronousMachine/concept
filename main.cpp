@@ -10,6 +10,9 @@
 #include <type_traits>
 #include <algorithm>
 #include <functional>
+#include <stdexcept>
+#include <typeinfo>
+#include <utility>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/null_mutex.hpp>
@@ -19,18 +22,43 @@
 #include <boost/type_erasure/any_cast.hpp>
 #include <boost/type_erasure/member.hpp>
 #include <boost/type_erasure/placeholder.hpp>
-#include <boost/type_erasure/callable.hpp>
 #include <boost/type_erasure/builtin.hpp>
+#include <boost/type_erasure/typeid_of.hpp>
 
 BOOST_TYPE_ERASURE_MEMBER((has_getName), getName, 0)
 
-using data_object_type = boost::type_erasure::any<boost::mpl::vector<boost::type_erasure::typeid_<>, has_getName<const std::string&()>>, boost::type_erasure::_self&>;
-using link_type = boost::type_erasure::any<boost::mpl::vector<boost::type_erasure::copy_constructible<>, boost::type_erasure::callable<void(data_object_type, data_object_type)>>>;
+// DOs support RTTI, have a member function getName() and are passed by reference
+using data_object_type = boost::type_erasure::any<
+    boost::mpl::vector<
+        boost::type_erasure::typeid_<>,
+        has_getName<const std::string&()>
+    >,
+    boost::type_erasure::_self&
+>;
+
+BOOST_TYPE_ERASURE_MEMBER((has_registerDOs), registerDOs, 2)
+
+// Links are copy-constructible and have the member functions getName() and registerDOs()
+using link_type = boost::type_erasure::any<
+    boost::mpl::vector<
+        boost::type_erasure::copy_constructible<>,
+        has_getName<const std::string&()>,
+        has_registerDOs<void(data_object_type, data_object_type)>
+    >
+>;
 
 BOOST_TYPE_ERASURE_MEMBER((has_getDataObjects), getDataObjects, 0)
 BOOST_TYPE_ERASURE_MEMBER((has_getLinks), getLinks, 0)
 
-using module_type = boost::type_erasure::any<boost::mpl::vector<has_getName<const std::string&()>, has_getDataObjects<std::vector<data_object_type>()>, has_getLinks<std::map<std::string, link_type>()>>, boost::type_erasure::_self&>;
+// Modules have the member functions getName(), getDataObjects() and getLinks() and are passed by reference
+using module_type = boost::type_erasure::any<
+    boost::mpl::vector<
+        has_getName<const std::string&()>,
+        has_getDataObjects<std::vector<data_object_type>()>,
+        has_getLinks<std::vector<link_type>()>
+    >,
+    boost::type_erasure::_self&
+>;
 
 // Concept of data object
 //
@@ -166,6 +194,29 @@ template <typename T> class DataObject
         void unregisterLink(std::string name) { /*todo*/ }
 };
 
+template <class DO1Type, class DO2Type>
+class Link
+{
+    public:
+        using callback_type = std::function<void(DO1Type&, DO2Type&)>;
+
+    private:
+        std::string _name;
+        callback_type _callback;
+
+    public:
+        Link(std::string name, callback_type callback) : _name(std::move(name)), _callback(std::move(callback)) {}
+
+        const std::string& getName() const { return _name; }
+
+        void registerDOs(data_object_type do1, data_object_type do2)
+        {
+            DO1Type &d1 = boost::type_erasure::any_cast<DO1Type&>(do1); // throws boost::bad_any_cast if casting fails
+            DO2Type &d2 = boost::type_erasure::any_cast<DO2Type&>(do2); // throws boost::bad_any_cast if casting fails
+            d1.registerLink(d2, _callback);
+        }
+};
+
 // A simple reactor
 class AsynchronousMachine
 {
@@ -255,9 +306,9 @@ class Module1
             return std::vector<data_object_type>{do1, do2};
         }
 
-        std::map<std::string, link_type> getLinks()
+        std::vector<link_type> getLinks()
         {
-            return std::map<std::string, link_type>{};
+            return std::vector<link_type>{};
         }
 };
 
@@ -305,21 +356,66 @@ class Module2
             return std::vector<data_object_type>{do1, do2};
         }
 
-        std::map<std::string, link_type> getLinks()
+        std::vector<link_type> getLinks()
         {
-            link_type l1 = [this](data_object_type lhs, data_object_type rhs){
-                DataObject<int> &do1 = boost::type_erasure::any_cast<DataObject<int>&>(lhs); // throws boost::bad_any_cast if casting fails
-                DataObject<std::string> &do2 = boost::type_erasure::any_cast<DataObject<std::string>&>(rhs); // throws boost::bad_any_cast if casting fails
-                Link1(do1, do2);
+            return std::vector<link_type>{
+                Link<DataObject<int>, DataObject<std::string>>("Link1", [this](DataObject<int> &do1, DataObject<std::string> &do2) { Link1(do1, do2); }),
+                Link<DataObject<int>, DataObject<int>>("Link2", [this](DataObject<int> &do1, DataObject<int> &do2) { Link2(do1, do2); })
             };
-            link_type l2 = [this](data_object_type lhs, data_object_type rhs){
-                DataObject<int> &do1 = boost::type_erasure::any_cast<DataObject<int>&>(lhs); // throws boost::bad_any_cast if casting fails
-                DataObject<int> &do2 = boost::type_erasure::any_cast<DataObject<int>&>(rhs); // throws boost::bad_any_cast if casting fails
-                Link2(do1, do2);
-            };
-            return std::map<std::string, link_type>{{"Link1", l1}, {"Link2", l2}};
         }
 };
+
+std::vector<module_type> modules;
+
+void link(std::string do1, std::string do2, std::string l)
+{
+    auto idx = do1.find('.');
+    std::string module1 = do1.substr(0, idx);
+    std::string module1do = do1.substr(idx + 1);
+
+    idx = do2.find('.');
+    std::string module2 = do2.substr(0, idx);
+    std::string module2do = do2.substr(idx + 1);
+
+    idx = l.find('.');
+    std::string module3 = l.substr(0, idx);
+    std::string module3link = l.substr(idx + 1);
+
+    auto modit = std::find_if(modules.begin(), modules.end(), [module1](auto &m){ return m.getName() == module1; });
+    if (modit == modules.end())
+        throw std::runtime_error("unknown module " + module1);
+    module_type mod1 = *modit;
+
+    modit = std::find_if(modules.begin(), modules.end(), [module2](auto &m){ return m.getName() == module2; });
+    if (modit == modules.end())
+        throw std::runtime_error("unknown module " + module2);
+    module_type mod2 = *modit;
+
+    modit = std::find_if(modules.begin(), modules.end(), [module3](auto &m){ return m.getName() == module3; });
+    if (modit == modules.end())
+        throw std::runtime_error("unknown module " + module3);
+    module_type mod3 = *modit;
+
+    auto dataObjects = mod1.getDataObjects();
+    auto doit = std::find_if(dataObjects.begin(), dataObjects.end(), [module1do](auto &d){ return d.getName() == module1do; });
+    if (doit == dataObjects.end())
+        throw std::runtime_error("unknown data object " + module1do);
+    data_object_type d1 = *doit;
+
+    dataObjects = mod2.getDataObjects();
+    doit = std::find_if(dataObjects.begin(), dataObjects.end(), [module2do](auto &d){ return d.getName() == module2do; });
+    if (doit == dataObjects.end())
+        throw std::runtime_error("unknown data object " + module2do);
+    data_object_type d2 = *doit;
+
+    auto links = mod3.getLinks();
+    auto linkit = std::find_if(links.begin(), links.end(), [module3link](auto &l){ return l.getName() == module3link; });
+    if (linkit == links.end())
+        throw std::runtime_error("unknown link " + module3link);
+    link_type ll = *linkit;
+
+    ll.registerDOs(d1, d2);
+}
 
 int main(void)
 {
@@ -383,36 +479,25 @@ int main(void)
     Module1 Hello("Hello");
     Module2 World("World");
 
-    std::vector<module_type> modules;
     modules.push_back(Hello);
     modules.push_back(World);
 
-    // Lookup modules Hello and World
-    auto HelloMod = *std::find_if(modules.begin(), modules.end(), [](auto &m){ return m.getName() == "Hello"; });
-    auto WorldMod = *std::find_if(modules.begin(), modules.end(), [](auto &m){ return m.getName() == "World"; });
+    try
+    {
+        link("Hello.DO1", "World.DO2", "World.Link1");
+    }
+    catch (std::exception &ex)
+    {
+        std::cout << ex.what() << std::endl;
+        std::exit(1);
+    }
 
-    // Link together Hello.do1 and World.do2 via Word.Link1
-    auto HelloDOs = HelloMod.getDataObjects();
-    auto WorldDOs = WorldMod.getDataObjects();
-
-    auto HelloDO1 = *std::find_if(HelloDOs.begin(), HelloDOs.end(), [](auto &d){ return d.getName() == "DO1"; });
-    auto WorldDO2 = *std::find_if(WorldDOs.begin(), WorldDOs.end(), [](auto &d){ return d.getName() == "DO2"; });
-
-    auto HelloLinks = HelloMod.getLinks();
-    auto WorldLinks = WorldMod.getLinks();
-
-    auto Link1 = WorldLinks.find("Link1")->second;
-
-    Link1(HelloDO1, WorldDO2);
-
-    // HelloDO1.registerLink(WorldDO2, [Link1](auto &do1, auto &do2) { Link1(do1, do2); });
-    //
-    // HelloDO1.set([](int &i){ i = 10; });
-    // asm1.trigger(&HelloDO1); // Because of changed content of do1
+    Hello.do1.set([](int &i){ i = 10; });
+    asm1.trigger(&Hello.do1); // Because of changed content of do1
 
     // Simulate the job of ASM
     // Should notify all callbacks of all DOs linked to
-    //asm1.execute();
+    asm1.execute();
 
     exit(0);
 }
