@@ -24,14 +24,17 @@
 #include <boost/type_erasure/placeholder.hpp>
 #include <boost/type_erasure/builtin.hpp>
 #include <boost/type_erasure/typeid_of.hpp>
+#include <boost/any.hpp>
 
 BOOST_TYPE_ERASURE_MEMBER((has_getName), getName, 0)
+BOOST_TYPE_ERASURE_MEMBER((has_set), set, 1)
 
 // DOs support RTTI, have a member function getName() and are passed by reference
 using data_object_type = boost::type_erasure::any<
     boost::mpl::vector<
         boost::type_erasure::typeid_<>,
-        has_getName<const std::string&()>
+        has_getName<const std::string&()>,
+        has_set<void(const boost::any&)>
     >,
     boost::type_erasure::_self&
 >;
@@ -162,6 +165,13 @@ template <typename T> class DataObject
             // Exclusive lock for write access
             boost::lock_guard<mutex_t> lock(mutex_);
             visitor(_content);
+        }
+
+        void set(const boost::any &value)
+        {
+            // Exclusive lock for write access
+            boost::lock_guard<mutex_t> lock(mutex_);
+            _content = boost::any_cast<T>(value);
         }
 
         // Const member function to avoid that a non-const reference is passed to the visitor
@@ -417,6 +427,26 @@ void link(std::string do1, std::string do2, std::string l)
     ll.registerDOs(d1, d2);
 }
 
+void set(std::string do1, boost::any value)
+{
+    auto idx = do1.find('.');
+    std::string module1 = do1.substr(0, idx);
+    std::string module1do = do1.substr(idx + 1);
+
+    auto modit = std::find_if(modules.begin(), modules.end(), [module1](auto &m){ return m.getName() == module1; });
+    if (modit == modules.end())
+        throw std::runtime_error("unknown module " + module1);
+    module_type mod1 = *modit;
+
+    auto dataObjects = mod1.getDataObjects();
+    auto doit = std::find_if(dataObjects.begin(), dataObjects.end(), [module1do](auto &d){ return d.getName() == module1do; });
+    if (doit == dataObjects.end())
+        throw std::runtime_error("unknown data object " + module1do);
+    data_object_type d1 = *doit;
+
+    d1.set(value);
+}
+
 int main(void)
 {
     AsynchronousMachine asm1;
@@ -485,6 +515,7 @@ int main(void)
     try
     {
         link("Hello.DO1", "World.DO2", "World.Link1");
+        set("Hello.DO1", 10);
     }
     catch (std::exception &ex)
     {
@@ -492,7 +523,6 @@ int main(void)
         std::exit(1);
     }
 
-    Hello.do1.set([](int &i){ i = 10; });
     asm1.trigger(&Hello.do1); // Because of changed content of do1
 
     // Simulate the job of ASM
