@@ -25,6 +25,9 @@
 #include <boost/type_erasure/builtin.hpp>
 #include <boost/type_erasure/typeid_of.hpp>
 #include <boost/any.hpp>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/mem_fun.hpp>
 
 BOOST_TYPE_ERASURE_MEMBER((has_getName), getName, 0)
 BOOST_TYPE_ERASURE_MEMBER((has_set), set, 1)
@@ -54,13 +57,29 @@ BOOST_TYPE_ERASURE_MEMBER((has_getDataObjects), getDataObjects, 0)
 BOOST_TYPE_ERASURE_MEMBER((has_getLinks), getLinks, 0)
 
 // Modules have the member functions getName(), getDataObjects() and getLinks() and are passed by reference
-using module_type = boost::type_erasure::any<
+struct module_type : public boost::type_erasure::any<
     boost::mpl::vector<
         has_getName<const std::string&()>,
         has_getDataObjects<std::vector<data_object_type>()>,
         has_getLinks<std::vector<link_type>()>
     >,
     boost::type_erasure::_self&
+>
+{
+    using base = boost::type_erasure::any<boost::mpl::vector<has_getName<const std::string&()>, has_getDataObjects<std::vector<data_object_type>()>, has_getLinks<std::vector<link_type>()>>, boost::type_erasure::_self&>;
+    using base::base;
+    const std::string &getName() const { return base::getName(); }
+};
+
+using modules_type = boost::multi_index::multi_index_container<
+    module_type,
+    boost::multi_index::indexed_by<
+        boost::multi_index::hashed_unique<
+            boost::multi_index::const_mem_fun<
+                module_type, const std::string&, &module_type::getName
+            >
+        >
+    >
 >;
 
 // Concept of data object
@@ -375,7 +394,7 @@ class Module2
         }
 };
 
-std::vector<module_type> modules;
+modules_type modules;
 
 void link(std::string do1, std::string do2, std::string l)
 {
@@ -391,17 +410,17 @@ void link(std::string do1, std::string do2, std::string l)
     std::string module3 = l.substr(0, idx);
     std::string module3link = l.substr(idx + 1);
 
-    auto modit = std::find_if(modules.begin(), modules.end(), [module1](auto &m){ return m.getName() == module1; });
+    auto modit = modules.find(module1);
     if (modit == modules.end())
         throw std::runtime_error("unknown module " + module1);
     module_type mod1 = *modit;
 
-    modit = std::find_if(modules.begin(), modules.end(), [module2](auto &m){ return m.getName() == module2; });
+    modit = modules.find(module2);
     if (modit == modules.end())
         throw std::runtime_error("unknown module " + module2);
     module_type mod2 = *modit;
 
-    modit = std::find_if(modules.begin(), modules.end(), [module3](auto &m){ return m.getName() == module3; });
+    modit = modules.find(module3);
     if (modit == modules.end())
         throw std::runtime_error("unknown module " + module3);
     module_type mod3 = *modit;
@@ -433,7 +452,7 @@ void set(std::string do1, boost::any value)
     std::string module1 = do1.substr(0, idx);
     std::string module1do = do1.substr(idx + 1);
 
-    auto modit = std::find_if(modules.begin(), modules.end(), [module1](auto &m){ return m.getName() == module1; });
+    auto modit = modules.find(module1);
     if (modit == modules.end())
         throw std::runtime_error("unknown module " + module1);
     module_type mod1 = *modit;
@@ -509,8 +528,8 @@ int main(void)
     Module1 Hello("Hello");
     Module2 World("World");
 
-    modules.push_back(Hello);
-    modules.push_back(World);
+    modules.insert(Hello);
+    modules.insert(World);
 
     try
     {
