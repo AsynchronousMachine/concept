@@ -67,6 +67,24 @@ using link_type = boost::type_erasure::any<
         boost::type_erasure::copy_constructible<>,
         has_getName<const std::string&()>,
         has_registerDOs<void(data_object_type, data_object_type)>
+    >,
+    boost::type_erasure::_self&
+>;
+
+struct multiindex_link_type : public link_type
+{
+    using link_type::link_type;
+    const std::string &getName() const { return link_type::getName(); }
+};
+
+using links_type = boost::multi_index::multi_index_container<
+    multiindex_link_type,
+    boost::multi_index::indexed_by<
+        boost::multi_index::hashed_unique<
+            boost::multi_index::const_mem_fun<
+                multiindex_link_type, const std::string&, &multiindex_link_type::getName
+            >
+        >
     >
 >;
 
@@ -78,7 +96,7 @@ using module_type = boost::type_erasure::any<
     boost::mpl::vector<
         has_getName<const std::string&()>,
         has_getDataObjects<data_object_types()>,
-        has_getLinks<std::vector<link_type>()>
+        has_getLinks<links_type()>
     >,
     boost::type_erasure::_self&
 >;
@@ -353,9 +371,9 @@ class Module1
             return data_object_types{do1, do2};
         }
 
-        std::vector<link_type> getLinks()
+        links_type getLinks()
         {
-            return std::vector<link_type>{};
+            return links_type{};
         }
 };
 
@@ -370,6 +388,9 @@ class Module2
 
         DataObject<int> do3; // Access is fully thread safe
 
+        Link<DataObject<int>, DataObject<std::string>> link1;
+        Link<DataObject<int>, DataObject<int>> link2;
+
     public:
         DataObject<int> do1;
         DataObject<std::string> do2;
@@ -377,7 +398,9 @@ class Module2
         const std::string& getName() const { return _name; }
 
         // Only one constructor
-        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11), do1("DO1"), do2("DO2")
+        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11),
+            link1("Link1", [this](DataObject<int> &do1, DataObject<std::string> &do2) { Link1(do1, do2); }),
+            link2("Link2", [this](DataObject<int> &do1, DataObject<int> &do2) { Link2(do1, do2); }), do1("DO1"), do2("DO2")
         {
             do1.set([](int &i){ i = _state; });
             do2.set([this](std::string &s){ s = _cmd; });
@@ -403,12 +426,9 @@ class Module2
             return data_object_types{do1, do2, do3};
         }
 
-        std::vector<link_type> getLinks()
+        links_type getLinks()
         {
-            return std::vector<link_type>{
-                Link<DataObject<int>, DataObject<std::string>>("Link1", [this](DataObject<int> &do1, DataObject<std::string> &do2) { Link1(do1, do2); }),
-                Link<DataObject<int>, DataObject<int>>("Link2", [this](DataObject<int> &do1, DataObject<int> &do2) { Link2(do1, do2); })
-            };
+            return links_type{link1, link2};
         }
 };
 
@@ -456,7 +476,7 @@ void link(std::string do1, std::string do2, std::string l)
     data_object_type d2 = *doit;
 
     auto links = mod3.getLinks();
-    auto linkit = std::find_if(links.begin(), links.end(), [module3link](auto &l){ return l.getName() == module3link; });
+    auto linkit = links.find(module3link);
     if (linkit == links.end())
         throw std::runtime_error("unknown link " + module3link);
     link_type ll = *linkit;
