@@ -42,6 +42,23 @@ using data_object_type = boost::type_erasure::any<
     boost::type_erasure::_self&
 >;
 
+struct multiindex_data_object_type : public data_object_type
+{
+    using data_object_type::data_object_type;
+    const std::string &getName() const { return data_object_type::getName(); }
+};
+
+using data_object_types = boost::multi_index::multi_index_container<
+    multiindex_data_object_type,
+    boost::multi_index::indexed_by<
+        boost::multi_index::hashed_unique<
+            boost::multi_index::const_mem_fun<
+                multiindex_data_object_type, const std::string&, &multiindex_data_object_type::getName
+            >
+        >
+    >
+>;
+
 BOOST_TYPE_ERASURE_MEMBER((has_registerDOs), registerDOs, 2)
 
 // Links are copy-constructible and have the member functions getName() and registerDOs()
@@ -57,26 +74,27 @@ BOOST_TYPE_ERASURE_MEMBER((has_getDataObjects), getDataObjects, 0)
 BOOST_TYPE_ERASURE_MEMBER((has_getLinks), getLinks, 0)
 
 // Modules have the member functions getName(), getDataObjects() and getLinks() and are passed by reference
-struct module_type : public boost::type_erasure::any<
+using module_type = boost::type_erasure::any<
     boost::mpl::vector<
         has_getName<const std::string&()>,
-        has_getDataObjects<std::vector<data_object_type>()>,
+        has_getDataObjects<data_object_types()>,
         has_getLinks<std::vector<link_type>()>
     >,
     boost::type_erasure::_self&
->
+>;
+
+struct multiindex_module_type : public module_type
 {
-    using base = boost::type_erasure::any<boost::mpl::vector<has_getName<const std::string&()>, has_getDataObjects<std::vector<data_object_type>()>, has_getLinks<std::vector<link_type>()>>, boost::type_erasure::_self&>;
-    using base::base;
-    const std::string &getName() const { return base::getName(); }
+    using module_type::module_type;
+    const std::string &getName() const { return module_type::getName(); }
 };
 
 using modules_type = boost::multi_index::multi_index_container<
-    module_type,
+    multiindex_module_type,
     boost::multi_index::indexed_by<
         boost::multi_index::hashed_unique<
             boost::multi_index::const_mem_fun<
-                module_type, const std::string&, &module_type::getName
+                multiindex_module_type, const std::string&, &multiindex_module_type::getName
             >
         >
     >
@@ -330,9 +348,9 @@ class Module1
 
         const std::string& getName() const { return _name; }
 
-        std::vector<data_object_type> getDataObjects()
+        data_object_types getDataObjects()
         {
-            return std::vector<data_object_type>{do1, do2};
+            return data_object_types{do1, do2};
         }
 
         std::vector<link_type> getLinks()
@@ -380,9 +398,9 @@ class Module2
         {
         }
 
-        std::vector<data_object_type> getDataObjects()
+        data_object_types getDataObjects()
         {
-            return std::vector<data_object_type>{do1, do2};
+            return data_object_types{do1, do2, do3};
         }
 
         std::vector<link_type> getLinks()
@@ -426,13 +444,13 @@ void link(std::string do1, std::string do2, std::string l)
     module_type mod3 = *modit;
 
     auto dataObjects = mod1.getDataObjects();
-    auto doit = std::find_if(dataObjects.begin(), dataObjects.end(), [module1do](auto &d){ return d.getName() == module1do; });
+    auto doit = dataObjects.find(module1do);
     if (doit == dataObjects.end())
         throw std::runtime_error("unknown data object " + module1do);
     data_object_type d1 = *doit;
 
     dataObjects = mod2.getDataObjects();
-    doit = std::find_if(dataObjects.begin(), dataObjects.end(), [module2do](auto &d){ return d.getName() == module2do; });
+    doit = dataObjects.find(module2do);
     if (doit == dataObjects.end())
         throw std::runtime_error("unknown data object " + module2do);
     data_object_type d2 = *doit;
@@ -458,7 +476,7 @@ void set(std::string do1, boost::any value)
     module_type mod1 = *modit;
 
     auto dataObjects = mod1.getDataObjects();
-    auto doit = std::find_if(dataObjects.begin(), dataObjects.end(), [module1do](auto &d){ return d.getName() == module1do; });
+    auto doit = dataObjects.find(module1do);
     if (doit == dataObjects.end())
         throw std::runtime_error("unknown data object " + module1do);
     data_object_type d1 = *doit;
