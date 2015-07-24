@@ -29,8 +29,8 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 
-BOOST_TYPE_ERASURE_MEMBER((has_getName), getName, 0)
-BOOST_TYPE_ERASURE_MEMBER((has_set), set, 1)
+BOOST_TYPE_ERASURE_MEMBER((has_getName), getName)
+BOOST_TYPE_ERASURE_MEMBER((has_set), set)
 
 // DOs support RTTI, have the member functions getName() and set() and are passed by reference
 using data_object_type = boost::type_erasure::any<
@@ -59,7 +59,7 @@ using data_object_types = boost::multi_index::multi_index_container<
     >
 >;
 
-BOOST_TYPE_ERASURE_MEMBER((has_registerDOs), registerDOs, 2)
+BOOST_TYPE_ERASURE_MEMBER((has_registerDOs), registerDOs)
 
 // Links have the member functions getName() and registerDOs() and are passed by reference
 using link_type = boost::type_erasure::any<
@@ -87,8 +87,8 @@ using links_type = boost::multi_index::multi_index_container<
     >
 >;
 
-BOOST_TYPE_ERASURE_MEMBER((has_getDataObjects), getDataObjects, 0)
-BOOST_TYPE_ERASURE_MEMBER((has_getLinks), getLinks, 0)
+BOOST_TYPE_ERASURE_MEMBER((has_getDataObjects), getDataObjects)
+BOOST_TYPE_ERASURE_MEMBER((has_getLinks), getLinks)
 
 // Modules have the member functions getName(), getDataObjects() and getLinks() and are passed by reference
 using module_type = boost::type_erasure::any<
