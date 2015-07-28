@@ -199,8 +199,8 @@ template <typename T> class DataObject
         }
 
     public:
-        DataObject(const std::string name) : _name(name) {}
-        DataObject(const std::string name, T content) : _name(name), _content(content) {}
+        DataObject(std::string name) : _name(std::move(name)) {}
+        DataObject(std::string name, T content) : _name(std::move(name)), _content(std::move(content)) {}
 
         // Non-copyable
         DataObject(const DataObject&) = delete;
@@ -265,7 +265,7 @@ class Link
         using callback_type = std::function<void(DO1Type&, DO2Type&)>;
 
     private:
-        std::string _name;
+        const std::string _name;
         callback_type _callback;
 
     public:
@@ -359,7 +359,7 @@ class Module1
 
     public:
         // Only one constructor
-        Module1(const std::string name) : _name(name), do1("DO1"), do2("DO2") {} // You have to choose a name
+        Module1(std::string name) : _name(std::move(name)), do1("DO1"), do2("DO2") {} // You have to choose a name
         DataObject<int> do1;
         DataObject<std::string> do2;
 
@@ -397,7 +397,7 @@ class Module2
         const std::string& getName() const { return _name; }
 
         // Only one constructor
-        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11),
+        Module2(std::string name) : _name(std::move(name)), _cmd("Init"), do3("DO3", 11),
             link1("Link1", [this](DataObject<int> &do1, DataObject<std::string> &do2) { Link1(do1, do2); }),
             link2("Link2", [this](DataObject<int> &do1, DataObject<int> &do2) { Link2(do1, do2); }), do1("DO1"), do2("DO2")
         {
