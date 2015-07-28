@@ -7,6 +7,7 @@
 #include <forward_list>
 #include <queue>
 #include <map>
+#include <unordered_map>
 #include <type_traits>
 #include <algorithm>
 #include <functional>
@@ -31,13 +32,15 @@
 
 BOOST_TYPE_ERASURE_MEMBER((has_getName), getName)
 BOOST_TYPE_ERASURE_MEMBER((has_set), set)
+BOOST_TYPE_ERASURE_MEMBER((has_unregisterLink), unregisterLink)
 
 // DOs support RTTI, have the member functions getName() and set() and are passed by reference
 using data_object_type = boost::type_erasure::any<
     boost::mpl::vector<
         boost::type_erasure::typeid_<>,
         has_getName<const std::string&()>,
-        has_set<void(const boost::any&)>
+        has_set<void(const boost::any&)>,
+        has_unregisterLink<void(const std::string&)>
     >,
     boost::type_erasure::_self&
 >;
@@ -65,7 +68,7 @@ BOOST_TYPE_ERASURE_MEMBER((has_registerDOs), registerDOs)
 using link_type = boost::type_erasure::any<
     boost::mpl::vector<
         has_getName<const std::string&()>,
-        has_registerDOs<void(data_object_type, data_object_type)>
+        has_registerDOs<void(std::string, data_object_type, data_object_type)>
     >,
     boost::type_erasure::_self&
 >;
@@ -188,14 +191,16 @@ template <typename T> class DataObject
         // Mutable mutex_ member as it needs to be modified in the const member function get()
         mutable mutex_t mutex_;
 
-        // This should be a at least a simple list to hold all data objects linked to that
-        // A mutex for exlusive access will properly also necessary
-        std::forward_list<std::function<void(DataObject<T>&)>> linkedDOs;
+        std::unordered_map<std::string, std::function<void(DataObject<T>&)>> linkedDOs;
+
+        mutex_t linkedDOs_mutex_;
 
         // Only called by reactor
         void notify_all()
         {
-            std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](std::function<void(DataObject<T>&)> f){ f(*this); });
+            // TODO: Do we need a recursive mutex?
+            boost::shared_lock_guard<mutex_t> lock(linkedDOs_mutex_);
+            std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](auto p){ p.second(*this); });
         }
 
     public:
@@ -243,19 +248,20 @@ template <typename T> class DataObject
 
         // Link a DO to that DO
         template <typename U, typename Callback>
-        void registerLink(DataObject<U> &d2, Callback cb)
+        void registerLink(std::string name, DataObject<U> &d2, Callback cb)
         {
-            linkedDOs.push_front([cb, &d2](DataObject<T>& d1){ cb(d1, d2); });
+            boost::lock_guard<mutex_t> lock(linkedDOs_mutex_);
+            linkedDOs.insert(std::make_pair(std::move(name), [cb, &d2](DataObject<T>& d1){ cb(d1, d2); }));
             std::cout << "Link " << d2.getName() << " to " << getName() << std::endl;
         }
 
-        // Remove a link to a DO by pointer to DO
-        template <typename U>
-        void unregisterLink(DataObject<U>* ptr) { /*todo*/ }
-
         // Remove a link to a DO by name
         // Get out
-        void unregisterLink(std::string name) { /*todo*/ }
+        void unregisterLink(const std::string &name)
+        {
+            boost::lock_guard<mutex_t> lock(linkedDOs_mutex_);
+            linkedDOs.erase(name);
+        }
 };
 
 template <class DO1Type, class DO2Type>
@@ -273,11 +279,11 @@ class Link
 
         const std::string& getName() const { return _name; }
 
-        void registerDOs(data_object_type do1, data_object_type do2)
+        void registerDOs(std::string name, data_object_type do1, data_object_type do2)
         {
             DO1Type &d1 = boost::type_erasure::any_cast<DO1Type&>(do1); // throws boost::bad_any_cast if casting fails
             DO2Type &d2 = boost::type_erasure::any_cast<DO2Type&>(do2); // throws boost::bad_any_cast if casting fails
-            d1.registerLink(d2, _callback);
+            d1.registerLink(std::move(name), d2, _callback);
         }
 };
 
@@ -433,7 +439,7 @@ class Module2
 
 modules_type modules;
 
-void link(std::string do1, std::string do2, std::string l)
+void link(std::string name, std::string do1, std::string do2, std::string l)
 {
     auto idx = do1.find('.');
     std::string module1 = do1.substr(0, idx);
@@ -480,7 +486,27 @@ void link(std::string do1, std::string do2, std::string l)
         throw std::runtime_error("unknown link " + module3link);
     link_type ll = *linkit;
 
-    ll.registerDOs(d1, d2);
+    ll.registerDOs(name, d1, d2);
+}
+
+void unlink(const std::string &name, std::string do1)
+{
+    auto idx = do1.find('.');
+    std::string module1 = do1.substr(0, idx);
+    std::string module1do = do1.substr(idx + 1);
+
+    auto modit = modules.find(module1);
+    if (modit == modules.end())
+        throw std::runtime_error("unknown module " + module1);
+    module_type mod1 = *modit;
+
+    auto dataObjects = mod1.getDataObjects();
+    auto doit = dataObjects.find(module1do);
+    if (doit == dataObjects.end())
+        throw std::runtime_error("unknown data object " + module1do);
+    data_object_type d1 = *doit;
+
+    d1.unregisterLink(name);
 }
 
 void set(std::string do1, boost::any value)
@@ -515,10 +541,10 @@ int main(void)
     std::cout << do2.getName() << std::endl;
 
     // Link together: do1<int> -------> do2<double>
-    do1.registerLink(do2, my_cb);
+    do1.registerLink("abc", do2, my_cb);
 
     // Link together: do1<int> -------> do3<string>
-    do1.registerLink(do3, my_cb2);
+    do1.registerLink("123", do3, my_cb2);
 
     // Link together: do1<double> -------> do3<string>
     // Will not compile due to wrong data type of callback parameter
@@ -570,8 +596,9 @@ int main(void)
 
     try
     {
-        link("Hello.DO1", "World.DO2", "World.Link1");
+        link("Speed", "Hello.DO1", "World.DO2", "World.Link1");
         set("Hello.DO1", 10);
+        unlink("Speed", "Hello.DO1");
     }
     catch (std::exception &ex)
     {
