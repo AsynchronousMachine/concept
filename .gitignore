@@ -1,3 +1,50 @@
 /bin
 /obj
 concept.*
+
+### Eclipse ###
+*.bak
+*.pydevproject
+*.swp
+*.tmp
+*~.nib
+.classpath
+.cproject
+.externalToolBuilders/
+.gradle
+.loadpath
+.metadata
+.project
+.settings/
+.texlipse
+Debug
+Local_Debug/
+Local_Release/
+Release
+bin/
+local.properties
+tmp/
+
+### CMake ###
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+### C++ stuff ###
+*.map
+*.so
+*.o
+*.a
+
+### Kate ###
+.*.kate-swp
+.swp.*
+
+### general Linux-related files ###
+*~
+.directory
+.Trash-*
+tags
