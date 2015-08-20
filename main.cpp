@@ -75,6 +75,7 @@ class AsynchronousMachine
         std::queue<std::function<void()>> triggeredDOs;
 
     public:
+        //TODO: please, explain the difference between trigger() and execute()? which must I call from outside?
         // Announce the change of content to the reactor
         template <class T>
         void trigger(const SharedDataObject<T> &data_object)
@@ -109,16 +110,20 @@ class AsynchronousMachine
 
 // Template class for arbitrary  content
 template <typename T> class DataObject : public std::enable_shared_from_this<DataObject<T>>
+
+
 {
     friend class AsynchronousMachine;
 
     private:
+        // TODO: ??? extend documentation!
         template <class M, class Enable = void>
         struct mutex
         {
             using type = boost::shared_mutex;
         };
 
+        // TODO: ??? extend documentation!
         template <class M>
         struct mutex<M, std::enable_if_t<std::is_integral<M>::value>>
         {
@@ -144,24 +149,29 @@ template <typename T> class DataObject : public std::enable_shared_from_this<Dat
         // Only called by reactor
         void notify_all()
         {
+    // TODO:     should this be a reference? If not, please explain why, otherwise there will be errors --v
             std::for_each(linkedDOs.begin(), linkedDOs.end(), [this](std::function<void(SharedDataObject<T>)> f){ f(this->shared_from_this()); });
         }
 
     public:
+        // TODO: could this be const ref?
         explicit DataObject(std::string name) : _name(std::move(name)) {}
         DataObject(std::string name, T content) : _name(std::move(name)), _content(std::move(content)) {}
 
         // Non-copyable
+        // TODO: please explain, why? Otherwise, someone will "know better"
         DataObject(const DataObject&) = delete;
         DataObject &operator=(const DataObject&) = delete;
 
         // Non-movable
+        // TODO: please explain, why? Otherwise, someone will "know better"
         DataObject(DataObject&&) = delete;
         DataObject &operator=(DataObject&&) = delete;
 
         // Necessary if someone want to inherit from that
         virtual ~DataObject() = default;
 
+        // TODO: Do I need this? If so, why?
         template <class Visitor>
         void set(Visitor visitor)
         {
