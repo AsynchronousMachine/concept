@@ -18,7 +18,10 @@
 
 // Concept of reactor
 //
-// This is not shown here
+// This is not yet shown here
+
+// Notifier type for the LINKS
+using notifier = std::function<void()>;
 
 // Template class for arbitrary  content
 template <typename T> class DataObject
@@ -29,13 +32,19 @@ template <typename T> class DataObject
         template <class M, class Enable = void>
         struct mutex
         {
-            using type = boost::shared_mutex;
+            using type = void; //Invalid type for mutex
         };
 
         template <class M>
         struct mutex<M, std::enable_if_t<std::is_integral<M>::value>>
         {
             using type = boost::null_mutex;
+        };
+
+        template <class M>
+        struct mutex<M, std::enable_if_t<!std::is_integral<M>::value>>
+        {
+            using type = boost::shared_mutex;
         };
 
         // Make it easier to name it
