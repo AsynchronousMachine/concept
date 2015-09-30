@@ -247,7 +247,7 @@ class AsynchronousMachine
             }
         };
 
-        boost::fusion::tuple<threadpool<LOW>, threadpool<MIDDLE>, threadpool<HIGH>> threadpools;
+        boost::fusion::tuple<threadpool<HIGH>, threadpool<MIDDLE>, threadpool<LOW>> threadpools;
 
     public:
         explicit AsynchronousMachine(unsigned threads = 1)
