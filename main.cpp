@@ -16,6 +16,8 @@
 #include <boost/thread/null_mutex.hpp>
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
+#include <boost/fusion/tuple.hpp>
+#include <boost/fusion/algorithm.hpp>
 
 // Concept of data object
 //
@@ -161,97 +163,108 @@ template <typename T> class DataObject
 class AsynchronousMachine
 {
     protected:
-        boost::thread_group threadpool;
-        boost::condition_variable_any cond[MAX_PRIO];
-
-        // Protect the list of triggered DOs
-        boost::mutex triggeredDOs_mutex[MAX_PRIO];
-        // This should be a at least a queue to hold all data objects which content has been changed or rather triggered
-        std::queue<std::function<void()>> triggeredDOs[MAX_PRIO];
-
-        void thread()
+        template <PRIORITIES Prio>
+        struct threadpool
         {
-            boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex[LOW]);
-            for (;;)
+            boost::thread_group threadgroup;
+            boost::condition_variable_any cond;
+            boost::mutex triggeredDOs_mutex;
+            std::queue<std::function<void()>> triggeredDOs;
+
+            threadpool() = default;
+            threadpool(const threadpool&) = delete;
+
+            void init(unsigned threads)
             {
-                cond[LOW].wait(triggeredDOs_mutex[LOW]);
-                execute(LOW);
+                unsigned cores = boost::thread::hardware_concurrency();
+                if (threads == 0 || threads > cores)
+                    threads = cores;
+                for (unsigned i = 0; i < threads; ++i)
+                    threadgroup.create_thread(std::bind(&threadpool::thread, this));
             }
-        }
+
+            template <class Visitor>
+            void init(unsigned threads, Visitor &&visitor)
+            {
+                unsigned cores = boost::thread::hardware_concurrency();
+                if (threads == 0 || threads > cores)
+                    threads = cores;
+                for (unsigned i = 0; i < threads; ++i)
+                {
+                    boost::thread *t = threadgroup.create_thread(std::bind(&threadpool::thread, this));
+                    visitor(*t);
+                }
+            }
+
+            ~threadpool()
+            {
+                threadgroup.interrupt_all();
+                threadgroup.join_all();
+            }
+
+            template <class T>
+            void trigger(DataObject<T> *ptr)
+            {
+                std::cout << "Trigger " << ptr->getName() << std::endl;
+                boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
+                if (!ptr->linkedDOs[Prio].empty())
+                {
+                    triggeredDOs.push([this, ptr](){ ptr->notify_all(Prio); });
+                    cond.notify_all();
+                }
+            }
+
+            void thread()
+            {
+                boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
+                for (;;)
+                {
+                    cond.wait(triggeredDOs_mutex);
+                    execute();
+                }
+            }
+
+            void execute()
+            {
+                bool empty = false;
+                while (!empty)
+                {
+                    std::function<void()> f;
+                    {
+                        if (!triggeredDOs.empty())
+                        {
+                            f = triggeredDOs.front();
+                            triggeredDOs.pop();
+                        }
+                        else
+                        {
+                            empty = true;
+                            continue;
+                        }
+                    }
+                    f();
+                }
+            }
+        };
+
+        boost::fusion::tuple<threadpool<LOW>, threadpool<MIDDLE>, threadpool<HIGH>> threadpools;
 
     public:
         explicit AsynchronousMachine(unsigned threads = 1)
         {
-            unsigned cores = boost::thread::hardware_concurrency();
-            if (threads == 0 || threads > cores)
-                threads = cores;
-            for (unsigned i = 0; i < threads; ++i)
-                threadpool.create_thread(std::bind(&AsynchronousMachine::thread, this));
+            boost::fusion::for_each(threadpools, [threads](auto &threadpool){ threadpool.init(threads); });
         }
 
         template <class Visitor>
         AsynchronousMachine(unsigned threads, Visitor &&visitor)
         {
-            unsigned cores = boost::thread::hardware_concurrency();
-            if (threads == 0 || threads > cores)
-                threads = cores;
-            for (unsigned i = 0; i < threads; ++i)
-            {
-                boost::thread *t = threadpool.create_thread(std::bind(&AsynchronousMachine::thread, this));
-                visitor(*t);
-            }
+            boost::fusion::for_each(threadpools, [threads, visitor](auto &threadpool){ threadpool.init(threads, visitor); });
         }
 
-        void shutdown()
-        {
-            threadpool.interrupt_all();
-            threadpool.join_all();
-        }
-
-        // Announce the change of content to the reactor
         template <class T>
-        void trigger(DataObject<T>* ptr)
+        void trigger(DataObject<T> *ptr)
         {
-            std::cout << "Trigger " << ptr->getName() << std::endl;
-
-            for(int prio = LOW; prio < MAX_PRIO; ++prio)
-            {
-                boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex[prio]);
-                if(!ptr->linkedDOs[prio].empty())
-                {
-                    triggeredDOs[prio].push([prio, ptr](){ ptr->notify_all(prio); });
-                }
-            }
-            cond[LOW].notify_all();
-        }
-
-    protected:
-        // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
-        // These method is typically called with in a thread related with priority "prio"
-        // This thread is waiting on a synchronisation element like a counting semaphore
-        void execute(PRIORITIES prio = LOW)
-        {
-            bool empty = false;
-
-            while(!empty)
-            {
-                std::function<void()> f;
-                {
-                    //boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex[prio]);
-                    if(!triggeredDOs[prio].empty())
-                    {
-                        f = triggeredDOs[prio].front();
-                        triggeredDOs[prio].pop();
-                    }
-                    else
-                    {
-                        empty = true;
-                        continue;
-                    }
-
-                }
-                f();
-            }
+            boost::fusion::for_each(threadpools, [ptr](auto &threadpool){ threadpool.trigger(ptr); });
         }
 };
 
@@ -338,11 +351,15 @@ class Module2
 
 int main(void)
 {
-    AsynchronousMachine asm1;
-
     DataObject<int> do1("Hello", 9);
     DataObject<double> do2("World");
     DataObject<std::string> do3("World2");
+
+    // A module should have a constant name to identify it
+    Module1 Hello("Hello");
+    Module2 World("World");
+
+    AsynchronousMachine asm1;
 
     std::cout << do1.getName() << std::endl;
     std::cout << do2.getName() << std::endl;
@@ -394,10 +411,6 @@ int main(void)
 
     std::cout << "++++++++++++++++" << std::endl;
 
-    // A module should have a constant name to identify it
-    Module1 Hello("Hello");
-    Module2 World("World");
-
     // Link together
     Hello.do1.registerLink(World.do2, [&World](DataObject<int> &do1, DataObject<std::string> &do2){ World.Link1(do1, do2); });
 
@@ -407,8 +420,6 @@ int main(void)
     // Simulate the job of ASM, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs linked to
     //asm1.execute();
-
-    asm1.shutdown();
 
     exit(0);
 }
