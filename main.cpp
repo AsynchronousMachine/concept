@@ -218,32 +218,13 @@ class AsynchronousMachine
             {
                 for (;;)
                 {
-                    {
-                        boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-                        cond.wait(triggeredDOs_mutex);
-                    }
-                    execute();
-                }
-            }
-
-            void execute()
-            {
-                bool empty = false;
-                while (!empty)
-                {
                     std::function<void()> f;
                     {
                         boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-                        if (!triggeredDOs.empty())
-                        {
-                            f = triggeredDOs.front();
-                            triggeredDOs.pop();
-                        }
-                        else
-                        {
-                            empty = true;
-                            continue;
-                        }
+                        while (triggeredDOs.empty())
+                            cond.wait(triggeredDOs_mutex);
+                        f = triggeredDOs.front();
+                        triggeredDOs.pop();
                     }
                     f();
                 }
