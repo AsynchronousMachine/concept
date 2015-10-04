@@ -99,10 +99,16 @@ template <typename T> class DataObject
         std::forward_list<std::function<void(DataObject<T>&)>> linkedDOs[MAX_PRIO];
 
         // Only called by reactor
-        void notify_all(int prio)
+        std::vector<std::function<void()>> get_callbacks(int prio)
         {
+            std::vector<std::function<void()>> callbacks;
             boost::lock_guard<boost::mutex> lock(linkedDOs_mutex[prio]);
-            std::for_each(linkedDOs[prio].begin(), linkedDOs[prio].end(), [this](std::function<void(DataObject<T>&)> f){ f(*this); });
+            for (auto it = linkedDOs[prio].begin(); it != linkedDOs[prio].end(); ++it)
+            {
+                auto callback = *it;
+                callbacks.push_back([this, callback](){ callback(*this); });
+            }
+            return callbacks;
         }
 
     public:
@@ -209,7 +215,9 @@ class AsynchronousMachine
                 boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
                 if (!ptr->linkedDOs[Prio].empty())
                 {
-                    triggeredDOs.push([this, ptr](){ ptr->notify_all(Prio); });
+                    auto callbacks = ptr->get_callbacks(Prio);
+                    for (auto &callback : callbacks)
+                        triggeredDOs.push(callback);
                     cond.notify_all();
                 }
             }
