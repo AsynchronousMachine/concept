@@ -1,6 +1,8 @@
 //g++ -Wall -fexceptions -g -std=c++14 -I/opt/local/include -c /media/rp/EXT4_40GB/codeblocks/BorisSchaeling/main2.cpp -o obj/Debug/main2.o
 //g++ -L/opt/local/lib -o bin/Debug/BorisSchaeling obj/Debug/main2.o   /opt/local/lib/libboost_system.so /opt/local/lib/libboost_thread.so
 
+#include <pthread.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -10,6 +12,7 @@
 #include <type_traits>
 #include <algorithm>
 #include <functional>
+#include <chrono>
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/shared_mutex.hpp>
@@ -183,14 +186,17 @@ class AsynchronousMachine
             void init(unsigned threads)
             {
                 unsigned cores = boost::thread::hardware_concurrency();
+
+                std::cout << "Found " << cores << " cores" << std::endl;
+
                 if (threads == 0 || threads > cores)
-                    threads = cores;
+                    threads = cores;boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
                 for (unsigned i = 0; i < threads; ++i)
                     threadgroup.create_thread(std::bind(&threadpool::thread, this));
             }
 
             template <class Visitor>
-            void init(unsigned threads, Visitor &&visitor)
+            void init(unsigned threads, Visitor visitor)
             {
                 unsigned cores = boost::thread::hardware_concurrency();
                 if (threads == 0 || threads > cores)
@@ -198,7 +204,7 @@ class AsynchronousMachine
                 for (unsigned i = 0; i < threads; ++i)
                 {
                     boost::thread *t = threadgroup.create_thread(std::bind(&threadpool::thread, this));
-                    visitor(*t);
+                    visitor(t);
                 }
             }
 
@@ -212,14 +218,24 @@ class AsynchronousMachine
             void trigger(DataObject<T> *ptr)
             {
                 std::cout << "Trigger " << ptr->getName() << std::endl;
-                boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
-                if (!ptr->linkedDOs[Prio].empty())
+
+                bool notify = false;
                 {
-                    auto callbacks = ptr->get_callbacks(Prio);
-                    for (auto &callback : callbacks)
-                        triggeredDOs.push(callback);
-                    cond.notify_all();
+                    boost::lock_guard<boost::mutex> lock(triggeredDOs_mutex);
+                    // I am a friend of DO so everything take in place
+                    if (!ptr->linkedDOs[Prio].empty())
+                    {
+                        boost::lock_guard<boost::mutex> lock(ptr->linkedDOs_mutex[Prio]);
+
+                        for(auto &callback : ptr->linkedDOs[Prio])
+                            triggeredDOs.push([callback, ptr](){ callback(*ptr); });
+
+                        notify = true;
+                    }
                 }
+                // Call notify_all() without locked mutex
+                if(notify)
+                    cond.notify_all();
             }
 
             void thread()
@@ -248,7 +264,7 @@ class AsynchronousMachine
         }
 
         template <class Visitor>
-        AsynchronousMachine(unsigned threads, Visitor &&visitor)
+        AsynchronousMachine(unsigned threads, Visitor visitor)
         {
             boost::fusion::for_each(threadpools, [threads, visitor](auto &threadpool){ threadpool.init(threads, visitor); });
         }
@@ -321,25 +337,116 @@ class Module2
     public:
         DataObject<int> do1;
         DataObject<std::string> do2;
+        DataObject<double> do4;
 
         // Only one constructor
-        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11), do1("DO1"), do2("DO2")
+        Module2(const std::string name) : _name(name), _cmd("Init"), do3("DO3", 11), do1("DO1"), do2("DO2"), do4("DO4")
         {
             do1.set([](int &i){ i = _state; });
             do2.set([this](std::string &s){ s = _cmd; });
+            do4.set([](double &i){ i = 2.0; });
         }
 
         void Link1(DataObject<int> &do1, DataObject<std::string> &do2)
         {
-            std::cout << "My DO.name: " << do2.getName() << std::endl;
-            std::cout << "Got DO.name: " << do1.getName() << std::endl;
-            do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
-            std::cout << "State: " << _state << std::endl;
-            do2.get([](std::string s){ std::cout << "Internal DO2.value: " << s << std::endl; });
+            boost::this_thread::sleep_for(boost::chrono::seconds(3));
+
+            std::cout << "/My DO.name: " << do2.getName() << std::endl;
+            std::cout << "/Got DO.name: " << do1.getName() << std::endl;
+            do1.get([](int i){ std::cout << "/Got DO.value: " << i << std::endl; });
+            std::cout << "/State: " << _state << std::endl;
+            do2.get([](std::string s){ std::cout << "/Internal DO2.value: " << s << std::endl; });
             do3.set([](int &i){ ++i; });
-            do3.get([](int i){ std::cout << "Internal DO3.value: " << i << std::endl; });
+            do3.get([](int i){ std::cout << "/Internal DO3.value: " << i << std::endl; });
+        }
+
+        void Link2(DataObject<int> &do1, DataObject<double> &do2)
+        {
+            boost::this_thread::sleep_for(boost::chrono::seconds(3));
+
+            std::cout << "//My DO.name: " << do2.getName() << std::endl;
+            std::cout << "//Got DO.name: " << do1.getName() << std::endl;
+            do1.get([](int i){ std::cout << "//Got DO.value: " << i << std::endl; });
+            std::cout << "/State: " << _state << std::endl;
+            do2.get([](double d){ std::cout << "//Internal DO2.value: " << d << std::endl; });
+            do3.set([](int &i){ ++i; });
+            do3.get([](int i){ std::cout << "//Internal DO3.value: " << i << std::endl; });
         }
 };
+
+#define handle_error_en(en, msg) do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+
+void display_pthread_attr(pthread_attr_t *attr, char *prefix)
+{
+   int s, i;
+   size_t v;
+   void *stkaddr;
+   struct sched_param sp;
+
+   s = pthread_attr_getdetachstate(attr, &i);
+   if (s != 0)
+       handle_error_en(s, "pthread_attr_getdetachstate");
+   printf("%sDetach state        = %s\n", prefix,
+           (i == PTHREAD_CREATE_DETACHED) ? "PTHREAD_CREATE_DETACHED" :
+           (i == PTHREAD_CREATE_JOINABLE) ? "PTHREAD_CREATE_JOINABLE" :
+           "???");
+
+   s = pthread_attr_getscope(attr, &i);
+   if (s != 0)
+       handle_error_en(s, "pthread_attr_getscope");
+   printf("%sScope               = %s\n", prefix,
+           (i == PTHREAD_SCOPE_SYSTEM)  ? "PTHREAD_SCOPE_SYSTEM" :
+           (i == PTHREAD_SCOPE_PROCESS) ? "PTHREAD_SCOPE_PROCESS" :
+           "???");
+
+   s = pthread_attr_getinheritsched(attr, &i);
+   if (s != 0)
+       handle_error_en(s, "pthread_attr_getinheritsched");
+   printf("%sInherit scheduler   = %s\n", prefix,
+           (i == PTHREAD_INHERIT_SCHED)  ? "PTHREAD_INHERIT_SCHED" :
+           (i == PTHREAD_EXPLICIT_SCHED) ? "PTHREAD_EXPLICIT_SCHED" :
+           "???");
+
+   s = pthread_attr_getschedpolicy(attr, &i);
+   if (s != 0)
+       handle_error_en(s, "pthread_attr_getschedpolicy");
+   printf("%sScheduling policy   = %s\n", prefix,
+           (i == SCHED_OTHER) ? "SCHED_OTHER" :
+           (i == SCHED_FIFO)  ? "SCHED_FIFO" :
+           (i == SCHED_RR)    ? "SCHED_RR" :
+           "???");
+
+   s = pthread_attr_getschedparam(attr, &sp);
+   if (s != 0)
+       handle_error_en(s, "pthread_attr_getschedparam");
+   printf("%sScheduling priority = %d\n", prefix, sp.sched_priority);
+
+   s = pthread_attr_getguardsize(attr, &v);
+   if (s != 0)
+       handle_error_en(s, "pthread_attr_getguardsize");
+   printf("%sGuard size          = %d bytes\n", prefix, v);
+
+   s = pthread_attr_getstack(attr, &stkaddr, &v);
+   if (s != 0)
+       handle_error_en(s, "pthread_attr_getstack");
+   printf("%sStack address       = %p\n", prefix, stkaddr);
+   printf("%sStack size          = 0x%zx bytes\n", prefix, v);
+}
+
+void get_threadinfo(boost::thread *t)
+{
+    char *prefix = "\t";
+    pthread_attr_t attr;
+
+    boost::thread::native_handle_type hnd = t->native_handle();
+
+    if(pthread_getattr_np(hnd, &attr))
+        return;
+
+    display_pthread_attr(&attr, prefix);
+
+    pthread_attr_destroy(&attr);
+}
 
 int main(void)
 {
@@ -351,7 +458,7 @@ int main(void)
     Module1 Hello("Hello");
     Module2 World("World");
 
-    AsynchronousMachine asm1;
+    AsynchronousMachine asm1(2, get_threadinfo);
 
     std::cout << do1.getName() << std::endl;
     std::cout << do2.getName() << std::endl;
@@ -405,6 +512,7 @@ int main(void)
 
     // Link together
     Hello.do1.registerLink(World.do2, [&World](DataObject<int> &do1, DataObject<std::string> &do2){ World.Link1(do1, do2); });
+    Hello.do1.registerLink(World.do4, [&World](DataObject<int> &do1, DataObject<double> &do2){ World.Link2(do1, do2); }, HIGH);
 
     Hello.do1.set([](int &i){ i = 10; });
     asm1.trigger(&Hello.do1); // Because of changed content of do1
@@ -412,6 +520,8 @@ int main(void)
     // Simulate the job of ASM, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs linked to
     //asm1.execute();
+
+    boost::this_thread::sleep_for(boost::chrono::seconds(10));
 
     exit(0);
 }
