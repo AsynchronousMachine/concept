@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <functional>
 #include <chrono>
+#include <cstdio>
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/shared_mutex.hpp>
