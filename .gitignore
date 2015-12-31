@@ -1,3 +1,6 @@
-/bin
-/obj
-concept.*
+# Generated files
+bin/
+obj/
+
+# Codeblocks
+*.layout
