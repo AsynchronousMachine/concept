@@ -1,6 +1,3 @@
-//g++ -Wall -fexceptions -Wfatal-errors -g -std=c++14 -I/opt/local/include -c main.cpp -o obj/Debug/main.o
-//g++ -L/opt/local/lib -o bin/Debug/DataObject obj/Debug/main.o /opt/local/lib/libboost_system.so /opt/local/lib/libboost_timer.so /opt/local/lib/libboost_thread.so
-
 #include "dataobject.hpp"
 
 // Test concept of data object
@@ -73,14 +70,16 @@ int main(void)
     do1.get(cbi);
     std::cout << do1.get(fir) << '\n';
 
-    // Usually now is time to announce the change of this DO to the reactor
+    // Usually now is time to announce the change of this DO
+    do1.notify_all();
 
     // Complex DO
     DataObject<std::vector<int>> do4("Vector");
     do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
     do4.get([](const std::vector<int> &v){ std::cout << v[0] << ',' << v[1] << '\n'; });
 
-    // Usually now is time to announce the change of this DO to the reactor
+    // Usually now is time to announce the change of this DO
+    do4.notify_all();
 
     // More complex DO
     int tmp = 0;
@@ -97,7 +96,8 @@ int main(void)
     tmp = do5.get([](const std::map<std::string, int> &v){ return (v.at("1") + 2); });
     std::cout << tmp << '\n';
 
-    // Usually now is time to announce the change of this DO to the reactor
+    // Usually now is time to announce the change of this DO
+    do5.notify_all();
 
     DataObject<MySpecial> do6("MySpecial", {1, "step1"});
     do6.get([](const MySpecial &m){std::cout << m.i << " has value " << m.s << '\n';});
@@ -109,7 +109,8 @@ int main(void)
     ms = do6.get([](const MySpecial &m){return m;});
     std::cout << ms.i << " has value " << ms.s << '\n';
 
-    // Usually now is time to announce the change of this DO to the reactor
+    // Usually now is time to announce the change of this DO
+    do6.notify_all();
 
     exit(0);
 }
