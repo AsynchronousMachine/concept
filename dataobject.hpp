@@ -16,17 +16,11 @@
 //        |
 //        +--LINK3-------> DO3    Also DO1 is linked to DO3
 
-// Concept of reactor
-//
-// This is not yet shown here
-
-// Notifier type for the LINKS
-using notifier = std::function<void()>;
-
 // Template class for arbitrary  content
-template <typename T> class DataObject
+template <typename D>
+class DataObject
 {
-    friend class AsynchronousMachine; // This enables the reactor to call notify_all() from outside
+    friend class Reactor; // This enables the reactor to traverse the links from outside
 
     private:
         template <class M, class Enable = void>
@@ -48,13 +42,13 @@ template <typename T> class DataObject
         };
 
         // Make it easier to name it
-        using mutex_t = typename mutex<T>::type;
+        using mutex_t = typename mutex<D>::type;
 
         // A data object should have a constant name to identify it
         const std::string _name;
 
         // Content for this DO
-        T _content;
+        D _content;
 
         // Mutable mutex_ member as it needs to be modified in the const member function get()
         mutable mutex_t _mutex;
@@ -64,18 +58,11 @@ template <typename T> class DataObject
 
         // This should be a at least a simple list to hold all callbacks (LINKS) linked to that original DO
         // A mutex for exlusive access will properly also necessary
-        std::forward_list<std::function<void(DataObject<T>&)>> links;
-
-        // Only called by reactor
-        void notify_all()
-        {
-            boost::lock_guard<boost::mutex> lock(_link_mutex);
-            std::for_each(links.begin(), links.end(), [this](std::function<void(DataObject<T>&)> f){ f(*this); });
-        }
+        std::forward_list<std::function<void()>> links;
 
     public:
         DataObject(const std::string name) : _name(name) {}
-        DataObject(const std::string name, T content) : _name(name), _content(content) {}
+        DataObject(const std::string name, D content) : _name(name), _content(content) {}
 
         // Non-copyable
         DataObject(const DataObject&) = delete;
@@ -99,7 +86,7 @@ template <typename T> class DataObject
         // Const member function to avoid that a non-const reference is passed to the visitor
         // as that would allow the visitor to change the data_ member
         template <class Visitor>
-        std::result_of_t<Visitor(T)> get(Visitor visitor) const
+        std::result_of_t<Visitor(D)> get(Visitor visitor) const
         {
             // Shared lock to support concurrent access from multiple visitors in different threads
             boost::shared_lock_guard<mutex_t> lock(_mutex);
@@ -110,11 +97,13 @@ template <typename T> class DataObject
         const std::string& getName() const { return _name; }
 
         // Link a DO to that DO
-        template <typename D, typename C>
-        void registerLink(DataObject<D> &d2, C cb)
+//        template <typename D2, typename CB>
+//        void registerLink(DataObject<D2> &d2, CB cb)
+        template <typename D2, typename CB>
+        void registerLink(DataObject<D2> &d2, CB cb)
         {
             boost::lock_guard<boost::mutex> lock(_link_mutex);
-            links.push_front([cb, &d2](DataObject<T>& d1){ cb(d1, d2); });
+            links.push_front([cb, this, &d2](){ cb(*this, d2); });
         }
 
         // Remove a link to a DO by name
