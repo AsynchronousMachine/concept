@@ -60,5 +60,7 @@ class Reactor
 
                 f();
             }
+
+            std::cout << "----" << std::endl;
         }
 };

@@ -23,42 +23,47 @@ void my_cb3(DataObject<double> &do1, DataObject<std::string> &do2)
     std::cout << "My DO.name: " << do2.getName() << std::endl;
     do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
 }
-/*
+
 struct Cb4
 {
-    void operator() (DataObject<int> &do1, DataObject<std::vector<int>> &do2)
+    void operator() (DataObject<int> &do1, DataObject<std::vector<int>> &do2) const
     {
+        std::cout << "Got DO.name: " << do1.getName() << std::endl;
+        std::cout << "My DO.name: " << do2.getName() << std::endl;
         int i = do1.get([](int i){ return i; });
         int v = do2.get([&i](const std::vector<int> &v){ return v[i]; });
-        std::cout << "Vector element content: " << v << '\n';
+        std::cout << "Vector element content: " << v << std::endl;
     }
 }
 my_cb4;
-*/
-void my_cb4(DataObject<int> &do1, DataObject<std::vector<int>> &do2)
-    {
-        int i = do1.get([](int i){ return i; });
-        int v = do2.get([&i](const std::vector<int> &v){ return v[i]; });
-        std::cout << "Vector element content: " << v << '\n';
-    }
-/*
+
 struct Cb5
 {
-    void operator() (DataObject<int> &do1, DataObject<std::map<std::string, int>> &do2)
+    void operator() (DataObject<int> &do1, DataObject<std::map<std::string, int>> &do2) const
     {
+        std::cout << "Got DO.name: " << do1.getName() << std::endl;
+        std::cout << "My DO.name: " << do2.getName() << std::endl;
         int i = do1.get([](int i){ return i; });
-        int m = do2.get([&i](const std::map<std::string, int> &m){ std::string s = std::to_string(i); return m.at(s); });
-        std::cout << "Map element content: " << m << '\n';
+        int m = do2.get([&i](const std::map<std::string, int> &m){ return m.at(std::to_string(i)); });
+        std::cout << "Map element content: " << m << std::endl;
     }
 }
 my_cb5;
-*/
-    void my_cb5(DataObject<int> &do1, DataObject<std::map<std::string, int>> &do2)
+
+/*
+* It is not allowed to give back a reference or a pointer of the content of the dataobject
+*
+struct Cb6
+{
+    void operator() (DataObject<int> &do1, DataObject<std::map<std::string, int>> &do2) const
     {
         int i = do1.get([](int i){ return i; });
-        int m = do2.get([&i](const std::map<std::string, int> &m){ std::string s = std::to_string(i); return m.at(s); });
-        std::cout << "Map element content: " << m << '\n';
+        const std::map<std::string, int> &m_ref = do2.get([](const std::map<std::string, int> &m){ return m; });
+        std::cout << "Map element content: " << m_ref.at(std::to_string(i)) << '\n';
     }
+}
+my_cb6;
+*/
 
 int main(void)
 {
@@ -73,6 +78,13 @@ int main(void)
 
     // Link together: do1<int> -------> do3<string>
     do1.registerLink(do3, my_cb2);
+
+    // Usually now is time to announce the change of this DO to the reactor
+    reactor.trigger(do1);
+
+    // Simulate the job of reactor, typically inside a thread related with a prioritiy
+    // Should notify all callbacks of all DOs which have been triggered
+    reactor.execute();
 
     // Link together: do1<double> -------> do3<string>
     // Will not compile due to wrong data type of callback parameter
