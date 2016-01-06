@@ -1,9 +1,11 @@
 #include <forward_list>
 #include <type_traits>
+#include <unordered_map>
+#include <mutex>
 
 #include <boost/thread/shared_mutex.hpp>
-#include <boost/thread/null_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
+#include <boost/thread/null_mutex.hpp>
 
 // Concept of data object
 //
@@ -16,7 +18,7 @@
 //        |
 //        +--LINK3-------> DO3    Also DO1 is linked to DO3
 
-// Template class for arbitrary  content
+// Template class for a data object
 template <typename D>
 class DataObject
 {
@@ -53,12 +55,11 @@ class DataObject
         // Mutable mutex_ member as it needs to be modified in the const member function get()
         mutable mutex_t _mutex;
 
-        // Protect the list of linked DOs
-        boost::mutex _link_mutex;
+        // This holds all callbacks (LINKS) linked to that DO
+        std::unordered_map<std::string, std::function<void()>> _links;
 
-        // This should be a at least a simple list to hold all callbacks (LINKS) linked to that original DO
-        // A mutex for exlusive access will properly also necessary
-        std::forward_list<std::function<void()>> links;
+        // Protect the map of linked DOs
+        std::mutex _links_mutex;
 
     public:
         DataObject(const std::string name) : _name(name) {}
@@ -97,19 +98,17 @@ class DataObject
         const std::string& getName() const { return _name; }
 
         // Link a DO to that DO
-//        template <typename D2, typename CB>
-//        void registerLink(DataObject<D2> &d2, CB cb)
         template <typename D2, typename CB>
-        void registerLink(DataObject<D2> &d2, CB cb)
+        void registerLink(std::string name, DataObject<D2> &d2, CB cb)
         {
-            boost::lock_guard<boost::mutex> lock(_link_mutex);
-            links.push_front([cb, this, &d2](){ cb(*this, d2); });
+            std::lock_guard<std::mutex> lock(_links_mutex);
+            _links.insert(std::make_pair(name, [cb, this, &d2](){ cb(*this, d2); }));
         }
 
-        // Remove a link to a DO by name
+        // Remove a link to that DO by name
         void unregisterLink(std::string name)
         {
-            boost::lock_guard<boost::mutex> lock(_link_mutex);
-            /*todo*/
+            std::lock_guard<std::mutex> lock(_links_mutex);
+            _links.erase(name);
         }
 };

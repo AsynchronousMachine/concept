@@ -74,10 +74,10 @@ int main(void)
     DataObject<std::string> do3("World2");
 
     // Link together: do1<int> -------> do2<double>
-    do1.registerLink(do2, my_cb);
+    do1.registerLink("DO1->DO2", do2, my_cb);
 
     // Link together: do1<int> -------> do3<string>
-    do1.registerLink(do3, my_cb2);
+    do1.registerLink("DO1->DO3",do3, my_cb2);
 
     // Usually now is time to announce the change of this DO to the reactor
     reactor.trigger(do1);
@@ -106,7 +106,7 @@ int main(void)
     do1.set([](int &i){ i = 0; });
 
     // Link together: do1<int> -------> do4<vector>
-    do1.registerLink(do4, my_cb4);
+    do1.registerLink("DO1->DO4", do4, my_cb4);
 
     // Usually now is time to announce the change of this DO to the reactor
     reactor.trigger(do1);
@@ -121,7 +121,20 @@ int main(void)
     do1.set([](int &i){ i = 1; });
 
     // Link together: do1<int> -------> do4<map>
-    do1.registerLink(do5, my_cb5);
+    do1.registerLink("DO1->DO5", do5, my_cb5);
+
+    // Usually now is time to announce the change of this DO to the reactor
+    reactor.trigger(do1);
+
+    // Simulate the job of reactor, typically inside a thread related with a prioritiy
+    // Should notify all callbacks of all DOs which have been triggered
+    reactor.execute();
+
+    // Unregister link
+    do1.unregisterLink("DO1->DO2");
+
+    // Set a new value
+    do1.set([](int &i){ i = 2; });
 
     // Usually now is time to announce the change of this DO to the reactor
     reactor.trigger(do1);

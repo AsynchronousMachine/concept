@@ -1,4 +1,6 @@
-#include <queue>
+#include <mutex>
+
+#include <boost/circular_buffer.hpp>
 
 // Concept of reactor
 //
@@ -10,55 +12,56 @@
 // To simulate the not implemented asynchronous behavior call the public function execute()
 class Reactor
 {
-    protected:
-        // Protect the list of triggered DOs
-        boost::mutex _triggeredDOs_mutex;
+    private:
+        // Max. queue capacity
+        static constexpr size_t MAX_CAPACITY = 1024;
 
-        // This should be a at least a queue to hold all data objects which content has been changed or rather triggered
-        std::queue<std::function<void()>> _triggeredDOs;
+        // This is a circular buffer to hold all links from data objects which content has been changed
+        boost::circular_buffer<std::function<void()>> _triggeredDOs{MAX_CAPACITY};
+
+        // Protect the list of triggered DOs
+        std::mutex _triggeredDOs_mutex;
 
     public:
-        // Announce the change of content to the reactor
-        template <class D1>
-        void trigger(DataObject<D1> &do1)
+        // Announce the change of the content of a data object to the reactor
+        template <class D>
+        void trigger(DataObject<D> &d)
         {
-            boost::lock_guard<boost::mutex> lock(_triggeredDOs_mutex);
-            if(!do1.links.empty())
+            std::lock_guard<std::mutex> lock(_triggeredDOs_mutex);
+            if(!d._links.empty())
             {
-                boost::lock_guard<boost::mutex> lock(do1._link_mutex);
+                std::lock_guard<std::mutex> lock(d._links_mutex);
 
-                std::for_each(do1.links.begin(), do1.links.end(), [this](std::function<void()> f){ _triggeredDOs.push(f); });
-                // Now trigger a synchronisation element like a counting semaphore to release a waiting thread
+                for(auto &p : d._links)
+                    _triggeredDOs.push_front(p.second);
             }
+            // Now trigger a synchronization element to release at least a waiting thread
         }
 
         // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
-        // These method is typically private and called with in a thread related with priority "prio"
-        // This thread is waiting on a synchronisation element like a counting semaphore
+        // These method is typically private and called with in a thread related to a priority
+        // This thread is typically waiting on a synchronization element
         void execute()
         {
-            bool empty = false;
-
-            while(!empty)
+            for(;;)
             {
-                std::function<void()> f;
+                std::function<void()> cb;
 
+                std::unique_lock<std::mutex> lock(_triggeredDOs_mutex);
+
+                if(_triggeredDOs.empty())
                 {
-                    boost::lock_guard<boost::mutex> lock(_triggeredDOs_mutex);
-                    if(!_triggeredDOs.empty())
-                    {
-                        f = _triggeredDOs.front();
-                        _triggeredDOs.pop();
-                    }
-                    else
-                    {
-                        empty = true;
-                        continue;
-                    }
-
+                    lock.unlock();
+                    break;
                 }
 
-                f();
+                cb = _triggeredDOs.front();
+                _triggeredDOs.pop_front();
+
+                lock.unlock();
+
+                // Execute the callback without holding the lock
+                cb();
             }
 
             std::cout << "----" << std::endl;

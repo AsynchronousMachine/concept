@@ -48,7 +48,7 @@
 			<Add library="/opt/local/lib/libboost_timer.so" />
 			<Add library="/opt/local/lib/libboost_thread.so" />
 			<Add library="/opt/local/lib/libboost_system.so" />
-			<Add library="pthread" />
+			<Add library="/usr/lib/i386-linux-gnu/libpthread.so" />
 		</Linker>
 		<Unit filename="dataobject.hpp" />
 		<Unit filename="main.cpp" />
