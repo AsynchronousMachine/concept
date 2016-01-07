@@ -1,5 +1,6 @@
-#include "dataobject.hpp"
-#include "reactor.hpp"
+#include "asm.hpp"
+
+using namespace Asm;
 
 // Test concept of dataobject and reactor
 
@@ -68,6 +69,12 @@ my_cb6;
 int main(void)
 {
     Reactor reactor;
+
+    reactor.init(2);
+
+    for(;;);
+
+    exit(0);
 
     DataObject<int> do1("Hello", 9);
     DataObject<double> do2("World");

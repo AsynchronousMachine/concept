@@ -9,7 +9,7 @@
 		<Build>
 			<Target title="Debug">
 				<Option platforms="Unix;" />
-				<Option output="bin/Debug/Reactor" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/Asm" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -21,7 +21,7 @@
 			</Target>
 			<Target title="Release">
 				<Option platforms="Unix;" />
-				<Option output="bin/Release/Reactor" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Release/Asm" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -44,9 +44,8 @@
 			<Add library="/opt/local/lib/libboost_system.so" />
 			<Add library="/opt/local/lib/libboost_thread.so" />
 		</Linker>
-		<Unit filename="dataobject.hpp" />
+		<Unit filename="asm.hpp" />
 		<Unit filename="main.cpp" />
-		<Unit filename="reactor.hpp" />
 		<Extensions>
 			<envvars />
 			<code_completion />
