@@ -7,9 +7,9 @@
 #include <boost/thread/shared_lock_guard.hpp>
 #include <boost/thread/null_mutex.hpp>
 
-// Concept of data object
+// Concept of dataobject
 //
-// Data objects (aka DO) are container to hold data (content) and callback functions (aka LINKS) as notifier
+// Dataobjects (aka DO) are container to hold data (content) and callback functions (aka LINKS) as notifier
 // DOs can be linked together via LINKS
 // DOs can be locked and unlocked to handle there content consistently
 // The associated callback functions (LINKS) are called if the content of the original DO has been changed
@@ -18,7 +18,7 @@
 //        |
 //        +--LINK3-------> DO3    Also DO1 is linked to DO3
 
-// Template class for a data object
+// Template class for a dataobject
 template <typename D>
 class DataObject
 {
@@ -46,7 +46,7 @@ class DataObject
         // Make it easier to name it
         using mutex_t = typename mutex<D>::type;
 
-        // A data object should have a constant name to identify it
+        // A dataobject should have a constant name to identify it
         const std::string _name;
 
         // Content for this DO

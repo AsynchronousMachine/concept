@@ -16,14 +16,14 @@ class Reactor
         // Max. queue capacity
         static constexpr size_t MAX_CAPACITY = 1024;
 
-        // This is a circular buffer to hold all links from data objects which content has been changed
+        // This is a circular buffer to hold all links from dataobjects which content has been changed
         boost::circular_buffer<std::function<void()>> _triggeredDOs{MAX_CAPACITY};
 
         // Protect the list of triggered DOs
         std::mutex _triggeredDOs_mutex;
 
     public:
-        // Announce the change of the content of a data object to the reactor
+        // Announce the change of the content of a dataobject to the reactor
         template <class D>
         void trigger(DataObject<D> &d)
         {
