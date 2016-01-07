@@ -18,9 +18,6 @@
 					<Add option="-g" />
 					<Add directory="/opt/local/include" />
 				</Compiler>
-				<Linker>
-					<Add directory="/opt/local/lib" />
-				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option platforms="Unix;" />
@@ -35,20 +32,17 @@
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
-					<Add directory="/opt/local/lib" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
-			<Add option="-fexceptions" />
-			<Add option="-std=c++14" />
+			<Add option="-std=c++1z" />
 		</Compiler>
 		<Linker>
 			<Add library="/opt/local/lib/libboost_timer.so" />
-			<Add library="/opt/local/lib/libboost_thread.so" />
 			<Add library="/opt/local/lib/libboost_system.so" />
-			<Add library="/usr/lib/i386-linux-gnu/libpthread.so" />
+			<Add library="/opt/local/lib/libboost_thread.so" />
 		</Linker>
 		<Unit filename="dataobject.hpp" />
 		<Unit filename="main.cpp" />

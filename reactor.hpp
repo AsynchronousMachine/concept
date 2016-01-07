@@ -43,22 +43,19 @@ class Reactor
         // This thread is typically waiting on a synchronization element
         void execute()
         {
+            std::function<void()> cb;
+
             for(;;)
             {
-                std::function<void()> cb;
-
-                std::unique_lock<std::mutex> lock(_triggeredDOs_mutex);
-
-                if(_triggeredDOs.empty())
                 {
-                    lock.unlock();
-                    break;
+                    std::lock_guard<std::mutex> lock(_triggeredDOs_mutex);
+
+                    if(_triggeredDOs.empty())
+                        break;
+
+                    cb = _triggeredDOs.front();
+                    _triggeredDOs.pop_front();
                 }
-
-                cb = _triggeredDOs.front();
-                _triggeredDOs.pop_front();
-
-                lock.unlock();
 
                 // Execute the callback without holding the lock
                 cb();
