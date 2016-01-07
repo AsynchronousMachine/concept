@@ -36,7 +36,7 @@ class Reactor
                     return;
 
                 for(auto &p : d._links)
-                    _triggeredDOs.push_front(p.second);
+                    _triggeredDOs.push_back(p.second);
             }
 
             // Now trigger a synchronization element to release at least a waiting thread

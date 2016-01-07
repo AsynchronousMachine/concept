@@ -102,7 +102,7 @@ int main(void)
 
     // Complex DO
     DataObject<std::vector<int>> do4("Vector");
-    do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3};});
+    do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3, 4};});
     do1.set([](int &i){ i = 0; });
 
     // Link together: do1<int> -------> do4<vector>
@@ -116,8 +116,8 @@ int main(void)
     reactor.execute();
 
     // More complex DO
-    DataObject<std::map<std::string, int>> do5("Map", std::map<std::string, int>{{"3", 23}, {"4", 24}});
-    do5.set([](std::map<std::string, int> &v) { v = std::map<std::string, int>{{"1", 42}, {"2", 43}}; });
+    DataObject<std::map<std::string, int>> do5("Map", std::map<std::string, int>{{"0", 22}, {"3", 23}, {"4", 24}});
+    do5.set([](std::map<std::string, int> &v) { v.insert({{"1", 42}, {"2", 43}});});
     do1.set([](int &i){ i = 1; });
 
     // Link together: do1<int> -------> do4<map>
@@ -138,6 +138,20 @@ int main(void)
 
     // Usually now is time to announce the change of this DO to the reactor
     reactor.trigger(do1);
+
+    // Simulate the job of reactor, typically inside a thread related with a prioritiy
+    // Should notify all callbacks of all DOs which have been triggered
+    reactor.execute();
+
+    /* Following should show the correct sequence of triggering */
+    do1.set([](int &i){ i = 3; });
+    DataObject<int> do10("Hallo", 11);
+    DataObject<double> do11("Du");
+    do10.registerLink("DO10->DO11",do11, my_cb);
+
+    // Usually now is time to announce the change of these DOs to the reactor
+    reactor.trigger(do1);
+    reactor.trigger(do10);
 
     // Simulate the job of reactor, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs which have been triggered
