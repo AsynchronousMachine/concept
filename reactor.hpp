@@ -28,13 +28,17 @@ class Reactor
         void trigger(DataObject<D> &d)
         {
             std::lock_guard<std::mutex> lock(_triggeredDOs_mutex);
-            if(!d._links.empty())
+
             {
                 std::lock_guard<std::mutex> lock(d._links_mutex);
+
+                if(d._links.empty())
+                    return;
 
                 for(auto &p : d._links)
                     _triggeredDOs.push_front(p.second);
             }
+
             // Now trigger a synchronization element to release at least a waiting thread
         }
 
