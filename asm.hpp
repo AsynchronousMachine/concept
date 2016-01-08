@@ -7,6 +7,8 @@
 #include <boost/thread/null_mutex.hpp>
 #include <boost/circular_buffer.hpp>
 
+#include <pthread.h>
+
 // AsynchronousMachine
 namespace Asm {
 
@@ -152,7 +154,19 @@ class Reactor
                     threads = cores;
 
                 for(unsigned i = 0; i < threads; ++i)
-                    _tg.create_thread([this](){ Threadpool::thread(); });
+                {
+                    boost::thread *t = _tg.create_thread([this](){ Threadpool::thread(); });
+
+                    //char tn[32];
+                    //pthread_getname_np(t->native_handle(), &tn[0], 31);
+                    //std::cout << "Default thread name is " << tn << std::endl;
+
+                    std::string s = "ASM-TP" + std::to_string(i);
+                    std::cout << s << std::endl;
+
+                    if(pthread_setname_np(t->native_handle(), s.data()))
+                        std::cout << "Could not set threadpool name" << std::endl;
+                }
 
                 std::cout << "Have " << _tg.size() << " thread/s running" << std::endl << std::endl;
             }

@@ -38,11 +38,13 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c++1z" />
+			<Add option="-pthread" />
 		</Compiler>
 		<Linker>
 			<Add library="/opt/local/lib/libboost_timer.so" />
 			<Add library="/opt/local/lib/libboost_system.so" />
 			<Add library="/opt/local/lib/libboost_thread.so" />
+			<Add library="/usr/lib/i386-linux-gnu/libpthread.so" />
 		</Linker>
 		<Unit filename="asm.hpp" />
 		<Unit filename="main.cpp" />
