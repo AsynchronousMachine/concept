@@ -72,10 +72,6 @@ int main(void)
 
     reactor.init(2);
 
-    for(;;);
-
-    exit(0);
-
     DataObject<int> do1("Hello", 9);
     DataObject<double> do2("World");
     DataObject<std::string> do3("World2");
@@ -88,10 +84,12 @@ int main(void)
 
     // Usually now is time to announce the change of this DO to the reactor
     reactor.trigger(do1);
+    // Let it run
+    boost::this_thread::sleep_for(boost::chrono::seconds(1));
 
     // Simulate the job of reactor, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs which have been triggered
-    reactor.execute();
+    //reactor.execute();
 
     // Link together: do1<double> -------> do3<string>
     // Will not compile due to wrong data type of callback parameter
@@ -102,10 +100,12 @@ int main(void)
 
     // Usually now is time to announce the change of this DO to the reactor
     reactor.trigger(do1);
+    // Let it run
+    boost::this_thread::sleep_for(boost::chrono::seconds(1));
 
     // Simulate the job of reactor, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs which have been triggered
-    reactor.execute();
+    //reactor.execute();
 
     // Complex DO
     DataObject<std::vector<int>> do4("Vector");
@@ -117,10 +117,12 @@ int main(void)
 
     // Usually now is time to announce the change of this DO to the reactor
     reactor.trigger(do1);
+    // Let it run
+    boost::this_thread::sleep_for(boost::chrono::seconds(1));
 
     // Simulate the job of reactor, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs which have been triggered
-    reactor.execute();
+    //reactor.execute();
 
     // More complex DO
     DataObject<std::map<std::string, int>> do5("Map", std::map<std::string, int>{{"0", 22}, {"3", 23}, {"4", 24}});
@@ -132,10 +134,12 @@ int main(void)
 
     // Usually now is time to announce the change of this DO to the reactor
     reactor.trigger(do1);
+    // Let it run
+    boost::this_thread::sleep_for(boost::chrono::seconds(1));
 
     // Simulate the job of reactor, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs which have been triggered
-    reactor.execute();
+    //reactor.execute();
 
     // Unregister link
     do1.unregisterLink("DO1->DO2");
@@ -145,10 +149,12 @@ int main(void)
 
     // Usually now is time to announce the change of this DO to the reactor
     reactor.trigger(do1);
+    // Let it run
+    boost::this_thread::sleep_for(boost::chrono::seconds(1));
 
     // Simulate the job of reactor, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs which have been triggered
-    reactor.execute();
+    //reactor.execute();
 
     /* Following should show the correct sequence of triggering */
     do1.set([](int &i){ i = 3; });
@@ -162,8 +168,9 @@ int main(void)
 
     // Simulate the job of reactor, typically inside a thread related with a prioritiy
     // Should notify all callbacks of all DOs which have been triggered
-    reactor.execute();
+    //reactor.execute();
 
+    boost::this_thread::sleep_for(boost::chrono::seconds(10));
     exit(0);
 }
 

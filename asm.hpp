@@ -142,6 +142,7 @@ class Reactor
         {
             boost::thread_group _threadgroup;
             std::condition_variable _cv_tg;
+            std::function<void()> _tf;
 
             Threadpool() = default;
 
@@ -151,8 +152,10 @@ class Reactor
                 _threadgroup.join_all();
             }
 
-            void init(unsigned threads)
+            void init(unsigned threads, std::function<void()> f)
             {
+                _tf = f;
+
                 unsigned cores = boost::thread::hardware_concurrency();
 
                 std::cout << "Found " << cores << " cores" << std::endl;
@@ -166,17 +169,49 @@ class Reactor
                  std::cout << "Have " << _threadgroup.size() << " thread/s running" << std::endl;
             }
 
+            void wait(std::unique_lock<std::mutex>& lock)
+            {
+                _cv_tg.wait(lock);
+            }
+
+            void notify()
+            {
+                _cv_tg.notify_all();
+            }
+
             void thread()
             {
-                for(;;)
-                {
-                    boost::this_thread::sleep_for(boost::chrono::milliseconds(3000));
-                    std::cout << "thread" << std::endl;
-                }
+                _tf();
             }
         };
 
         struct Threadpool _tp;
+
+        // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
+        // These method is typically private and called with in a thread related to a priority
+        // This thread is typically waiting on a synchronization element
+        void execute()
+        {
+            std::function<void()> cb;
+
+            for(;;)
+            {
+                {
+                    std::unique_lock<std::mutex> lock(_triggeredDOs_mutex);
+
+                    while (_triggeredDOs.empty())
+                            _tp.wait(lock);
+
+                    cb = _triggeredDOs.front();
+                    _triggeredDOs.pop_front();
+                }
+
+                // Execute the callback without holding the lock
+                cb();
+
+                std::cout << "----" << std::endl;
+            }
+        }
 
     public:
         Reactor() = default;
@@ -192,15 +227,13 @@ class Reactor
         // Initialize threadgroup and start the threads
         void init(unsigned threads = 1)
         {
-            _tp.init(threads);
+            _tp.init(threads, [this](){Reactor::execute();} );
         }
 
         // Announce the change of the content of a dataobject to the reactor
         template <class D>
         void trigger(DataObject<D> &d)
         {
-            std::lock_guard<std::mutex> lock(_triggeredDOs_mutex);
-
             {
                 std::lock_guard<std::mutex> lock(d._links_mutex);
 
@@ -212,32 +245,7 @@ class Reactor
             }
 
             // Now trigger a synchronization element to release at least a waiting thread
-        }
-
-        // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
-        // These method is typically private and called with in a thread related to a priority
-        // This thread is typically waiting on a synchronization element
-        void execute()
-        {
-            std::function<void()> cb;
-
-            for(;;)
-            {
-                {
-                    std::lock_guard<std::mutex> lock(_triggeredDOs_mutex);
-
-                    if(_triggeredDOs.empty())
-                        break;
-
-                    cb = _triggeredDOs.front();
-                    _triggeredDOs.pop_front();
-                }
-
-                // Execute the callback without holding the lock
-                cb();
-            }
-
-            std::cout << "----" << std::endl;
+            _tp.notify();
         }
 };
 
