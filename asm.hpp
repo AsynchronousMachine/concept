@@ -131,21 +131,19 @@ class Reactor
         static constexpr size_t MAX_CAPACITY = 1024;
 
         // This is a circular buffer to hold all links from dataobjects which content has been changed
-        boost::circular_buffer<std::function<void()>> _triggeredDOs{MAX_CAPACITY};
+        boost::circular_buffer<std::function<void()>> _triggeredLinks{MAX_CAPACITY};
 
-        // Protect the list of triggered DOs
-        boost::mutex _triggeredDOs_mutex;
+        // Protect the circular buffer of triggered DOs
+        boost::mutex _triggeredLinks_mutex;
 
         struct Threadpool
         {
-            boost::thread_group _threadgroup;
+            boost::thread_group _tg;
             boost::condition_variable _cv;
             std::function<void()> _f;
 
-            Threadpool(unsigned threads, std::function<void()> f)
+            Threadpool(unsigned threads, std::function<void()> f) : _f(f)
             {
-                _f = f;
-
                 unsigned cores = boost::thread::hardware_concurrency();
 
                 std::cout << "Found " << cores << " cores" << std::endl;
@@ -154,16 +152,16 @@ class Reactor
                     threads = cores;
 
                 for(unsigned i = 0; i < threads; ++i)
-                    _threadgroup.create_thread([this](){ Threadpool::thread(); });
+                    _tg.create_thread([this](){ Threadpool::thread(); });
 
-                 std::cout << "Have " << _threadgroup.size() << " thread/s running" << std::endl << std::endl;
+                std::cout << "Have " << _tg.size() << " thread/s running" << std::endl << std::endl;
             }
 
             ~Threadpool()
             {
                 std::cout << "Delete treadpool" << std::endl;
-                _threadgroup.interrupt_all();
-                _threadgroup.join_all();
+                _tg.interrupt_all();
+                _tg.join_all();
             }
 
             void wait(boost::unique_lock<boost::mutex>& lock) { _cv.wait(lock); }
@@ -185,16 +183,16 @@ class Reactor
             for(;;)
             {
                 {
-                    boost::unique_lock<boost::mutex> lock(_triggeredDOs_mutex);
+                    boost::unique_lock<boost::mutex> lock(_triggeredLinks_mutex);
 
-                    while(_triggeredDOs.empty())
+                    while(_triggeredLinks.empty())
                     {
                         _tp.wait(lock);
                         std::cout << ">>>" << std::endl;
                     }
 
-                    f = _triggeredDOs.front();
-                    _triggeredDOs.pop_front();
+                    f = _triggeredLinks.front();
+                    _triggeredLinks.pop_front();
                 }
 
                 // Execute the link without holding the lock
@@ -229,7 +227,7 @@ class Reactor
                     return;
 
                 for(auto &p : d._links)
-                    _triggeredDOs.push_back(p.second);
+                    _triggeredLinks.push_back(p.second);
             }
 
             // Now trigger a synchronization element to release at least a waiting thread
