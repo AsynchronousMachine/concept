@@ -68,9 +68,12 @@ my_cb6;
 
 int main(void)
 {
-    Reactor reactor;
+    Reactor *rptr = new Reactor(2);
+    // Let it run
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
-    reactor.init(2);
+delete rptr;
+exit(0);
 
     DataObject<int> do1("Hello", 9);
     DataObject<double> do2("World");
@@ -83,13 +86,9 @@ int main(void)
     do1.registerLink("DO1->DO3",do3, my_cb2);
 
     // Usually now is time to announce the change of this DO to the reactor
-    reactor.trigger(do1);
+    rptr->trigger(do1);
     // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(1));
-
-    // Simulate the job of reactor, typically inside a thread related with a prioritiy
-    // Should notify all callbacks of all DOs which have been triggered
-    //reactor.execute();
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
     // Link together: do1<double> -------> do3<string>
     // Will not compile due to wrong data type of callback parameter
@@ -99,13 +98,9 @@ int main(void)
     do1.set([](int &i){ i = 7; });
 
     // Usually now is time to announce the change of this DO to the reactor
-    reactor.trigger(do1);
+    rptr->trigger(do1);
     // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(1));
-
-    // Simulate the job of reactor, typically inside a thread related with a prioritiy
-    // Should notify all callbacks of all DOs which have been triggered
-    //reactor.execute();
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
     // Complex DO
     DataObject<std::vector<int>> do4("Vector");
@@ -116,13 +111,9 @@ int main(void)
     do1.registerLink("DO1->DO4", do4, my_cb4);
 
     // Usually now is time to announce the change of this DO to the reactor
-    reactor.trigger(do1);
+    rptr->trigger(do1);
     // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(1));
-
-    // Simulate the job of reactor, typically inside a thread related with a prioritiy
-    // Should notify all callbacks of all DOs which have been triggered
-    //reactor.execute();
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
     // More complex DO
     DataObject<std::map<std::string, int>> do5("Map", std::map<std::string, int>{{"0", 22}, {"3", 23}, {"4", 24}});
@@ -133,13 +124,9 @@ int main(void)
     do1.registerLink("DO1->DO5", do5, my_cb5);
 
     // Usually now is time to announce the change of this DO to the reactor
-    reactor.trigger(do1);
+    rptr->trigger(do1);
     // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(1));
-
-    // Simulate the job of reactor, typically inside a thread related with a prioritiy
-    // Should notify all callbacks of all DOs which have been triggered
-    //reactor.execute();
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
     // Unregister link
     do1.unregisterLink("DO1->DO2");
@@ -148,29 +135,24 @@ int main(void)
     do1.set([](int &i){ i = 2; });
 
     // Usually now is time to announce the change of this DO to the reactor
-    reactor.trigger(do1);
+    rptr->trigger(do1);
     // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(1));
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
-    // Simulate the job of reactor, typically inside a thread related with a prioritiy
-    // Should notify all callbacks of all DOs which have been triggered
-    //reactor.execute();
-
-    /* Following should show the correct sequence of triggering */
+    // Following should show the correct sequence of triggering
     do1.set([](int &i){ i = 3; });
     DataObject<int> do10("Hallo", 11);
     DataObject<double> do11("Du");
     do10.registerLink("DO10->DO11",do11, my_cb);
 
     // Usually now is time to announce the change of these DOs to the reactor
-    reactor.trigger(do1);
-    reactor.trigger(do10);
+    rptr->trigger(do1);
+    rptr->trigger(do10);
 
-    // Simulate the job of reactor, typically inside a thread related with a prioritiy
-    // Should notify all callbacks of all DOs which have been triggered
-    //reactor.execute();
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
-    boost::this_thread::sleep_for(boost::chrono::seconds(10));
+    delete rptr;
+
     exit(0);
 }
 

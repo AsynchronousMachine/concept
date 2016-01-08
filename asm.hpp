@@ -144,15 +144,7 @@ class Reactor
             std::condition_variable _cv_tg;
             std::function<void()> _tf;
 
-            Threadpool() = default;
-
-            ~Threadpool()
-            {
-                _threadgroup.interrupt_all();
-                _threadgroup.join_all();
-            }
-
-            void init(unsigned threads, std::function<void()> f)
+            Threadpool(unsigned threads, std::function<void()> f)
             {
                 _tf = f;
 
@@ -166,23 +158,21 @@ class Reactor
                 for(unsigned i = 0; i < threads; ++i)
                     _threadgroup.create_thread([this](){Threadpool::thread();});
 
-                 std::cout << "Have " << _threadgroup.size() << " thread/s running" << std::endl;
+                 std::cout << "Have " << _threadgroup.size() << " thread/s running" << std::endl << std::endl;
             }
 
-            void wait(std::unique_lock<std::mutex>& lock)
+            ~Threadpool()
             {
-                _cv_tg.wait(lock);
+                std::cout << "Delete reactor" << std::endl;
+                _threadgroup.interrupt_all();
+                _threadgroup.join_all();
             }
 
-            void notify()
-            {
-                _cv_tg.notify_all();
-            }
+            void wait(std::unique_lock<std::mutex>& lock) { _cv_tg.wait(lock); }
 
-            void thread()
-            {
-                _tf();
-            }
+            void notify() { _cv_tg.notify_all(); }
+
+            void thread() { _tf(); }
         };
 
         struct Threadpool _tp;
@@ -199,8 +189,11 @@ class Reactor
                 {
                     std::unique_lock<std::mutex> lock(_triggeredDOs_mutex);
 
-                    while (_triggeredDOs.empty())
-                            _tp.wait(lock);
+                    while(_triggeredDOs.empty())
+                    {
+                        _tp.wait(lock);
+                        std::cout << ">>>" << std::endl;
+                    }
 
                     cb = _triggeredDOs.front();
                     _triggeredDOs.pop_front();
@@ -208,13 +201,11 @@ class Reactor
 
                 // Execute the callback without holding the lock
                 cb();
-
-                std::cout << "----" << std::endl;
             }
         }
 
     public:
-        Reactor() = default;
+        Reactor(unsigned threads = 1) : _tp(threads, [this](){Reactor::execute();}) {}
 
         // Non-copyable
         Reactor(const Reactor&) = delete;
@@ -223,12 +214,6 @@ class Reactor
         // Non-movable
         Reactor(Reactor&&) = delete;
         Reactor &operator=(Reactor&&) = delete;
-
-        // Initialize threadgroup and start the threads
-        void init(unsigned threads = 1)
-        {
-            _tp.init(threads, [this](){Reactor::execute();} );
-        }
 
         // Announce the change of the content of a dataobject to the reactor
         template <class D>
