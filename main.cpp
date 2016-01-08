@@ -72,9 +72,6 @@ int main(void)
     // Let it run
     boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
-delete rptr;
-exit(0);
-
     DataObject<int> do1("Hello", 9);
     DataObject<double> do2("World");
     DataObject<std::string> do3("World2");

@@ -1,13 +1,11 @@
 #include <type_traits>
 #include <unordered_map>
-#include <mutex>
-#include <condition_variable>
 
+#include <boost/thread/thread.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
 #include <boost/thread/null_mutex.hpp>
 #include <boost/circular_buffer.hpp>
-#include <boost/thread/thread.hpp>
 
 // AsynchronousMachine
 namespace Asm {
@@ -64,7 +62,7 @@ class DataObject
         std::unordered_map<std::string, std::function<void()>> _links;
 
         // Protect the map of linked DOs
-        std::mutex _links_mutex;
+        boost::mutex _links_mutex;
 
     public:
         DataObject(const std::string name) : _name(name) {}
@@ -106,14 +104,14 @@ class DataObject
         template <typename D2, typename CB>
         void registerLink(std::string name, DataObject<D2> &d2, CB cb)
         {
-            std::lock_guard<std::mutex> lock(_links_mutex);
+            boost::lock_guard<boost::mutex> lock(_links_mutex);
             _links.insert(std::make_pair(name, [cb, this, &d2](){ cb(*this, d2); }));
         }
 
         // Remove a link to that DO by name
         void unregisterLink(std::string name)
         {
-            std::lock_guard<std::mutex> lock(_links_mutex);
+            boost::lock_guard<boost::mutex> lock(_links_mutex);
             _links.erase(name);
         }
 };
@@ -136,17 +134,17 @@ class Reactor
         boost::circular_buffer<std::function<void()>> _triggeredDOs{MAX_CAPACITY};
 
         // Protect the list of triggered DOs
-        std::mutex _triggeredDOs_mutex;
+        boost::mutex _triggeredDOs_mutex;
 
         struct Threadpool
         {
             boost::thread_group _threadgroup;
-            std::condition_variable _cv_tg;
-            std::function<void()> _tf;
+            boost::condition_variable _cv;
+            std::function<void()> _f;
 
             Threadpool(unsigned threads, std::function<void()> f)
             {
-                _tf = f;
+                _f = f;
 
                 unsigned cores = boost::thread::hardware_concurrency();
 
@@ -156,23 +154,23 @@ class Reactor
                     threads = cores;
 
                 for(unsigned i = 0; i < threads; ++i)
-                    _threadgroup.create_thread([this](){Threadpool::thread();});
+                    _threadgroup.create_thread([this](){ Threadpool::thread(); });
 
                  std::cout << "Have " << _threadgroup.size() << " thread/s running" << std::endl << std::endl;
             }
 
             ~Threadpool()
             {
-                std::cout << "Delete reactor" << std::endl;
+                std::cout << "Delete treadpool" << std::endl;
                 _threadgroup.interrupt_all();
                 _threadgroup.join_all();
             }
 
-            void wait(std::unique_lock<std::mutex>& lock) { _cv_tg.wait(lock); }
+            void wait(boost::unique_lock<boost::mutex>& lock) { _cv.wait(lock); }
 
-            void notify() { _cv_tg.notify_all(); }
+            void notify() { _cv.notify_all(); }
 
-            void thread() { _tf(); }
+            void thread() { _f(); }
         };
 
         struct Threadpool _tp;
@@ -182,12 +180,12 @@ class Reactor
         // This thread is typically waiting on a synchronization element
         void execute()
         {
-            std::function<void()> cb;
+            std::function<void()> f;
 
             for(;;)
             {
                 {
-                    std::unique_lock<std::mutex> lock(_triggeredDOs_mutex);
+                    boost::unique_lock<boost::mutex> lock(_triggeredDOs_mutex);
 
                     while(_triggeredDOs.empty())
                     {
@@ -195,12 +193,12 @@ class Reactor
                         std::cout << ">>>" << std::endl;
                     }
 
-                    cb = _triggeredDOs.front();
+                    f = _triggeredDOs.front();
                     _triggeredDOs.pop_front();
                 }
 
-                // Execute the callback without holding the lock
-                cb();
+                // Execute the link without holding the lock
+                f();
             }
         }
 
@@ -215,12 +213,17 @@ class Reactor
         Reactor(Reactor&&) = delete;
         Reactor &operator=(Reactor&&) = delete;
 
+        ~Reactor()
+        {
+            std::cout << std::endl << "Delete reactor" << std::endl;
+        }
+
         // Announce the change of the content of a dataobject to the reactor
         template <class D>
         void trigger(DataObject<D> &d)
         {
             {
-                std::lock_guard<std::mutex> lock(d._links_mutex);
+                boost::lock_guard<boost::mutex> lock(d._links_mutex);
 
                 if(d._links.empty())
                     return;
