@@ -107,7 +107,7 @@ class DataObject
         void registerLink(std::string name, DataObject<D2> &d2, CB cb)
         {
             boost::lock_guard<boost::mutex> lock(_links_mutex);
-            _links.insert(std::make_pair(name, [cb, this, &d2](){ cb(*this, d2); }));
+            _links.insert({name, [cb, this, &d2](){ cb(*this, d2); }});
         }
 
         // Remove a link to that DO by name

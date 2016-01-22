@@ -1,151 +1,65 @@
 #include "asm.hpp"
 
-using namespace Asm;
+// Test concept of dataobject, reactor and modules
 
-// Test concept of dataobject and reactor
-
-void my_cb(DataObject<int> &do1, DataObject<double> &do2)
+class Module1
 {
-    std::cout << "Got DO.name: " << do1.getName() << std::endl;
-    std::cout << "My DO.name: " << do2.getName() << std::endl;
-    do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
-}
+    public:
+        // A module should have a constant name to identify it
+        const std::string _name;
 
-void my_cb2(DataObject<int> &do1, DataObject<std::string> &do2)
-{
-    std::cout << "Got DO.name: " << do1.getName() << std::endl;
-    std::cout << "My DO.name: " << do2.getName() << std::endl;
-    do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
-}
+        // Only one constructor
+        Module1(std::string name) : _name(name), do1("DO1", 1), do2("DO2", "42") {}
 
-void my_cb3(DataObject<double> &do1, DataObject<std::string> &do2)
-{
-    std::cout << "Got DO.name: " << do1.getName() << std::endl;
-    std::cout << "My DO.name: " << do2.getName() << std::endl;
-    do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
-}
+        Asm::DataObject<int> do1;
+        Asm::DataObject<std::string> do2;
+};
 
-struct Cb4
+class Module2
 {
-    void operator() (DataObject<int> &do1, DataObject<std::vector<int>> &do2) const
-    {
-        std::cout << "Got DO.name: " << do1.getName() << std::endl;
-        std::cout << "My DO.name: " << do2.getName() << std::endl;
-        int i = do1.get([](int i){ return i; });
-        int v = do2.get([&i](const std::vector<int> &v){ return v[i]; });
-        std::cout << "Vector element content: " << v << std::endl;
-    }
-}
-my_cb4;
+    public:
+        // A module should have a constant name to identify it
+        const std::string _name;
 
-struct Cb5
-{
-    void operator() (DataObject<int> &do1, DataObject<std::map<std::string, int>> &do2) const
-    {
-        std::cout << "Got DO.name: " << do1.getName() << std::endl;
-        std::cout << "My DO.name: " << do2.getName() << std::endl;
-        int i = do1.get([](int i){ return i; });
-        int m = do2.get([&i](const std::map<std::string, int> &m){ return m.at(std::to_string(i)); });
-        std::cout << "Map element content: " << m << std::endl;
-    }
-}
-my_cb5;
+        // Only one constructor
+        Module2(std::string name) : _name(name), do1("DO1", 2), do2("DO2", std::map<std::string, double>{{"42", 22.0}, {"43", 23.0}, {"44", 24.0}}) {}
 
-/*
-* It is not allowed to give back a reference or a pointer of the content of the dataobject
-*
-struct Cb6
-{
-    void operator() (DataObject<int> &do1, DataObject<std::map<std::string, int>> &do2) const
-    {
-        int i = do1.get([](int i){ return i; });
-        const std::map<std::string, int> &m_ref = do2.get([](const std::map<std::string, int> &m){ return m; });
-        std::cout << "Map element content: " << m_ref.at(std::to_string(i)) << '\n';
-    }
-}
-my_cb6;
-*/
+        Asm::DataObject<int> do1;
+        Asm::DataObject<std::map<std::string, double>> do2;
+
+        void link1(Asm::DataObject<int> &do1, Asm::DataObject<int> &do2)
+        {
+            std::cout << "My DO.name: " << do2.getName() << std::endl;
+            std::cout << "Got DO.name: " << do1.getName() << std::endl;
+            do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
+            do2.get([](int i){ std::cout << "Had DO.value: " << i << std::endl; });
+        }
+
+        void link2(Asm::DataObject<std::string> &do1, Asm::DataObject<std::map<std::string, double>> &do2)
+        {
+            std::cout << "My DO.name: " << do2.getName() << std::endl;
+            std::cout << "Got DO.name: " << do1.getName() << std::endl;
+            std::string s = do1.get([](std::string s){ std::cout << "Got DO.value: " << s << std::endl; return s; });
+            std::cout << "Has DO.value: " << do2.get([&s](const std::map<std::string, double> &m){ return m.at(s); }) << '\n';
+        }
+};
 
 int main(void)
 {
-    Reactor *rptr = new Reactor(2);
-    // Let it run
+    Asm::Reactor *rptr = new Asm::Reactor(2);
+    // Let it start
     boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
-    DataObject<int> do1("Hello", 9);
-    DataObject<double> do2("World");
-    DataObject<std::string> do3("World2");
+    Module1 module1("Module1");
+    Module2 module2("Module2");
 
-    // Link together: do1<int> -------> do2<double>
-    do1.registerLink("DO1->DO2", do2, my_cb);
-
-    // Link together: do1<int> -------> do3<string>
-    do1.registerLink("DO1->DO3",do3, my_cb2);
+    module1.do1.registerLink("Link1", module2.do1, [&module2](Asm::DataObject<int> &do1, Asm::DataObject<int> &do2){ module2.link1(do1, do2); });
+    module1.do2.registerLink("Link2", module2.do2, [&module2](Asm::DataObject<std::string> &do1, Asm::DataObject<std::map<std::string, double>> &do2){ module2.link2(do1, do2); });
 
     // Usually now is time to announce the change of this DO to the reactor
-    rptr->trigger(do1);
+    rptr->trigger(module1.do1);
+    rptr->trigger(module1.do2);
     // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(3));
-
-    // Link together: do1<double> -------> do3<string>
-    // Will not compile due to wrong data type of callback parameter
-    // do1.registerLink(do3, my_cb3);
-
-    // Access content consistently
-    do1.set([](int &i){ i = 7; });
-
-    // Usually now is time to announce the change of this DO to the reactor
-    rptr->trigger(do1);
-    // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(3));
-
-    // Complex DO
-    DataObject<std::vector<int>> do4("Vector");
-    do4.set([](std::vector<int> &v) {v = std::vector<int>{1, 2, 3, 4};});
-    do1.set([](int &i){ i = 0; });
-
-    // Link together: do1<int> -------> do4<vector>
-    do1.registerLink("DO1->DO4", do4, my_cb4);
-
-    // Usually now is time to announce the change of this DO to the reactor
-    rptr->trigger(do1);
-    // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(3));
-
-    // More complex DO
-    DataObject<std::map<std::string, int>> do5("Map", std::map<std::string, int>{{"0", 22}, {"3", 23}, {"4", 24}});
-    do5.set([](std::map<std::string, int> &v) { v.insert({{"1", 42}, {"2", 43}});});
-    do1.set([](int &i){ i = 1; });
-
-    // Link together: do1<int> -------> do4<map>
-    do1.registerLink("DO1->DO5", do5, my_cb5);
-
-    // Usually now is time to announce the change of this DO to the reactor
-    rptr->trigger(do1);
-    // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(3));
-
-    // Unregister link
-    do1.unregisterLink("DO1->DO2");
-
-    // Set a new value
-    do1.set([](int &i){ i = 2; });
-
-    // Usually now is time to announce the change of this DO to the reactor
-    rptr->trigger(do1);
-    // Let it run
-    boost::this_thread::sleep_for(boost::chrono::seconds(3));
-
-    // Following should show the correct sequence of triggering
-    do1.set([](int &i){ i = 3; });
-    DataObject<int> do10("Hallo", 11);
-    DataObject<double> do11("Du");
-    do10.registerLink("DO10->DO11",do11, my_cb);
-
-    // Usually now is time to announce the change of these DOs to the reactor
-    rptr->trigger(do1);
-    rptr->trigger(do10);
-
     boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
     delete rptr;

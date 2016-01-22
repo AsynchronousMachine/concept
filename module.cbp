@@ -2,14 +2,14 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="DataObject" />
+		<Option title="Module" />
 		<Option platforms="Unix;" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
 				<Option platforms="Unix;" />
-				<Option output="bin/Debug/Asm" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/Module" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -21,7 +21,7 @@
 			</Target>
 			<Target title="Release">
 				<Option platforms="Unix;" />
-				<Option output="bin/Release/Asm" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Release/Module" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -35,6 +35,9 @@
 				</Linker>
 			</Target>
 		</Build>
+		<VirtualTargets>
+			<Add alias="All" targets="Debug;Release;" />
+		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c++1z" />
