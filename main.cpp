@@ -44,17 +44,24 @@ class Module2
         }
 };
 
+// Helper function template
+template <typename D1, typename M2, typename D2, typename CB>
+void RegisterLink(std::string name, Asm::DataObject<D1> &d1, M2 &m2, Asm::DataObject<D2> &d2, CB cb)
+{
+    d1.registerLink(name, d2, [cb, &m2](Asm::DataObject<D1> &do1, Asm::DataObject<D2> &do2){ std::mem_fn(cb)(m2, do1, do2); });
+}
+
 int main(void)
 {
     Asm::Reactor *rptr = new Asm::Reactor(2);
     // Let it start
-    boost::this_thread::sleep_for(boost::chrono::seconds(3));
+    boost::this_thread::sleep_for(boost::chrono::seconds(1));
 
     Module1 module1("Module1");
     Module2 module2("Module2");
 
-    module1.do1.registerLink("Link1", module2.do1, [&module2](Asm::DataObject<int> &do1, Asm::DataObject<int> &do2){ module2.link1(do1, do2); });
-    module1.do2.registerLink("Link2", module2.do2, [&module2](Asm::DataObject<std::string> &do1, Asm::DataObject<std::map<std::string, double>> &do2){ module2.link2(do1, do2); });
+    RegisterLink("Link1", module1.do1, module2, module2.do1, &Module2::link1);
+    RegisterLink("Link2", module1.do2, module2, module2.do2, &Module2::link2);
 
     // Usually now is time to announce the change of this DO to the reactor
     rptr->trigger(module1.do1);
