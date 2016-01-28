@@ -16,6 +16,7 @@ Start with following sequence of git branches:
 2. concept-reactor
 3. concept-reactor-threaded
 4. concept-module
+5. concept-reflection
  
 Other git branches are used for temporary tests!
 
