@@ -6,6 +6,7 @@
 #include <boost/thread/shared_lock_guard.hpp>
 #include <boost/thread/null_mutex.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/any.hpp>
 
 #include <pthread.h>
 
@@ -115,6 +116,38 @@ class DataObject
         {
             boost::lock_guard<boost::mutex> lock(_links_mutex);
             _links.erase(name);
+        }
+};
+
+// Template class for a link
+template <typename D1, typename D2>
+class Link
+{
+    public:
+        using cb_type = std::function<void(D1&, D2&)>;
+
+    private:
+        cb_type _cb;
+
+    public:
+        Link(cb_type cb) : _cb(cb) {}
+
+        // Non-copyable
+        Link(const Link&) = delete;
+        Link &operator=(const Link&) = delete;
+
+        // Non-movable
+        Link(Link&&) = delete;
+        Link &operator=(Link&&) = delete;
+
+        // Necessary if someone want to inherit from that
+        virtual ~Link() = default;
+
+        void regit(const std::string name, boost::any a1, boost::any a2)
+        {
+            D1 *d1 = boost::any_cast<D1*>(a1);
+            D2 *d2 = boost::any_cast<D2*>(a2);
+            d1->registerLink(name, *d2, _cb);
         }
 };
 
