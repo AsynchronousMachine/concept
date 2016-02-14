@@ -80,8 +80,8 @@ int main(void)
                       };
 
     // This map should be built automatically
-    registerlink_map links{{"Module2.link1", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link1); l(module2).regit(name, a1, a2);}},
-                           {"Module2.link2", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link2); l(module2).regit(name, a1, a2);}}
+    registerlink_map links{{"Module2.link1", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link1); l(module2).set(name, a1, a2);}},
+                           {"Module2.link2", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link2); l(module2).set(name, a1, a2);}}
                           };
 
     // This map should be built automatically
@@ -94,8 +94,8 @@ int main(void)
                                   {"Module2", [&module2](){return std::mem_fn(&Module2::serialize)(module2);}}
                                  };
 
-    module2.link1.regit("Link1", dos.at("Module1.DO1"), dos.at("Module2.DO1"));
-    module2.link2.regit("Link2", dos.at("Module1.DO2"), dos.at("Module2.DO2"));
+    module2.link1.set("Link1", dos.at("Module1.DO1"), dos.at("Module2.DO1"));
+    module2.link2.set("Link2", dos.at("Module1.DO2"), dos.at("Module2.DO2"));
 
     // Usually now is time to announce the change of this DO to the reactor
     rptr->trigger(module1.do1);

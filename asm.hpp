@@ -143,7 +143,7 @@ class Link
         // Necessary if someone want to inherit from that
         virtual ~Link() = default;
 
-        void regit(const std::string name, boost::any a1, boost::any a2)
+        void set(const std::string name, boost::any a1, boost::any a2)
         {
             D1 *d1 = boost::any_cast<D1*>(a1);
             D2 *d2 = boost::any_cast<D2*>(a2);
