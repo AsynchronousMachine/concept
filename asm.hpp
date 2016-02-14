@@ -90,6 +90,13 @@ class DataObject
             visitor(_content);
         }
 
+        void set(const boost::any &value)
+        {
+            // Exclusive lock for write access
+            boost::lock_guard<mutex_t> lock(_mutex);
+            _content = boost::any_cast<D>(value);
+        }
+
         // Const member function to avoid that a non-const reference is passed to the visitor
         // as that would allow the visitor to change the data_ member
         template <class Visitor>

@@ -30,6 +30,7 @@ private:
         std::cout << "Got DO.name: " << do1.getName() << std::endl;
         do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
         do2.get([](int i){ std::cout << "Had DO.value: " << i << std::endl; });
+
     }
 
     void action2(Asm::DataObject<std::string> &do1, Asm::DataObject<std::map<std::string, double>> &do2)
@@ -65,6 +66,10 @@ int main(void)
 
     Module1 module1("Module1");
     Module2 module2("Module2");
+
+    //Test boost:any interface at dataobject
+    boost::any a = 42;
+    module1.do1.set(a);
 
     //Reflection
     using dataobject_map = std::unordered_map<std::string, boost::any>;
