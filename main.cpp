@@ -15,6 +15,9 @@ struct Module1
 
     void deserialize(std::string js) { std::cout << "Got: " << js << std::endl; }
     std::string serialize() { return "{do1:2}"; }
+
+    // Get out the module name for humans
+    const std::string& getName() const { return _name; }
 };
 
 class Module2
@@ -30,7 +33,6 @@ private:
         std::cout << "Got DO.name: " << do1.getName() << std::endl;
         do1.get([](int i){ std::cout << "Got DO.value: " << i << std::endl; });
         do2.get([](int i){ std::cout << "Had DO.value: " << i << std::endl; });
-
     }
 
     void action2(Asm::DataObject<std::string> &do1, Asm::DataObject<std::map<std::string, double>> &do2)
@@ -56,6 +58,9 @@ public:
 
     void deserialize(std::string js) { std::cout << "Got: " << js << std::endl; }
     std::string serialize() { return "{do1:2}"; }
+
+    // Get out the module name for humans
+    const std::string& getName() const { return _name; }
 };
 
 int main(void)
@@ -74,7 +79,8 @@ int main(void)
     using serialize_map   = std::unordered_map<std::string, std::function<std::string()>>;
 
     // This map should be built automatically
-    dataobject_map dos{{"Module1.DO1", &module1.do1},
+    dataobject_map dos{//{"Module1.DO1", &module1.do1},
+                       {module1.getName()+"."+module1.do1.getName(), &module1.do1}, //Alternate initialization
                        {"Module1.DO2", &module1.do2},
                        {"Module2.DO1", &module2.do1},
                        {"Module2.DO2", &module2.do2},
