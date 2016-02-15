@@ -67,10 +67,6 @@ int main(void)
     Module1 module1("Module1");
     Module2 module2("Module2");
 
-    //Test boost:any interface at dataobject
-    boost::any a = 42;
-    module1.do1.set(a);
-
     //Reflection
     using dataobject_map = std::unordered_map<std::string, boost::any>;
     using registerlink_map = std::unordered_map<std::string, std::function<void(std::string, boost::any, boost::any)>>;
@@ -99,8 +95,17 @@ int main(void)
                                   {"Module2", [&module2](){return std::mem_fn(&Module2::serialize)(module2);}}
                                  };
 
-    module2.link1.set("Link1", dos.at("Module1.DO1"), dos.at("Module2.DO1"));
-    module2.link2.set("Link2", dos.at("Module1.DO2"), dos.at("Module2.DO2"));
+    // Test to set links by JSON description only
+    // {
+    // {Link1:["Module2.link1", "Module1.DO1", "Module2.DO1"]},
+    // {Link2:["Module2.link2", "Module1.DO2", "Module2.DO2"]}
+    // }
+    links.at("Module2.link1")("Link1", dos.at("Module1.DO1"), dos.at("Module2.DO1"));
+    links.at("Module2.link2")("Link2", dos.at("Module1.DO2"), dos.at("Module2.DO2"));
+
+    // Test boost:any interface at dataobject
+    boost::any a = 42;
+    module1.do1.set(a);
 
     // Usually now is time to announce the change of this DO to the reactor
     rptr->trigger(module1.do1);
