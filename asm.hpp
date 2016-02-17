@@ -1,5 +1,6 @@
 #include <type_traits>
 #include <unordered_map>
+#include <functional>
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/shared_mutex.hpp>
@@ -138,6 +139,9 @@ class Link
         cb_type _cb;
 
     public:
+        template <typename MemberFunction, typename ThisPointer>
+        Link(MemberFunction memfun, ThisPointer thisptr) : _cb(std::bind(memfun, thisptr, std::placeholders::_1, std::placeholders::_2)) {}
+
         Link(cb_type cb) : _cb(cb) {}
 
         // Non-copyable
