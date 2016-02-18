@@ -208,14 +208,12 @@ class Reactor
                 {
                     boost::thread *t = _tg.create_thread([this](){ Threadpool::thread(); });
 
-                    //char tn[32];
-                    //pthread_getname_np(t->native_handle(), &tn[0], 31);
-                    //std::cout << "Default thread name is " << tn << std::endl;
-
+                    //The thread name is a meaningful C language string, whose length is
+                    //restricted to 16 characters, including the terminating null byte ('\0')
                     std::string s = "ASM-TP" + boost::lexical_cast<std::string>(i);
                     std::cout << s << std::endl;
 
-#ifndef __CYGWIN__
+#ifdef __linux__
                     if(pthread_setname_np(t->native_handle(), s.data()))
                         std::cout << "Could not set threadpool name" << std::endl;
 #endif
