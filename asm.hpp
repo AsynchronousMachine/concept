@@ -32,140 +32,140 @@ class DataObject
 {
     friend class Reactor; // This enables the reactor to traverse the links from outside
 
-    private:
-        template <class M, class Enable = void>
-        struct mutex
-        {
-            using type = void; //Invalid type for mutex
-        };
+private:
+    template <class M, class Enable = void>
+    struct mutex
+    {
+        using type = void; //Invalid type for mutex
+    };
 
-        template <class M>
-        struct mutex<M, std::enable_if_t<std::is_integral<M>::value>>
-        {
-            using type = boost::null_mutex;
-        };
+    template <class M>
+    struct mutex<M, std::enable_if_t<std::is_integral<M>::value>>
+    {
+        using type = boost::null_mutex;
+    };
 
-        template <class M>
-        struct mutex<M, std::enable_if_t<!std::is_integral<M>::value>>
-        {
-            using type = boost::shared_mutex;
-        };
+    template <class M>
+    struct mutex<M, std::enable_if_t<!std::is_integral<M>::value>>
+    {
+        using type = boost::shared_mutex;
+    };
 
-        // Make it easier to name it
-        using mutex_t = typename mutex<D>::type;
+    // Make it easier to name it
+    using mutex_t = typename mutex<D>::type;
 
-        // A dataobject should have a constant name to identify it
-        const std::string _name;
+    // A dataobject should have a constant name to identify it
+    const std::string _name;
 
-        // Content for this DO
-        D _content;
+    // Content for this DO
+    D _content;
 
-        // Mutable mutex_ member as it needs to be modified in the const member function get()
-        mutable mutex_t _mutex;
+    // Mutable mutex_ member as it needs to be modified in the const member function get()
+    mutable mutex_t _mutex;
 
-        // This holds all callbacks (LINKS) linked to that DO
-        std::unordered_map<std::string, std::function<void()>> _links;
+    // This holds all callbacks (LINKS) linked to that DO
+    std::unordered_map<std::string, std::function<void()>> _links;
 
-        // Protect the map of linked DOs
-        boost::mutex _links_mutex;
+    // Protect the map of linked DOs
+    boost::mutex _links_mutex;
 
-    public:
-        DataObject(const std::string name) : _name(name) {}
-        DataObject(const std::string name, D content) : _name(name), _content(content) {}
+public:
+    DataObject(const std::string name) : _name(name) {}
+    DataObject(const std::string name, D content) : _name(name), _content(content) {}
 
-        // Non-copyable
-        DataObject(const DataObject&) = delete;
-        DataObject &operator=(const DataObject&) = delete;
+    // Non-copyable
+    DataObject(const DataObject&) = delete;
+    DataObject &operator=(const DataObject&) = delete;
 
-        // Non-movable
-        DataObject(DataObject&&) = delete;
-        DataObject &operator=(DataObject&&) = delete;
+    // Non-movable
+    DataObject(DataObject&&) = delete;
+    DataObject &operator=(DataObject&&) = delete;
 
-        // Necessary if someone want to inherit from that
-        virtual ~DataObject() = default;
+    // Necessary if someone want to inherit from that
+    virtual ~DataObject() = default;
 
-        template <class Visitor>
-        void set(Visitor visitor)
-        {
-            // Exclusive lock for write access
-            boost::lock_guard<mutex_t> lock(_mutex);
-            visitor(_content);
-        }
+    template <class Visitor>
+    void set(Visitor visitor)
+    {
+        // Exclusive lock for write access
+        boost::lock_guard<mutex_t> lock(_mutex);
+        visitor(_content);
+    }
 
-        void set(const boost::any &value)
-        {
-            // Exclusive lock for write access
-            boost::lock_guard<mutex_t> lock(_mutex);
-            _content = boost::any_cast<D>(value);
-        }
+    void set(const boost::any &value)
+    {
+        // Exclusive lock for write access
+        boost::lock_guard<mutex_t> lock(_mutex);
+        _content = boost::any_cast<D>(value);
+    }
 
-        // Const member function to avoid that a non-const reference is passed to the visitor
-        // as that would allow the visitor to change the data_ member
-        template <class Visitor>
-        std::result_of_t<Visitor(D)> get(Visitor visitor) const
-        {
-            // Shared lock to support concurrent access from multiple visitors in different threads
-            boost::shared_lock_guard<mutex_t> lock(_mutex);
-            return visitor(_content);
-        }
+    // Const member function to avoid that a non-const reference is passed to the visitor
+    // as that would allow the visitor to change the data_ member
+    template <class Visitor>
+    std::result_of_t<Visitor(D)> get(Visitor visitor) const
+    {
+        // Shared lock to support concurrent access from multiple visitors in different threads
+        boost::shared_lock_guard<mutex_t> lock(_mutex);
+        return visitor(_content);
+    }
 
-        // Get out the DO name for humans
-        const std::string& getName() const { return _name; }
+    // Get out the DO name for humans
+    const std::string& getName() const { return _name; }
 
-        // Link a DO to that DO
-        template <typename D2, typename CB>
-        void registerLink(std::string name, DataObject<D2> &d2, CB cb)
-        {
-            boost::lock_guard<boost::mutex> lock(_links_mutex);
-            _links.insert({name, [cb, this, &d2](){ cb(*this, d2); }});
-        }
+    // Link a DO to that DO
+    template <typename D2, typename CB>
+    void registerLink(std::string name, DataObject<D2> &d2, CB cb)
+    {
+        boost::lock_guard<boost::mutex> lock(_links_mutex);
+        _links.insert({name, [cb, this, &d2](){ cb(*this, d2); }});
+    }
 
-        // Remove a link to that DO by name
-        void unregisterLink(std::string name)
-        {
-            boost::lock_guard<boost::mutex> lock(_links_mutex);
-            _links.erase(name);
-        }
+    // Remove a link to that DO by name
+    void unregisterLink(std::string name)
+    {
+        boost::lock_guard<boost::mutex> lock(_links_mutex);
+        _links.erase(name);
+    }
 };
 
 // Template class for a link
 template <typename D1, typename D2>
 class Link
 {
-    public:
-        using cb_type = std::function<void(D1&, D2&)>;
+public:
+    using cb_type = std::function<void(D1&, D2&)>;
 
-    private:
-        cb_type _cb;
+private:
+    cb_type _cb;
 
-    public:
-        template <typename MemFun, typename ThisPtr>
-        Link(MemFun memfun, ThisPtr thisptr) : _cb([thisptr, memfun](D1& d1, D2& d2){std::mem_fn(memfun)(thisptr, d1, d2);}) {}
-        Link(cb_type cb) : _cb(cb) {}
+public:
+    template <typename MemFun, typename ThisPtr>
+    Link(MemFun memfun, ThisPtr thisptr) : _cb([thisptr, memfun](D1& d1, D2& d2){std::mem_fn(memfun)(thisptr, d1, d2);}) {}
+    Link(cb_type cb) : _cb(cb) {}
 
-        // Non-copyable
-        Link(const Link&) = delete;
-        Link &operator=(const Link&) = delete;
+    // Non-copyable
+    Link(const Link&) = delete;
+    Link &operator=(const Link&) = delete;
 
-        // Non-movable
-        Link(Link&&) = delete;
-        Link &operator=(Link&&) = delete;
+    // Non-movable
+    Link(Link&&) = delete;
+    Link &operator=(Link&&) = delete;
 
-        // Necessary if someone want to inherit from that
-        virtual ~Link() = default;
+    // Necessary if someone want to inherit from that
+    virtual ~Link() = default;
 
-        void set(const std::string name, boost::any a1, boost::any a2)
-        {
-            D1 *d1 = boost::any_cast<D1*>(a1);
-            D2 *d2 = boost::any_cast<D2*>(a2);
-            d1->registerLink(name, *d2, _cb);
-        }
+    void set(const std::string name, boost::any a1, boost::any a2)
+    {
+        D1 *d1 = boost::any_cast<D1*>(a1);
+        D2 *d2 = boost::any_cast<D2*>(a2);
+        d1->registerLink(name, *d2, _cb);
+    }
 
-        void clear(const std::string name, boost::any a)
-        {
-            D1 *d1 = boost::any_cast<D1*>(a);
-            d1->unregisterLink(name);
-        }
+    void clear(const std::string name, boost::any a)
+    {
+        D1 *d1 = boost::any_cast<D1*>(a);
+        d1->unregisterLink(name);
+    }
 };
 
 // Concept of reactor
@@ -178,125 +178,125 @@ class Link
 // To simulate the not implemented asynchronous behavior call the public function execute()
 class Reactor
 {
-    private:
-        // Max. queue capacity
-        static constexpr size_t MAX_CAPACITY = 1024;
+private:
+    // Max. queue capacity
+    static constexpr size_t MAX_CAPACITY = 1024;
 
-        // This is a circular buffer to hold all links from dataobjects which content has been changed
-        boost::circular_buffer<std::function<void()>> _triggeredLinks{MAX_CAPACITY};
+    // This is a circular buffer to hold all links from dataobjects which content has been changed
+    boost::circular_buffer<std::function<void()>> _triggeredLinks{MAX_CAPACITY};
 
-        // Protect the circular buffer of triggered DOs
-        boost::mutex _triggeredLinks_mutex;
+    // Protect the circular buffer of triggered DOs
+    boost::mutex _triggeredLinks_mutex;
 
-        struct Threadpool
+    struct Threadpool
+    {
+        boost::thread_group _tg;
+        boost::condition_variable _cv;
+        std::function<void()> _f;
+
+        Threadpool(unsigned threads, std::function<void()> f) : _f(f)
         {
-            boost::thread_group _tg;
-            boost::condition_variable _cv;
-            std::function<void()> _f;
+            unsigned cores = boost::thread::hardware_concurrency();
 
-            Threadpool(unsigned threads, std::function<void()> f) : _f(f)
+            std::cout << "Found " << cores << " cores" << std::endl;
+
+            if(threads == 0 || threads > cores)
+                threads = cores;
+
+            for(unsigned i = 0; i < threads; ++i)
             {
-                unsigned cores = boost::thread::hardware_concurrency();
+                boost::thread *t = _tg.create_thread([this](){ Threadpool::thread(); });
 
-                std::cout << "Found " << cores << " cores" << std::endl;
-
-                if(threads == 0 || threads > cores)
-                    threads = cores;
-
-                for(unsigned i = 0; i < threads; ++i)
-                {
-                    boost::thread *t = _tg.create_thread([this](){ Threadpool::thread(); });
-
-                    //The thread name is a meaningful C language string, whose length is
-                    //restricted to 16 characters, including the terminating null byte ('\0')
-                    std::string s = "ASM-TP" + boost::lexical_cast<std::string>(i);
-                    std::cout << s << std::endl;
+                //The thread name is a meaningful C language string, whose length is
+                //restricted to 16 characters, including the terminating null byte ('\0')
+                std::string s = "ASM-TP" + boost::lexical_cast<std::string>(i);
+                std::cout << s << std::endl;
 
 #ifdef __linux__
-                    if(pthread_setname_np(t->native_handle(), s.data()))
-                        std::cout << "Could not set threadpool name" << std::endl;
+                if(pthread_setname_np(t->native_handle(), s.data()))
+                    std::cout << "Could not set threadpool name" << std::endl;
 #endif
-                }
-
-                std::cout << "Have " << _tg.size() << " thread/s running" << std::endl << std::endl;
             }
 
-            ~Threadpool()
-            {
-                std::cout << "Delete treadpool" << std::endl;
-                _tg.interrupt_all();
-                _tg.join_all();
-            }
+            std::cout << "Have " << _tg.size() << " thread/s running" << std::endl << std::endl;
+        }
 
-            void wait(boost::unique_lock<boost::mutex>& lock) { _cv.wait(lock); }
-
-            void notify() { _cv.notify_all(); }
-
-            void thread() { _f(); }
-        };
-
-        struct Threadpool _tp;
-
-        // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
-        // These method is typically private and called with in a thread related to a priority
-        // This thread is typically waiting on a synchronization element
-        void execute()
+        ~Threadpool()
         {
-            std::function<void()> f;
+            std::cout << "Delete treadpool" << std::endl;
+            _tg.interrupt_all();
+            _tg.join_all();
+        }
 
-            for(;;)
+        void wait(boost::unique_lock<boost::mutex>& lock) { _cv.wait(lock); }
+
+        void notify() { _cv.notify_all(); }
+
+        void thread() { _f(); }
+    };
+
+    struct Threadpool _tp;
+
+    // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
+    // These method is typically private and called with in a thread related to a priority
+    // This thread is typically waiting on a synchronization element
+    void execute()
+    {
+        std::function<void()> f;
+
+        for(;;)
+        {
             {
+                boost::unique_lock<boost::mutex> lock(_triggeredLinks_mutex);
+
+                while(_triggeredLinks.empty())
                 {
-                    boost::unique_lock<boost::mutex> lock(_triggeredLinks_mutex);
-
-                    while(_triggeredLinks.empty())
-                    {
-                        _tp.wait(lock);
-                        std::cout << ">>>" << std::endl;
-                    }
-
-                    f = _triggeredLinks.front();
-                    _triggeredLinks.pop_front();
+                    _tp.wait(lock);
+                    std::cout << ">>>" << std::endl;
                 }
 
-                // Execute the link without holding the lock
-                f();
-            }
-        }
-
-    public:
-        Reactor(unsigned threads = 1) : _tp(threads, [this](){Reactor::execute();}) {}
-
-        // Non-copyable
-        Reactor(const Reactor&) = delete;
-        Reactor &operator=(const Reactor&) = delete;
-
-        // Non-movable
-        Reactor(Reactor&&) = delete;
-        Reactor &operator=(Reactor&&) = delete;
-
-        ~Reactor()
-        {
-            std::cout << std::endl << "Delete reactor" << std::endl;
-        }
-
-        // Announce the change of the content of a dataobject to the reactor
-        template <class D>
-        void trigger(DataObject<D> &d)
-        {
-            {
-                boost::lock_guard<boost::mutex> lock(d._links_mutex);
-
-                if(d._links.empty())
-                    return;
-
-                for(auto &p : d._links)
-                    _triggeredLinks.push_back(p.second);
+                f = _triggeredLinks.front();
+                _triggeredLinks.pop_front();
             }
 
-            // Now trigger a synchronization element to release at least a waiting thread
-            _tp.notify();
+            // Execute the link without holding the lock
+            f();
         }
+    }
+
+public:
+    Reactor(unsigned threads = 1) : _tp(threads, [this](){Reactor::execute();}) {}
+
+    // Non-copyable
+    Reactor(const Reactor&) = delete;
+    Reactor &operator=(const Reactor&) = delete;
+
+    // Non-movable
+    Reactor(Reactor&&) = delete;
+    Reactor &operator=(Reactor&&) = delete;
+
+    ~Reactor()
+    {
+        std::cout << std::endl << "Delete reactor" << std::endl;
+    }
+
+    // Announce the change of the content of a dataobject to the reactor
+    template <class D>
+    void trigger(DataObject<D> &d)
+    {
+        {
+            boost::lock_guard<boost::mutex> lock(d._links_mutex);
+
+            if(d._links.empty())
+                return;
+
+            for(auto &p : d._links)
+                _triggeredLinks.push_back(p.second);
+        }
+
+        // Now trigger a synchronization element to release at least a waiting thread
+        _tp.notify();
+    }
 };
 
 } // End of namespace

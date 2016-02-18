@@ -2,13 +2,16 @@
 
 // Test concept of dataobject, reactor and modules
 
-struct Module1
+class Module1
 {
+private:
     // A module should have a constant name to identify it
     const std::string _name;
 
-    // Only one constructor
-    Module1(std::string name) : _name(name), do1("DO1", 1), do2("DO2", "42") {}
+public:
+    Module1(std::string name) : _name(name),
+                                do1("DO1", 1),
+                                do2("DO2", "42") {}
 
     Asm::DataObject<int> do1;
     Asm::DataObject<std::string> do2;
@@ -45,8 +48,9 @@ private:
     }
 
 public:
-    // Only one constructor
-    Module2(std::string name) : _name(name), do1("DO1", 2), do2("DO2", std::map<std::string, double>{{"42", 22.0}, {"43", 23.0}, {"44", 24.0}}),
+    Module2(std::string name) : _name(name),
+                                do1("DO1", 2),
+                                do2("DO2", std::map<std::string, double>{{"42", 22.0}, {"43", 23.0}, {"44", 24.0}}),
                                 link1(&Module2::action1, this),
                                 link2(&Module2::action2, this) {}
 
@@ -87,7 +91,7 @@ int main(void)
                        {"Module2.DO2", &module2.do2},
                       };
 
-    // This map should be built automatically
+    // This map should be built automaticallystd::mem_fn(&Module1::deserialize)(module1, js);
     registerlink_map set_links{{"Module2.link1", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link1); l(module2).set(name, a1, a2);}},
                                {"Module2.link2", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link2); l(module2).set(name, a1, a2);}}
                               };
@@ -115,7 +119,7 @@ int main(void)
     set_links.at("Module2.link1")("Link1", dos.at("Module1.DO1"), dos.at("Module2.DO1"));
     set_links.at("Module2.link2")("Link2", dos.at("Module1.DO2"), dos.at("Module2.DO2"));
 
-    // Test boost:any interface at dataobject
+    // Test boost:any interface at specific dataobject
     boost::any a = 42;
     module1.do1.set(a);
 
