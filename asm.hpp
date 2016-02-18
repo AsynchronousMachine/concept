@@ -1,5 +1,6 @@
 #include <type_traits>
 #include <unordered_map>
+#include <functional>
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/shared_mutex.hpp>
@@ -7,6 +8,7 @@
 #include <boost/thread/null_mutex.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/any.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <pthread.h>
 
@@ -137,6 +139,9 @@ class Link
         cb_type _cb;
 
     public:
+        template <typename MemberFunction, typename ThisPointer>
+        Link(MemberFunction memfun, ThisPointer thisptr) : _cb(std::bind(memfun, thisptr, std::placeholders::_1, std::placeholders::_2)) {}
+
         Link(cb_type cb) : _cb(cb) {}
 
         // Non-copyable
@@ -207,11 +212,13 @@ class Reactor
                     //pthread_getname_np(t->native_handle(), &tn[0], 31);
                     //std::cout << "Default thread name is " << tn << std::endl;
 
-                    std::string s = "ASM-TP" + std::to_string(i);
+                    std::string s = "ASM-TP" + boost::lexical_cast<std::string>(i);
                     std::cout << s << std::endl;
 
+#ifndef __CYGWIN__
                     if(pthread_setname_np(t->native_handle(), s.data()))
                         std::cout << "Could not set threadpool name" << std::endl;
+#endif
                 }
 
                 std::cout << "Have " << _tg.size() << " thread/s running" << std::endl << std::endl;

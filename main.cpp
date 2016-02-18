@@ -47,8 +47,8 @@ private:
 public:
     // Only one constructor
     Module2(std::string name) : _name(name), do1("DO1", 2), do2("DO2", std::map<std::string, double>{{"42", 22.0}, {"43", 23.0}, {"44", 24.0}}),
-                                link1([this](Asm::DataObject<int> &do1, Asm::DataObject<int> &do2) { action1(do1, do2); }),
-                                link2([this](Asm::DataObject<std::string> &do1, Asm::DataObject<std::map<std::string, double>> &do2) { action2(do1, do2); }) {}
+                                link1(&Module2::action1, this),
+                                link2(&Module2::action2, this) {}
 
     Asm::DataObject<int> do1;
     Asm::DataObject<std::map<std::string, double>> do2;
