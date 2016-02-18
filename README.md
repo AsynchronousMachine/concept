@@ -18,12 +18,12 @@ Start with following sequence of git branches:
 4. concept-module
 5. concept-reflection
  
-Other git branches are used for temporary tests!
+Other git <dev/branches> are used for temporary tests!
 
 ## How to use
 
 Install boost libraries.
 
-Take care how to find them.
+Take care how to find them by your compiler.
 
 Change your codeblocks projects settings accordingly.
