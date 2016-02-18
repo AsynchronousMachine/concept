@@ -156,6 +156,12 @@ class Link
             D2 *d2 = boost::any_cast<D2*>(a2);
             d1->registerLink(name, *d2, _cb);
         }
+
+        void clear(const std::string name, boost::any a)
+        {
+            D1 *d1 = boost::any_cast<D1*>(a);
+            d1->unregisterLink(name);
+        }
 };
 
 // Concept of reactor

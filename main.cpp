@@ -75,6 +75,7 @@ int main(void)
     //Reflection
     using dataobject_map = std::unordered_map<std::string, boost::any>;
     using registerlink_map = std::unordered_map<std::string, std::function<void(std::string, boost::any, boost::any)>>;
+    using unregisterlink_map = std::unordered_map<std::string, std::function<void(std::string, boost::any)>>;
     using deserialize_map = std::unordered_map<std::string, std::function<void(std::string)>>;
     using serialize_map   = std::unordered_map<std::string, std::function<std::string()>>;
 
@@ -87,9 +88,14 @@ int main(void)
                       };
 
     // This map should be built automatically
-    registerlink_map links{{"Module2.link1", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link1); l(module2).set(name, a1, a2);}},
-                           {"Module2.link2", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link2); l(module2).set(name, a1, a2);}}
-                          };
+    registerlink_map set_links{{"Module2.link1", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link1); l(module2).set(name, a1, a2);}},
+                               {"Module2.link2", [&module2](std::string name, boost::any a1, boost::any a2){auto l = std::mem_fn(&Module2::link2); l(module2).set(name, a1, a2);}}
+                              };
+
+    // This map should be built automatically
+    unregisterlink_map clear_links{{"Module2.link1", [&module2](std::string name, boost::any a){auto l = std::mem_fn(&Module2::link1); l(module2).clear(name, a);}},
+                                   {"Module2.link2", [&module2](std::string name, boost::any a){auto l = std::mem_fn(&Module2::link2); l(module2).clear(name, a);}}
+                                  };
 
     // This map should be built automatically
     const deserialize_map des_modules{{"Module1", [&module1](std::string js){std::mem_fn(&Module1::deserialize)(module1, js);}},
@@ -106,8 +112,8 @@ int main(void)
     // {Link1:["Module2.link1", "Module1.DO1", "Module2.DO1"]},
     // {Link2:["Module2.link2", "Module1.DO2", "Module2.DO2"]}
     // }
-    links.at("Module2.link1")("Link1", dos.at("Module1.DO1"), dos.at("Module2.DO1"));
-    links.at("Module2.link2")("Link2", dos.at("Module1.DO2"), dos.at("Module2.DO2"));
+    set_links.at("Module2.link1")("Link1", dos.at("Module1.DO1"), dos.at("Module2.DO1"));
+    set_links.at("Module2.link2")("Link2", dos.at("Module1.DO2"), dos.at("Module2.DO2"));
 
     // Test boost:any interface at dataobject
     boost::any a = 42;
@@ -142,6 +148,12 @@ int main(void)
     std::cout << "+++Serialize via JSON by key" << std::endl;
     std::cout << "Got from  Module1: "; std::cout << s_modules.at("Module1")() << std::endl;
     std::cout << "Got from  Module2: "; std::cout << s_modules.at("Module2")() << std::endl;
+
+    // Test to clear links by JSON description only
+    // {
+    // {Link2:["Module2.link2", "Module1.DO2"]}
+    // }
+    clear_links.at("Module2.link2")("Link2", dos.at("Module1.DO2"));
 
     delete rptr;
 
