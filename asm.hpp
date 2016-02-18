@@ -139,9 +139,8 @@ class Link
         cb_type _cb;
 
     public:
-        template <typename MemberFunction, typename ThisPointer>
-        Link(MemberFunction memfun, ThisPointer thisptr) : _cb(std::bind(memfun, thisptr, std::placeholders::_1, std::placeholders::_2)) {}
-
+        template <typename MemFun, typename ThisPtr>
+        Link(MemFun memfun, ThisPtr thisptr) : _cb([thisptr, memfun](D1& d1, D2& d2){std::mem_fn(memfun)(thisptr, d1, d2);}) {}
         Link(cb_type cb) : _cb(cb) {}
 
         // Non-copyable
