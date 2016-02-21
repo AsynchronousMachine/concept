@@ -182,6 +182,9 @@ private:
     // Max. queue capacity
     static constexpr size_t MAX_CAPACITY = 1024;
 
+    // Realtime priority
+    static constexpr int RT_PRIO = 30;
+
     // This is a circular buffer to hold all links from dataobjects which content has been changed
     boost::circular_buffer<std::function<void()>> _triggeredLinks{MAX_CAPACITY};
 
@@ -215,6 +218,11 @@ private:
 #ifdef __linux__
                 if(pthread_setname_np(t->native_handle(), s.data()))
                     std::cout << "Could not set threadpool name" << std::endl;
+
+                struct sched_param param = {.sched_priority = RT_PRIO};
+
+                if(pthread_setschedparam(t->native_handle(), SCHED_FIFO, &param))
+                    std::cout << "Could not set realtime parameter" << std::endl;
 #endif
             }
 
