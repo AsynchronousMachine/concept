@@ -11,6 +11,9 @@
 #include <boost/lexical_cast.hpp>
 
 #include <pthread.h>
+#include <time.h>
+#include <sys/timerfd.h>
+
 
 // AsynchronousMachine
 namespace Asm {
@@ -283,10 +286,7 @@ public:
     Reactor(Reactor&&) = delete;
     Reactor &operator=(Reactor&&) = delete;
 
-    ~Reactor()
-    {
-        std::cout << std::endl << "Delete reactor" << std::endl;
-    }
+    ~Reactor() { std::cout << std::endl << "Delete reactor" << std::endl; }
 
     // Announce the change of the content of a dataobject to the reactor
     template <class D>
@@ -304,6 +304,91 @@ public:
 
         // Now trigger a synchronization element to release at least a waiting thread
         _tp.notify();
+    }
+};
+
+class Timer
+{
+private:
+    int _fd;
+    long _interval;
+    long _next;
+
+public:
+    Timer() : _fd(-1), _interval(0), _next(0)
+    {
+        if((_fd = ::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC)) < 0)
+        {
+            std::cout << "Timer could not be created: " << std::strerror(errno) << std::endl;
+        }
+    }
+
+    // Non-copyable
+    Timer(const Timer&) = delete;
+    Timer &operator=(const Timer&) = delete;
+
+    // Non-movable
+    Timer(Timer&&) = delete;
+    Timer &operator=(Timer&&) = delete;
+
+    ~Timer() { Stop(); ::close(_fd); }
+
+    bool SetRelativeInterval(long interval, long next = 0)
+    {
+        itimerspec val;
+
+        if(interval == 0 && next == 0)
+        {
+            std::cout << "Interval and next start time must be different from zero" << std::endl;
+            return false;
+        }
+
+        _interval = interval;
+        _next = next ? next : interval;
+
+        val.it_interval.tv_sec = _interval / 1000;
+        val.it_interval.tv_nsec = (_interval % 1000) * 1000000;
+        val.it_value.tv_sec = _next / 1000;
+        val.it_value.tv_nsec = (_next % 1000) * 1000000;
+
+
+        if(::timerfd_settime(_fd, 0, &val, 0) < 0)
+        {
+            std::cout << "Timer could not set: " << std::strerror(errno) << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
+    bool Stop()
+    {
+        itimerspec val;
+
+        std::memset(&val, 0, sizeof val);
+
+        if(::timerfd_settime(_fd, 0, &val, 0) < 0)
+        {
+            std::cout << "Timer could not stopped: " << std::strerror(errno) << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
+    long GetInterval() { return _interval; }
+
+    bool Restart() { return SetRelativeInterval(_interval, _next); }
+
+    bool Wait(uint64_t& elapsed)
+    {
+        if(::read(_fd, &elapsed, sizeof(uint64_t)) != sizeof(uint64_t))
+        {
+            std::cout << "Timer could not read: " << std::strerror(errno) << std::endl;
+            return false;
+        }
+
+        return true;
     }
 };
 

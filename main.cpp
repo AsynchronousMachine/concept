@@ -69,6 +69,7 @@ public:
 
 int main(void)
 {
+#if 0
     Asm::Reactor *rptr = new Asm::Reactor(2);
     // Let it start
     boost::this_thread::sleep_for(boost::chrono::seconds(1));
@@ -160,6 +161,49 @@ int main(void)
     clear_links.at("Module2.link2")("Link2", dos.at("Module1.DO2"));
 
     delete rptr;
+#endif // 0
+
+    Asm::Timer timer1;
+
+    std::cout << "Start with delay of 3s with intervall 3s" << std::endl;
+
+    timer1.SetRelativeInterval(3000, 3000);
+
+    for(int i = 0; i < 5; ++i)
+    {
+        uint64_t t;
+        timer1.Wait(t);
+
+        std::cout << "Elapsed time " << t << std::endl;
+    }
+
+    std::cout << "Start with delay of 0s with intervall 3s" << std::endl;
+
+    timer1.SetRelativeInterval(3000, 0);
+
+    for(int i = 0; i < 5; ++i)
+    {
+        uint64_t t;
+        timer1.Wait(t);
+
+        std::cout << "Elapsed time " << t << std::endl;
+    }
+
+    std::cout << "Timer stop and restart" << std::endl;
+
+    timer1.Stop();
+
+    timer1.Restart();
+
+    for(int i = 0; i < 5; ++i)
+    {
+        uint64_t t;
+        timer1.Wait(t);
+
+        std::cout << "Elapsed time " << t << std::endl;
+    }
+
+    timer1.Stop();
 
     exit(0);
 }
