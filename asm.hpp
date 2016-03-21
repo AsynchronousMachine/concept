@@ -14,6 +14,7 @@
 #include <time.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 
 // AsynchronousMachine
 namespace Asm {
@@ -410,8 +411,11 @@ private:
         Timer* ptimer;
     };
 
-    // File descriptor for epoll machanism
-    int _fd;
+    // File descriptor for epoll mechanism
+    int _epfd;
+
+    // File descriptor for epoll break mechanism
+    int _evtfd;
 
     // Reference to the event reactor
     Reactor& _reactor;
@@ -425,24 +429,16 @@ private:
     // Holds all epoll file descriptor associated data
     std::unordered_map<int, TimerEntry> _notify;
 
-    bool _break;
-
     // Threaded timer function mechanism
     void execute()
     {
         for(;;)
         {
             epoll_event evt[MAX_CAPACITY];
-            // Use eventfd for breaking epoll_wait ...
-            int evt_cnt = ::epoll_wait(_fd, &evt[0], MAX_CAPACITY, 1000);
 
-            if(evt_cnt == 0 && _break)
-            {
-                std::cout << "Epoll breaked: " << std::strerror(errno) << std::endl;
-                return;
-            }
+            int evt_cnt = ::epoll_wait(_epfd, &evt[0], MAX_CAPACITY, -1);
 
-            if(evt_cnt < 0)
+            if(evt_cnt <= 0)
             {
                 std::cout << "Epoll wait error: " << std::strerror(errno) << std::endl;
                 continue;
@@ -460,6 +456,12 @@ private:
                         continue;
                     }
 
+                    if(evt[i].data.fd == _evtfd && elapsed == UINT64_MAX-1)
+                    {
+                        std::cout << "Read timer returns break command" << std::endl;
+                        return;
+                    }
+
                     std::cout << "Timer has fired" << std::endl;
 
 //                    const int& fd = events[i].data.fd;
@@ -473,11 +475,32 @@ private:
     }
 
 public:
-    TimerReactor(Reactor& reactor) : _fd(-1), _reactor(reactor), _break(false)
+    TimerReactor(Reactor& reactor) : _epfd(-1), _evtfd(-1), _reactor(reactor)
     {
-        if((_fd = ::epoll_create1(EPOLL_CLOEXEC)) < 0)
+        if((_evtfd = ::eventfd(0, EFD_CLOEXEC)) < 0)
+        {
+            std::cout << "Eventfd file handle could not be created: " << std::strerror(errno) << std::endl;
+            return;
+        }
+
+        if((_epfd = ::epoll_create1(EPOLL_CLOEXEC)) < 0)
         {
             std::cout << "Epoll file handle could not be created: " << std::strerror(errno) << std::endl;
+            close(_evtfd);
+            return;
+        }
+
+        // Add it first to break epoll_wait in case of destruction
+        epoll_event evt;
+
+        evt.events = EPOLLIN;
+        evt.data.fd = _evtfd;
+
+        if(::epoll_ctl(_epfd, EPOLL_CTL_ADD, _evtfd, &evt) < 0)
+        {
+            std::cout << "Epoll control error at ADD break event: " << std::strerror(errno) << std::endl;
+            close(_epfd);
+            close(_evtfd);
             return;
         }
 
@@ -496,12 +519,20 @@ public:
     {
         std::cout << "Delete timer reactor" << std::endl;
 
-        _break = true;
+        uint64_t stop = UINT64_MAX-1;
+
+        if(::write(_evtfd, &stop, sizeof(stop)) != sizeof(stop))
+        {
+            std::cout << "Write timer break failed: " << std::strerror(errno) << std::endl;
+        }
 
         _t.join();
 
-        if(_fd >= 0)
-            ::close(_fd);
+        if(_epfd >= 0)
+            ::close(_epfd);
+
+        if(_evtfd >= 0)
+            ::close(_evtfd);
     }
 
     bool Register(Timer* ptimer, /*Reference to ???*/ bool ref = true, bool one_shot = false)
@@ -515,10 +546,9 @@ public:
         evt.events = EPOLLIN;
         if(one_shot)
             evt.events |= EPOLLONESHOT;
-
         evt.data.fd = ptimer->_fd;
 
-        if(::epoll_ctl(_fd, EPOLL_CTL_ADD, ptimer->_fd, &evt) < 0)
+        if(::epoll_ctl(_epfd, EPOLL_CTL_ADD, ptimer->_fd, &evt) < 0)
         {
             // Delete it again in the case of error
             _notify.erase(ptimer->_fd);
@@ -536,7 +566,7 @@ public:
 
         boost::lock_guard<boost::mutex> lock(_mtx);
 
-        if(::epoll_ctl(_fd, EPOLL_CTL_DEL, ptimer->_fd, 0) < 0)
+        if(::epoll_ctl(_epfd, EPOLL_CTL_DEL, ptimer->_fd, 0) < 0)
         {
             std::cout << "Epoll control error at DEL: " << std::strerror(errno) << std::endl;
             ret = false;
