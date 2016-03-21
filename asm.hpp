@@ -13,7 +13,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <sys/timerfd.h>
-
+#include <sys/epoll.h>
 
 // AsynchronousMachine
 namespace Asm {
@@ -63,7 +63,7 @@ private:
     // Content for this DO
     D _content;
 
-    // Mutable mutex_ member as it needs to be modified in the const member function get()
+    // Mutable member as it needs to be modified in the const member function get()
     mutable mutex_t _mutex;
 
     // This holds all callbacks (LINKS) linked to that DO
@@ -309,6 +309,8 @@ public:
 
 class Timer
 {
+    friend class TimerReactor; // This enables the timer reactor to traverse the file descriptors from outside
+
 private:
     int _fd;
     long _interval;
@@ -331,7 +333,11 @@ public:
     Timer(Timer&&) = delete;
     Timer &operator=(Timer&&) = delete;
 
-    ~Timer() { Stop(); ::close(_fd); }
+    ~Timer()
+    {
+        Stop();
+        ::close(_fd);
+    }
 
     bool SetRelativeInterval(long interval, long next = 0)
     {
@@ -363,9 +369,7 @@ public:
 
     bool Stop()
     {
-        itimerspec val;
-
-        std::memset(&val, 0, sizeof val);
+        itimerspec val {};
 
         if(::timerfd_settime(_fd, 0, &val, 0) < 0)
         {
@@ -389,6 +393,159 @@ public:
         }
 
         return true;
+    }
+};
+
+class TimerReactor
+{
+private:
+    // Max. epoll capacity, can be found at /proc/sys/fs/epoll/max_user_watches
+    static constexpr size_t MAX_CAPACITY = 256;
+
+    // Epoll file descriptor associated data
+    struct TimerEntry
+    {
+        bool ref;
+        bool one_shot;
+        Timer* ptimer;
+    };
+
+    // File descriptor for epoll machanism
+    int _fd;
+
+    // Reference to the event reactor
+    Reactor& _reactor;
+
+    // Protects internal data
+    boost::mutex _mtx;
+
+    // Holds the timer thread reference
+    boost::thread _t;
+
+    // Holds all epoll file descriptor associated data
+    std::unordered_map<int, TimerEntry> _notify;
+
+    bool _break;
+
+    // Threaded timer function mechanism
+    void execute()
+    {
+        for(;;)
+        {
+            epoll_event evt[MAX_CAPACITY];
+            // Use eventfd for breaking epoll_wait ...
+            int evt_cnt = ::epoll_wait(_fd, &evt[0], MAX_CAPACITY, 1000);
+
+            if(evt_cnt == 0 && _break)
+            {
+                std::cout << "Epoll breaked: " << std::strerror(errno) << std::endl;
+                return;
+            }
+
+            if(evt_cnt < 0)
+            {
+                std::cout << "Epoll wait error: " << std::strerror(errno) << std::endl;
+                continue;
+            }
+
+            for(int i = 0; i < evt_cnt; i++)
+            {
+                if(evt[i].events & EPOLLIN)
+                {
+                    uint64_t elapsed;
+
+                    if(::read(evt[i].data.fd, &elapsed, sizeof(elapsed)) != sizeof(elapsed))
+                    {
+                        std::cout << "Read timer returns wrong size: " << std::strerror(errno) << std::endl;
+                        continue;
+                    }
+
+                    std::cout << "Timer has fired" << std::endl;
+
+//                    const int& fd = events[i].data.fd;
+//                    {
+//                        if (m_NotifyMap[fd].NotifyPtr != 0)
+//                            m_pDOReactor->trigger(m_NotifyMap[fd].level, m_NotifyMap[fd].NotifyPtr);
+//                    }
+                }
+            }
+        }
+    }
+
+public:
+    TimerReactor(Reactor& reactor) : _fd(-1), _reactor(reactor), _break(false)
+    {
+        if((_fd = ::epoll_create1(EPOLL_CLOEXEC)) < 0)
+        {
+            std::cout << "Epoll file handle could not be created: " << std::strerror(errno) << std::endl;
+            return;
+        }
+
+        _t = boost::thread([this](){TimerReactor::execute();});
+    }
+
+    // Non-copyable
+    TimerReactor(const TimerReactor&) = delete;
+    TimerReactor &operator=(const TimerReactor&) = delete;
+
+    // Non-movable
+    TimerReactor(TimerReactor&&) = delete;
+    TimerReactor &operator=(TimerReactor&&) = delete;
+
+    ~TimerReactor()
+    {
+        std::cout << "Delete timer reactor" << std::endl;
+
+        _break = true;
+
+        _t.join();
+
+        if(_fd >= 0)
+            ::close(_fd);
+    }
+
+    bool Register(Timer* ptimer, /*Reference to ???*/ bool ref = true, bool one_shot = false)
+    {
+        epoll_event evt;
+
+        boost::lock_guard<boost::mutex> lock(_mtx);
+
+        _notify.insert({ptimer->_fd, TimerEntry {ref, one_shot, ptimer}});
+
+        evt.events = EPOLLIN;
+        if(one_shot)
+            evt.events |= EPOLLONESHOT;
+
+        evt.data.fd = ptimer->_fd;
+
+        if(::epoll_ctl(_fd, EPOLL_CTL_ADD, ptimer->_fd, &evt) < 0)
+        {
+            // Delete it again in the case of error
+            _notify.erase(ptimer->_fd);
+
+            std::cout << "Epoll control error at ADD: " << std::strerror(errno) << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
+    bool Unregister(Timer* ptimer)
+    {
+        bool ret = true;
+
+        boost::lock_guard<boost::mutex> lock(_mtx);
+
+        if(::epoll_ctl(_fd, EPOLL_CTL_DEL, ptimer->_fd, 0) < 0)
+        {
+            std::cout << "Epoll control error at DEL: " << std::strerror(errno) << std::endl;
+            ret = false;
+        }
+
+        // Erase it in any case
+        _notify.erase(ptimer->_fd);
+
+        return ret;
     }
 };
 
