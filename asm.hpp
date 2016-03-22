@@ -310,7 +310,7 @@ public:
 
 class Timer
 {
-    friend class TimerReactor; // This enables the timer reactor to traverse the file descriptors from outside
+    friend class TimerReactor; // This enables the timer reactor to traverse the file descriptor from outside
 
 private:
     int _fd;
@@ -407,7 +407,6 @@ private:
     struct TimerEntry
     {
         bool ref;
-        bool one_shot;
         Timer* ptimer;
     };
 
@@ -456,9 +455,9 @@ private:
                         continue;
                     }
 
-                    if(evt[i].data.fd == _evtfd && elapsed == UINT64_MAX-1)
+                    if(evt[i].data.fd == _evtfd && elapsed > 0)
                     {
-                        std::cout << "Read timer returns break command" << std::endl;
+                        std::cout << "Read timer returns stop command" << std::endl;
                         return;
                     }
 
@@ -492,7 +491,6 @@ public:
 
         // Add it first to break epoll_wait in case of destruction
         epoll_event evt;
-
         evt.events = EPOLLIN;
         evt.data.fd = _evtfd;
 
@@ -519,33 +517,30 @@ public:
     {
         std::cout << "Delete timer reactor" << std::endl;
 
-        uint64_t stop = UINT64_MAX-1;
+        uint64_t stop = 1;
 
         if(::write(_evtfd, &stop, sizeof(stop)) != sizeof(stop))
         {
-            std::cout << "Write timer break failed: " << std::strerror(errno) << std::endl;
+            std::cout << "Write timer stop failed: " << std::strerror(errno) << std::endl;
         }
 
         _t.join();
 
-        if(_epfd >= 0)
-            ::close(_epfd);
-
         if(_evtfd >= 0)
             ::close(_evtfd);
+
+        if(_epfd >= 0)
+            ::close(_epfd);
     }
 
-    bool Register(Timer* ptimer, /*Reference to ???*/ bool ref = true, bool one_shot = false)
+    bool Register(Timer* ptimer, /*Reference to ???*/ bool ref = true)
     {
-        epoll_event evt;
-
         boost::lock_guard<boost::mutex> lock(_mtx);
 
-        _notify.insert({ptimer->_fd, TimerEntry {ref, one_shot, ptimer}});
+        _notify.insert({ptimer->_fd, TimerEntry {ref, ptimer}});
 
+        epoll_event evt;
         evt.events = EPOLLIN;
-        if(one_shot)
-            evt.events |= EPOLLONESHOT;
         evt.data.fd = ptimer->_fd;
 
         if(::epoll_ctl(_epfd, EPOLL_CTL_ADD, ptimer->_fd, &evt) < 0)
