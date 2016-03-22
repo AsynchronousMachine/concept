@@ -70,7 +70,7 @@ public:
 int main(void)
 {
 
-    Asm::Reactor *rptr = new Asm::Reactor(2);
+    Asm::DataObjectReactor *rptr = new Asm::DataObjectReactor(2);
 
 #if 0
     // Let it start
@@ -169,7 +169,7 @@ int main(void)
 
     std::cout << "Start with delay of 3s with intervall 2s" << std::endl;
 
-    timer1.SetRelativeInterval(2000, 3000);
+    timer1.setRelativeInterval(2000, 3000);
 
     for(int i = 0; i < 5; ++i)
     {
@@ -181,7 +181,7 @@ int main(void)
 
     std::cout << "Start with delay of 0s with intervall 2s" << std::endl;
 
-    timer1.SetRelativeInterval(2000, 0);
+    timer1.setRelativeInterval(2000, 0);
 
     for(int i = 0; i < 5; ++i)
     {
@@ -193,9 +193,9 @@ int main(void)
 
     std::cout << "Timer stop and restart" << std::endl;
 
-    timer1.Stop();
+    timer1.stop();
 
-    timer1.Restart();
+    timer1.restart();
 
     for(int i = 0; i < 5; ++i)
     {
@@ -213,22 +213,22 @@ int main(void)
     Asm::Timer timer2;
 
     std::cout << "Register timer2" << std::endl;
-    trptr->Register(&timer2);
+    trptr->registerTimer(&timer2);
 
     std::cout << "Wait 3s" << std::endl;
     boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
     std::cout << "Set intervall to 1s at timer2 with delay 0s" << std::endl;
-    timer2.SetRelativeInterval(1000, 0);
+    timer2.setRelativeInterval(1000, 0);
 
     std::cout << "Wait 6s" << std::endl;
     boost::this_thread::sleep_for(boost::chrono::seconds(6));
 
     std::cout << "Stop timer2" << std::endl;
-    timer2.Stop();
+    timer2.stop();
 
     std::cout << "Unregister timer2" << std::endl;
-    trptr->Unregister(&timer2);
+    trptr->unregisterTimer(&timer2);
 
     delete trptr;
     delete rptr;

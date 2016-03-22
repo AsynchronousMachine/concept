@@ -34,7 +34,7 @@ namespace Asm {
 template <typename D>
 class DataObject
 {
-    friend class Reactor; // This enables the reactor to traverse the links from outside
+    friend class DataObjectReactor; // This enables the reactor to traverse the links from outside
 
 private:
     template <class M, class Enable = void>
@@ -65,13 +65,13 @@ private:
     D _content;
 
     // Mutable member as it needs to be modified in the const member function get()
-    mutable mutex_t _mutex;
+    mutable mutex_t _mtx_content;
 
     // This holds all callbacks (LINKS) linked to that DO
     std::unordered_map<std::string, std::function<void()>> _links;
 
     // Protect the map of linked DOs
-    boost::mutex _links_mutex;
+    boost::mutex _mtx_links;
 
 public:
     DataObject(const std::string name) : _name(name) {}
@@ -92,14 +92,14 @@ public:
     void set(Visitor visitor)
     {
         // Exclusive lock for write access
-        boost::lock_guard<mutex_t> lock(_mutex);
+        boost::lock_guard<mutex_t> lock(_mtx_content);
         visitor(_content);
     }
 
     void set(const boost::any &value)
     {
         // Exclusive lock for write access
-        boost::lock_guard<mutex_t> lock(_mutex);
+        boost::lock_guard<mutex_t> lock(_mtx_content);
         _content = boost::any_cast<D>(value);
     }
 
@@ -109,7 +109,7 @@ public:
     std::result_of_t<Visitor(D)> get(Visitor visitor) const
     {
         // Shared lock to support concurrent access from multiple visitors in different threads
-        boost::shared_lock_guard<mutex_t> lock(_mutex);
+        boost::shared_lock_guard<mutex_t> lock(_mtx_content);
         return visitor(_content);
     }
 
@@ -120,14 +120,14 @@ public:
     template <typename D2, typename CB>
     void registerLink(std::string name, DataObject<D2> &d2, CB cb)
     {
-        boost::lock_guard<boost::mutex> lock(_links_mutex);
+        boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.insert({name, [cb, this, &d2](){ cb(*this, d2); }});
     }
 
     // Remove a link to that DO by name
     void unregisterLink(std::string name)
     {
-        boost::lock_guard<boost::mutex> lock(_links_mutex);
+        boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.erase(name);
     }
 };
@@ -180,7 +180,7 @@ public:
 
 // A simple reactor
 // To simulate the not implemented asynchronous behavior call the public function execute()
-class Reactor
+class DataObjectReactor
 {
 private:
     // Max. queue capacity
@@ -193,7 +193,7 @@ private:
     boost::circular_buffer<std::function<void()>> _triggeredLinks{MAX_CAPACITY};
 
     // Protect the circular buffer of triggered DOs
-    boost::mutex _triggeredLinks_mutex;
+    boost::mutex _mtx;
 
     struct Threadpool
     {
@@ -223,7 +223,8 @@ private:
                 if(pthread_setname_np(t->native_handle(), s.data()))
                     std::cout << "Could not set threadpool name" << std::endl;
 
-                struct sched_param param = {.sched_priority = RT_PRIO};
+                struct sched_param param = {};
+                param.sched_priority = RT_PRIO;
 
                 if(pthread_setschedparam(t->native_handle(), SCHED_FIFO, &param))
                     std::cout << "Could not set realtime parameter" << std::endl;
@@ -242,7 +243,7 @@ private:
 
         void wait(boost::unique_lock<boost::mutex>& lock) { _cv.wait(lock); }
 
-        void notify() { _cv.notify_all(); }
+        void notifyAll() { _cv.notify_all(); }
 
         void thread() { _f(); }
     };
@@ -252,14 +253,14 @@ private:
     // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
     // These method is typically private and called with in a thread related to a priority
     // This thread is typically waiting on a synchronization element
-    void execute()
+    void run()
     {
         std::function<void()> f;
 
         for(;;)
         {
             {
-                boost::unique_lock<boost::mutex> lock(_triggeredLinks_mutex);
+                boost::unique_lock<boost::mutex> lock(_mtx);
 
                 while(_triggeredLinks.empty())
                 {
@@ -277,17 +278,17 @@ private:
     }
 
 public:
-    Reactor(unsigned threads = 1) : _tp(threads, [this](){Reactor::execute();}) {}
+    DataObjectReactor(unsigned threads = 1) : _tp(threads, [this](){DataObjectReactor::run();}) {}
 
     // Non-copyable
-    Reactor(const Reactor&) = delete;
-    Reactor &operator=(const Reactor&) = delete;
+    DataObjectReactor(const DataObjectReactor&) = delete;
+    DataObjectReactor &operator=(const DataObjectReactor&) = delete;
 
     // Non-movable
-    Reactor(Reactor&&) = delete;
-    Reactor &operator=(Reactor&&) = delete;
+    DataObjectReactor(DataObjectReactor&&) = delete;
+    DataObjectReactor &operator=(DataObjectReactor&&) = delete;
 
-    ~Reactor() { std::cout << std::endl << "Delete reactor" << std::endl; }
+    ~DataObjectReactor() { std::cout << std::endl << "Delete reactor" << std::endl; }
 
     // Announce the change of the content of a dataobject to the reactor
     template <class D>
@@ -304,13 +305,13 @@ public:
         }
 
         // Now trigger a synchronization element to release at least a waiting thread
-        _tp.notify();
+        _tp.notifyAll();
     }
 };
 
 class Timer
 {
-    friend class TimerReactor; // This enables the timer reactor to traverse the file descriptor from outside
+    friend class TimerReactor; // This enables the timer reactor to access the internals
 
 private:
     int _fd;
@@ -336,11 +337,11 @@ public:
 
     ~Timer()
     {
-        Stop();
+        stop();
         ::close(_fd);
     }
 
-    bool SetRelativeInterval(long interval, long next = 0)
+    bool setRelativeInterval(long interval, long next = 0)
     {
         itimerspec val;
 
@@ -368,7 +369,7 @@ public:
         return true;
     }
 
-    bool Stop()
+    bool stop()
     {
         itimerspec val {};
 
@@ -381,11 +382,11 @@ public:
         return true;
     }
 
-    long GetInterval() { return _interval; }
+    long getInterval() { return _interval; }
 
-    bool Restart() { return SetRelativeInterval(_interval, _next); }
+    bool restart() { return setRelativeInterval(_interval, _next); }
 
-    bool Wait(uint64_t& elapsed)
+    bool wait(uint64_t& elapsed)
     {
         if(::read(_fd, &elapsed, sizeof(uint64_t)) != sizeof(uint64_t))
         {
@@ -417,9 +418,9 @@ private:
     int _evtfd;
 
     // Reference to the event reactor
-    Reactor& _reactor;
+    DataObjectReactor& _reactor;
 
-    // Protects internal data
+    // Protects the access to timerentry
     boost::mutex _mtx;
 
     // Holds the timer thread reference
@@ -429,7 +430,7 @@ private:
     std::unordered_map<int, TimerEntry> _notify;
 
     // Threaded timer function mechanism
-    void execute()
+    void run()
     {
         for(;;)
         {
@@ -474,7 +475,7 @@ private:
     }
 
 public:
-    TimerReactor(Reactor& reactor) : _epfd(-1), _evtfd(-1), _reactor(reactor)
+    TimerReactor(DataObjectReactor& reactor) : _epfd(-1), _evtfd(-1), _reactor(reactor)
     {
         if((_evtfd = ::eventfd(0, EFD_CLOEXEC)) < 0)
         {
@@ -489,20 +490,20 @@ public:
             return;
         }
 
-        // Add it first to break epoll_wait in case of destruction
+        // Add it first to stop epoll_wait in case of destruction
         epoll_event evt;
         evt.events = EPOLLIN;
         evt.data.fd = _evtfd;
 
         if(::epoll_ctl(_epfd, EPOLL_CTL_ADD, _evtfd, &evt) < 0)
         {
-            std::cout << "Epoll control error at ADD break event: " << std::strerror(errno) << std::endl;
+            std::cout << "Epoll control error at ADD stop event: " << std::strerror(errno) << std::endl;
             close(_epfd);
             close(_evtfd);
             return;
         }
 
-        _t = boost::thread([this](){TimerReactor::execute();});
+        _t = boost::thread([this](){TimerReactor::run();});
     }
 
     // Non-copyable
@@ -533,7 +534,7 @@ public:
             ::close(_epfd);
     }
 
-    bool Register(Timer* ptimer, /*Reference to ???*/ bool ref = true)
+    bool registerTimer(Timer* ptimer, /*Reference to ???*/ bool ref = true)
     {
         boost::lock_guard<boost::mutex> lock(_mtx);
 
@@ -555,7 +556,7 @@ public:
         return true;
     }
 
-    bool Unregister(Timer* ptimer)
+    bool unregisterTimer(Timer* ptimer)
     {
         bool ret = true;
 
