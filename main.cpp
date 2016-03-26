@@ -2,19 +2,46 @@
 
 // Test concept of dataobject, reactor and modules
 
+// The global reactors
+Asm::DataObjectReactor *g_rptr;
+Asm::TimerReactor *g_trptr;
+
 class Module1
 {
 private:
     // A module should have a constant name to identify it
     const std::string _name;
 
+    void timer_action1(Asm::DataObject<Asm::Timer> &do_timer1, Asm::DataObject<Asm::Timer> &do_timer2)
+    {
+        static unsigned cnt = 0;
+
+        if(++cnt >= 5)
+        {
+            std::cout << "Timer tick: " << cnt << std::endl;
+            std::cout << "Stop timer after 5 ticks" << std::endl;
+            do_timer1.set([](Asm::Timer &t){ t.stop(); });
+            g_trptr->unregisterTimer(do_timer1);
+        }
+    }
+
 public:
     Module1(std::string name) : _name(name),
                                 do1("DO1", 1),
-                                do2("DO2", "42") {}
+                                do2("DO2", "42"),
+                                do_timer1("DO-Timer1"),
+                                timer_link1(&Module1::timer_action1, this)
+    {
+        timer_link1.set("Timer1-Link", &do_timer1, &do_timer1);
+        g_trptr->registerTimer(do_timer1);
+        do_timer1.set([](Asm::Timer &t){ t.setRelativeInterval(1000, 3000); });
+    }
 
     Asm::DataObject<int> do1;
     Asm::DataObject<std::string> do2;
+    Asm::DataObject<Asm::Timer> do_timer1;
+
+    Asm::Link<Asm::DataObject<Asm::Timer>, Asm::DataObject<Asm::Timer>> timer_link1;
 
     void deserialize(std::string js) { std::cout << "Got: " << js << std::endl; }
     std::string serialize() { return "{do1:2}"; }
@@ -69,16 +96,16 @@ public:
 
 int main(void)
 {
+    g_rptr = new Asm::DataObjectReactor(2);
+    g_trptr = new Asm::TimerReactor(*g_rptr);
 
-    Asm::DataObjectReactor *rptr = new Asm::DataObjectReactor(2);
-
-#if 0
     // Let it start
     boost::this_thread::sleep_for(boost::chrono::seconds(1));
 
     Module1 module1("Module1");
     Module2 module2("Module2");
 
+#if 0
     //Reflection
     using dataobject_map = std::unordered_map<std::string, boost::any>;
     using registerlink_map = std::unordered_map<std::string, std::function<void(std::string, boost::any, boost::any)>>;
@@ -127,8 +154,8 @@ int main(void)
     module1.do1.set(a);
 
     // Usually now is time to announce the change of this DO to the reactor
-    rptr->trigger(module1.do1);
-    rptr->trigger(module1.do2);
+    g_rptr->trigger(module1.do1);
+    g_rptr->trigger(module1.do2);
     // Let it run
     boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
@@ -162,8 +189,9 @@ int main(void)
     // }
     clear_links.at("Module2.link2")("Link2", dos.at("Module1.DO2"));
 
-    delete rptr;
+    delete g_rptr;
 #endif
+
 #if 0
     Asm::Timer timer1;
 
@@ -208,12 +236,11 @@ int main(void)
     timer1.Stop();
 #endif
 
-    Asm::TimerReactor *trptr = new Asm::TimerReactor(*rptr);
-
+#if 0
     Asm::Timer timer2;
 
     std::cout << "Register timer2" << std::endl;
-    trptr->registerTimer(&timer2);
+    g_trptr->registerTimer(&timer2);
 
     std::cout << "Wait 3s" << std::endl;
     boost::this_thread::sleep_for(boost::chrono::seconds(3));
@@ -228,10 +255,14 @@ int main(void)
     timer2.stop();
 
     std::cout << "Unregister timer2" << std::endl;
-    trptr->unregisterTimer(&timer2);
+    g_trptr->unregisterTimer(&timer2);
+#endif
 
-    delete trptr;
-    delete rptr;
+    boost::this_thread::sleep_for(boost::chrono::seconds(15));
+
+
+    delete g_trptr;
+    delete g_rptr;
 
     exit(0);
 }

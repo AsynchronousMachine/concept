@@ -295,7 +295,7 @@ public:
     void trigger(DataObject<D> &d)
     {
         {
-            boost::lock_guard<boost::mutex> lock(d._links_mutex);
+            boost::lock_guard<boost::mutex> lock(d._mtx_links);
 
             if(d._links.empty())
                 return;
@@ -404,13 +404,6 @@ private:
     // Max. epoll capacity, can be found at /proc/sys/fs/epoll/max_user_watches
     static constexpr size_t MAX_CAPACITY = 256;
 
-    // Epoll file descriptor associated data
-    struct TimerEntry
-    {
-        bool ref;
-        Timer* ptimer;
-    };
-
     // File descriptor for epoll mechanism
     int _epfd;
 
@@ -418,7 +411,7 @@ private:
     int _evtfd;
 
     // Reference to the event reactor
-    DataObjectReactor& _reactor;
+    DataObjectReactor& _dor;
 
     // Protects the access to timerentry
     boost::mutex _mtx;
@@ -427,7 +420,7 @@ private:
     boost::thread _t;
 
     // Holds all epoll file descriptor associated data
-    std::unordered_map<int, TimerEntry> _notify;
+    std::unordered_map<int, DataObject<Timer>&> _notify;
 
     // Threaded timer function mechanism
     void run()
@@ -450,6 +443,8 @@ private:
                 {
                     uint64_t elapsed;
 
+                    std::cout << "Timer has fired" << std::endl;
+
                     if(::read(evt[i].data.fd, &elapsed, sizeof(elapsed)) != sizeof(elapsed))
                     {
                         std::cout << "Read timer returns wrong size: " << std::strerror(errno) << std::endl;
@@ -462,20 +457,14 @@ private:
                         return;
                     }
 
-                    std::cout << "Timer has fired" << std::endl;
-
-//                    const int& fd = events[i].data.fd;
-//                    {
-//                        if (m_NotifyMap[fd].NotifyPtr != 0)
-//                            m_pDOReactor->trigger(m_NotifyMap[fd].level, m_NotifyMap[fd].NotifyPtr);
-//                    }
+                    _dor.trigger(_notify.at(evt[i].data.fd));
                 }
             }
         }
     }
 
 public:
-    TimerReactor(DataObjectReactor& reactor) : _epfd(-1), _evtfd(-1), _reactor(reactor)
+    TimerReactor(DataObjectReactor& dor) : _epfd(-1), _evtfd(-1), _dor(dor)
     {
         if((_evtfd = ::eventfd(0, EFD_CLOEXEC)) < 0)
         {
@@ -534,20 +523,26 @@ public:
             ::close(_epfd);
     }
 
-    bool registerTimer(Timer* ptimer, /*Reference to ???*/ bool ref = true)
+    bool registerTimer(DataObject<Timer> &dot)
     {
-        boost::lock_guard<boost::mutex> lock(_mtx);
-
-        _notify.insert({ptimer->_fd, TimerEntry {ref, ptimer}});
+        int fd = dot.get([](const Timer &t){ return t._fd; });
 
         epoll_event evt;
         evt.events = EPOLLIN;
-        evt.data.fd = ptimer->_fd;
+        evt.data.fd = fd;
 
-        if(::epoll_ctl(_epfd, EPOLL_CTL_ADD, ptimer->_fd, &evt) < 0)
+        {
+            boost::lock_guard<boost::mutex> lock(_mtx);
+            _notify.insert({fd, dot});
+        }
+
+        if(::epoll_ctl(_epfd, EPOLL_CTL_ADD, fd, &evt) < 0)
         {
             // Delete it again in the case of error
-            _notify.erase(ptimer->_fd);
+            {
+                boost::lock_guard<boost::mutex> lock(_mtx);
+                _notify.erase(fd);
+            }
 
             std::cout << "Epoll control error at ADD: " << std::strerror(errno) << std::endl;
             return false;
@@ -556,20 +551,23 @@ public:
         return true;
     }
 
-    bool unregisterTimer(Timer* ptimer)
+    bool unregisterTimer(DataObject<Timer> &dot)
     {
         bool ret = true;
 
-        boost::lock_guard<boost::mutex> lock(_mtx);
+        int fd = dot.get([](const Timer &t){ return t._fd; });
 
-        if(::epoll_ctl(_epfd, EPOLL_CTL_DEL, ptimer->_fd, 0) < 0)
+        if(::epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, 0) < 0)
         {
             std::cout << "Epoll control error at DEL: " << std::strerror(errno) << std::endl;
             ret = false;
         }
 
         // Erase it in any case
-        _notify.erase(ptimer->_fd);
+        {
+            boost::lock_guard<boost::mutex> lock(_mtx);
+            _notify.erase(fd);
+        }
 
         return ret;
     }
