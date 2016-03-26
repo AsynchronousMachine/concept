@@ -407,20 +407,20 @@ private:
     // File descriptor for epoll mechanism
     int _epfd;
 
-    // File descriptor for epoll break mechanism
+    // File descriptor for epoll stop mechanism
     int _evtfd;
 
     // Reference to the event reactor
-    DataObjectReactor& _dor;
-
-    // Protects the access to timerentry
-    boost::mutex _mtx;
+    DataObjectReactor &_dor;
 
     // Holds the timer thread reference
     boost::thread _t;
 
     // Holds all epoll file descriptor associated data
     std::unordered_map<int, DataObject<Timer>&> _notify;
+
+    // Protects the access to epoll file descriptor associated data
+    boost::mutex _mtx;
 
     // Threaded timer function mechanism
     void run()
@@ -443,8 +443,6 @@ private:
                 {
                     uint64_t elapsed;
 
-                    std::cout << "Timer has fired" << std::endl;
-
                     if(::read(evt[i].data.fd, &elapsed, sizeof(elapsed)) != sizeof(elapsed))
                     {
                         std::cout << "Read timer returns wrong size: " << std::strerror(errno) << std::endl;
@@ -457,7 +455,13 @@ private:
                         return;
                     }
 
-                    _dor.trigger(_notify.at(evt[i].data.fd));
+                    std::cout << "Timer has fired" << std::endl;
+
+                    _mtx.lock();
+                    DataObject<Timer> &dot = _notify.at(evt[i].data.fd);
+                    _mtx.unlock();
+
+                    _dor.trigger(dot);
                 }
             }
         }

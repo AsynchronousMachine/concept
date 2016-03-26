@@ -18,11 +18,12 @@ private:
 
         if(++cnt >= 5)
         {
-            std::cout << "Timer tick: " << cnt << std::endl;
             std::cout << "Stop timer after 5 ticks" << std::endl;
             do_timer1.set([](Asm::Timer &t){ t.stop(); });
             g_trptr->unregisterTimer(do_timer1);
         }
+
+        std::cout << "Timer tick: " << cnt << std::endl;
     }
 
 public:
@@ -258,8 +259,7 @@ int main(void)
     g_trptr->unregisterTimer(&timer2);
 #endif
 
-    boost::this_thread::sleep_for(boost::chrono::seconds(15));
-
+    boost::this_thread::sleep_for(boost::chrono::seconds(20));
 
     delete g_trptr;
     delete g_rptr;
