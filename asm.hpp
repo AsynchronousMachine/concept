@@ -144,7 +144,7 @@ private:
 
 public:
     template <typename MemFun, typename ThisPtr>
-    Link(MemFun memfun, ThisPtr thisptr) : _cb([thisptr, memfun](D1& d1, D2& d2){std::mem_fn(memfun)(thisptr, d1, d2);}) {}
+    Link(MemFun memfun, ThisPtr thisptr) : _cb([thisptr, memfun](D1& d1, D2& d2){ std::mem_fn(memfun)(thisptr, d1, d2); }) {}
     Link(cb_type cb) : _cb(cb) {}
 
     // Non-copyable
@@ -199,9 +199,9 @@ private:
     {
         boost::thread_group _tg;
         boost::condition_variable _cv;
-        std::function<void()> _f;
+        std::function<void(int i)> _f;
 
-        Threadpool(unsigned threads, std::function<void()> f) : _f(f)
+        Threadpool(unsigned threads, std::function<void(int i)> f) : _f(f)
         {
             unsigned cores = boost::thread::hardware_concurrency();
 
@@ -212,7 +212,7 @@ private:
 
             for(unsigned i = 0; i < threads; ++i)
             {
-                boost::thread *t = _tg.create_thread([this](){ Threadpool::thread(); });
+                boost::thread *t = _tg.create_thread([this, i](){ Threadpool::thread(i); });
 
                 //The thread name is a meaningful C language string, whose length is
                 //restricted to 16 characters, including the terminating null byte ('\0')
@@ -241,11 +241,11 @@ private:
             _tg.join_all();
         }
 
-        void wait(boost::unique_lock<boost::mutex>& lock) { _cv.wait(lock); }
+        void wait(boost::unique_lock<boost::mutex> &lock) { _cv.wait(lock); }
 
         void notifyAll() { _cv.notify_all(); }
 
-        void thread() { _f(); }
+        void thread(int i) { _f(i); }
     };
 
     struct Threadpool _tp;
@@ -253,7 +253,7 @@ private:
     // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
     // These method is typically private and called with in a thread related to a priority
     // This thread is typically waiting on a synchronization element
-    void run()
+    void run(int i)
     {
         std::function<void()> f;
 
@@ -265,7 +265,7 @@ private:
                 while(_triggeredLinks.empty())
                 {
                     _tp.wait(lock);
-                    std::cout << ">>>" << std::endl;
+                    std::cout << ">>>" << i << "<<<" << std::endl;
                 }
 
                 f = _triggeredLinks.front();
@@ -278,7 +278,7 @@ private:
     }
 
 public:
-    DataObjectReactor(unsigned threads = 1) : _tp(threads, [this](){DataObjectReactor::run();}) {}
+    DataObjectReactor(unsigned threads = 1) : _tp(threads, [this](int i){ DataObjectReactor::run(i); }) {}
 
     // Non-copyable
     DataObjectReactor(const DataObjectReactor&) = delete;
@@ -496,7 +496,7 @@ public:
             return;
         }
 
-        _t = boost::thread([this](){TimerReactor::run();});
+        _t = boost::thread([this](){ TimerReactor::run(); });
     }
 
     // Non-copyable

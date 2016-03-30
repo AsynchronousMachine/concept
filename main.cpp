@@ -97,7 +97,7 @@ public:
 
 int main(void)
 {
-    g_rptr = new Asm::DataObjectReactor(2);
+    g_rptr = new Asm::DataObjectReactor(4);
     g_trptr = new Asm::TimerReactor(*g_rptr);
 
     // Let it start
