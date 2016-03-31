@@ -3,8 +3,8 @@
 // Test concept of dataobject, reactor and modules
 
 // The global reactors
-Asm::DataObjectReactor *g_rptr;
-Asm::TimerReactor *g_trptr;
+Asm::DataObjectReactor *g_rptr = nullptr;
+Asm::TimerReactor *g_trptr = nullptr;
 
 class Module1
 {

@@ -199,20 +199,20 @@ private:
     {
         boost::thread_group _tg;
         boost::condition_variable _cv;
-        std::function<void(int i)> _f;
+        std::function<void(unsigned inst)> _f;
 
-        Threadpool(unsigned threads, std::function<void(int i)> f) : _f(f)
+        Threadpool(unsigned thrd_cnt, std::function<void(unsigned inst)> f) : _f(f)
         {
             unsigned cores = boost::thread::hardware_concurrency();
 
             std::cout << "Found " << cores << " cores" << std::endl;
 
-            if(threads == 0 || threads > cores)
-                threads = cores;
+            if(thrd_cnt == 0 || thrd_cnt > cores)
+                thrd_cnt = cores;
 
-            for(unsigned i = 0; i < threads; ++i)
+            for(unsigned i = 0; i < thrd_cnt; ++i)
             {
-                boost::thread *t = _tg.create_thread([this, i](){ Threadpool::thread(i); });
+                boost::thread *t = _tg.create_thread([this, i](){ Threadpool::thrd(i); });
 
                 //The thread name is a meaningful C language string, whose length is
                 //restricted to 16 characters, including the terminating null byte ('\0')
@@ -245,7 +245,7 @@ private:
 
         void notifyAll() { _cv.notify_all(); }
 
-        void thread(int i) { _f(i); }
+        void thrd(unsigned inst) { _f(inst); }
     };
 
     struct Threadpool _tp;
@@ -253,7 +253,7 @@ private:
     // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
     // These method is typically private and called with in a thread related to a priority
     // This thread is typically waiting on a synchronization element
-    void run(int i)
+    void run(unsigned inst)
     {
         std::function<void()> f;
 
@@ -265,7 +265,7 @@ private:
                 while(_triggeredLinks.empty())
                 {
                     _tp.wait(lock);
-                    std::cout << ">>>" << i << "<<<" << std::endl;
+                    std::cout << ">>>" << inst << "<<<" << std::endl;
                 }
 
                 f = _triggeredLinks.front();
@@ -278,7 +278,7 @@ private:
     }
 
 public:
-    DataObjectReactor(unsigned threads = 1) : _tp(threads, [this](int i){ DataObjectReactor::run(i); }) {}
+    DataObjectReactor(unsigned thrd_cnt = 1) : _tp(thrd_cnt, [this](unsigned inst){ DataObjectReactor::run(inst); }) {}
 
     // Non-copyable
     DataObjectReactor(const DataObjectReactor&) = delete;
