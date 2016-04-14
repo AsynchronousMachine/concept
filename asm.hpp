@@ -414,7 +414,7 @@ private:
     DataObjectReactor &_dor;
 
     // Holds the timer thread reference
-    boost::thread _t;
+    boost::thread _thrd;
 
     // Holds all epoll file descriptor associated data
     std::unordered_map<int, DataObject<Timer>&> _notify;
@@ -457,9 +457,9 @@ private:
 
                     std::cout << "Timer has fired" << std::endl;
 
-                    _mtx.lock();
+                    boost::unique_lock<boost::mutex> lock(_mtx);
                     DataObject<Timer> &dot = _notify.at(evt[i].data.fd);
-                    _mtx.unlock();
+                    lock.unlock();
 
                     _dor.trigger(dot);
                 }
@@ -496,7 +496,7 @@ public:
             return;
         }
 
-        _t = boost::thread([this](){ TimerReactor::run(); });
+        _thrd = boost::thread([this](){ TimerReactor::run(); });
     }
 
     // Non-copyable
@@ -518,7 +518,7 @@ public:
             std::cout << "Write timer stop failed: " << std::strerror(errno) << std::endl;
         }
 
-        _t.join();
+        _thrd.join();
 
         if(_evtfd >= 0)
             ::close(_evtfd);
