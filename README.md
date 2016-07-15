@@ -7,8 +7,8 @@ Refer to *README.md* in git branch ***concept-dataobject***!
 In branch ***concept-dataobject***:
 
 1. Test to replace std::result_of_t<Visitor(D)> get(Visitor visitor) const by auto get(Visitor visitor) const
-2. Change interface from return visitor(_content) to return visitor(&_content);
-3. Add special use cases for indentionally misuse of get/set
+2. Change interface from Visitor to make a copy of _content to give a reference to _content
+3. Add special use cases for indentionally misuse of get/set with static_cast<>()
 
 In all branches
 
