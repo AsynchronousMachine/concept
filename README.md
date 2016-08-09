@@ -16,3 +16,5 @@ In all branches
 
 ---
 Clang reflection interfaces ...
+---
+Avoiding of unnecessary thread starts if less events are triggered then threads available 
