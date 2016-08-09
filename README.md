@@ -10,11 +10,12 @@ In branch ***concept-dataobject***:
 2. Change interface from Visitor to make a copy of _content to give a reference to _content
 3. Add special use cases for indentionally misuse of get/set with static_cast<>()
 
-In all branches
-
-1. Update all branches to the changes (1), (2) and (3) have been made
+In all branches: Update all branches to the changes (1), (2) and (3) have been made
 
 ---
+
 Clang reflection interfaces ...
+
 ---
+
 Avoiding of unnecessary thread starts if less events are triggered then threads available 
