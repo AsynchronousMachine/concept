@@ -12,6 +12,7 @@ In branch ***concept-dataobject***:
 
 In all branches
 
-1. Update all branches to the changes (1) and (2) have been made
+1. Update all branches to the changes (1), (2) and (3) have been made
 
+---
 Clang reflection interfaces ...
