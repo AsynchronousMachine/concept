@@ -180,7 +180,7 @@ class Reactor
 
             void wait(boost::unique_lock<boost::mutex>& lock) { _cv.wait(lock); }
 
-            void notify() { _cv.notify_all(); }
+            void notify() { _cv.notify_one(); }
 
             void thread() { _f(); }
         };
