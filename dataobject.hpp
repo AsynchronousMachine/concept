@@ -84,7 +84,7 @@ class DataObject
         // Const member function to avoid that a non-const reference is passed to the visitor
         // as that would allow the visitor to change the data_ member
         template <class Visitor>
-        std::result_of_t<Visitor(D)> get(Visitor visitor) const
+        auto get(Visitor visitor) const
         {
             // Shared lock to support concurrent access from multiple visitors in different threads
             boost::shared_lock_guard<mutex_t> lock(_mutex);
