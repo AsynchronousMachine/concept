@@ -111,6 +111,44 @@ int main(void)
 
     // Usually now is time to announce the change of this DO
     do6.notify_all();
+    
+    
+    // Misuse Test with 'return visitor(&_content)':
+    
+//    DataObject<int> do7("MisuseTest", 3);
+//    const int tmp5 = do7.get([](const int &i) -> const int*  {std::cout << "no copy of const int: " << i << std::endl; return i; });
+//    *const_cast<int*>(tmp5) = 4;
+//    do7.get([](const int* i) {std::cout << "no misuse i: " << *i << std::endl;});
+//    std::cout << "tmp5 = " << *tmp5 << '\n';
+
+    
+    // Misuse Test with 'return visitor(_content)':
+    
+    // Reference Test. OK, no misuse
+    DataObject<int> do8("MisuseTest", 3);
+    const int &tmp7 = do8.get([](const int& i) -> const int& {std::cout << "misuse const int: " << i << std::endl; return i; });
+//    const int &tmp7 = do8.get([](const int &i) -> const int {std::cout << "misuse const int: " << i << std::endl; return i; });
+    const_cast<int&>(tmp7) = 4;
+    do8.get([](int i) -> int {std::cout << "no misuse i: " << i << std::endl; });
+    std::cout << "tmp7 = " << tmp7 << '\n';  
+    
+    // Copy Test
+    DataObject<int> do9("MisuseTest", 3);
+    const int tmp8 = do9.get([](const int i) -> const int {std::cout << "misuse const int: " << i << std::endl; return i; });
+    const_cast<int&>(tmp8) = 4;
+    do9.get([](int i) -> int {std::cout << "no misuse i: " << i << std::endl; });
+    std::cout << "tmp8 = " << tmp8 << '\n';
+    
+    int tmp2 = 3;
+    DataObject<int*> do11("Test", &tmp2);
+    do11.get([](int* p) {std::cout << "tmp2: " << *p << std::endl;});
+    DataObject<int&> do12("Test", tmp2);
+    do12.get([](int& i) {std::cout << "tmp2: " << i << std::endl;});
+    // Atomic Test
+    DataObject<std::atomic_int> do13("AtomicTest");
+    do13.set([](std::atomic_int& i){i = 4;});    
+    //  error: use of deleted function 'std::atomic<int>::atomic(const std::atomic<int>&)'
+//    do13.get([](std::atomic_int i) {std::cout << "tmp2: " << i << std::endl;});
 
     exit(0);
 }
