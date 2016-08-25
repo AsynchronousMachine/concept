@@ -42,7 +42,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
-			<Add option="-std=c++14" />
+			<Add option="-std=c++1z" />
 		</Compiler>
 		<Linker>
 			<Add library="/opt/local/lib/libboost_timer.so" />

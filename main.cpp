@@ -1,3 +1,5 @@
+#include <atomic>
+
 #include "dataobject.hpp"
 
 // Test concept of data object
@@ -62,7 +64,7 @@ int main(void)
     // Will not compile due to wrong data type of callback parameter
     // do1.registerLink(do3, my_cb3);
 
-    // Access content consistently
+    // Access content consistently within held dataobject mutex
     do1.get(fi);
     do1.set([](int &i){ i = 1; });
     do1.get(fi);
@@ -99,6 +101,7 @@ int main(void)
     // Usually now is time to announce the change of this DO
     do5.notify_all();
 
+    // DO as none standard type
     DataObject<MySpecial> do6("MySpecial", {1, "step1"});
     do6.get([](const MySpecial &m){std::cout << m.i << " has value " << m.s << '\n';});
     do6.set([](MySpecial &m){m.i = 2; m.s = "step2";});
@@ -111,44 +114,36 @@ int main(void)
 
     // Usually now is time to announce the change of this DO
     do6.notify_all();
-    
-    
-    // Misuse Test with 'return visitor(&_content)':
-    
-//    DataObject<int> do7("MisuseTest", 3);
-//    const int tmp5 = do7.get([](const int &i) -> const int*  {std::cout << "no copy of const int: " << i << std::endl; return i; });
-//    *const_cast<int*>(tmp5) = 4;
-//    do7.get([](const int* i) {std::cout << "no misuse i: " << *i << std::endl;});
-//    std::cout << "tmp5 = " << *tmp5 << '\n';
 
-    
-    // Misuse Test with 'return visitor(_content)':
-    
-    // Reference Test. OK, no misuse
-    DataObject<int> do8("MisuseTest", 3);
-    const int &tmp7 = do8.get([](const int& i) -> const int& {std::cout << "misuse const int: " << i << std::endl; return i; });
-//    const int &tmp7 = do8.get([](const int &i) -> const int {std::cout << "misuse const int: " << i << std::endl; return i; });
-    const_cast<int&>(tmp7) = 4;
-    do8.get([](int i) -> int {std::cout << "no misuse i: " << i << std::endl; });
-    std::cout << "tmp7 = " << tmp7 << '\n';  
-    
-    // Copy Test
-    DataObject<int> do9("MisuseTest", 3);
-    const int tmp8 = do9.get([](const int i) -> const int {std::cout << "misuse const int: " << i << std::endl; return i; });
-    const_cast<int&>(tmp8) = 4;
-    do9.get([](int i) -> int {std::cout << "no misuse i: " << i << std::endl; });
-    std::cout << "tmp8 = " << tmp8 << '\n';
-    
-    int tmp2 = 3;
-    DataObject<int*> do11("Test", &tmp2);
-    do11.get([](int* p) {std::cout << "tmp2: " << *p << std::endl;});
-    DataObject<int&> do12("Test", tmp2);
-    do12.get([](int& i) {std::cout << "tmp2: " << i << std::endl;});
-    // Atomic Test
+    // Possible misuse by return of address of reference
+    DataObject<int> do7("MisuseTest1", 3);
+    const int *tmp5 = do7.get([](const int &i) {return &i;});
+    std::cout << "*tmp5 " << *tmp5 << std::endl;
+    *const_cast<int*>(tmp5) = 4; // Misuse
+    do7.get([](const int i) {std::cout << "Misused by return of address of reference " << i << std::endl;});
+
+    // Possible misuse by return of reference
+    DataObject<int> do8("MisuseTest2", 5);
+    do8.get([](const int &i) {int& tmp = const_cast<int&>(i); tmp = 6;}); // Misuse
+    do8.get([](const int i) {std::cout << "Misused by return of reference " << i << std::endl;});
+
+    // Possible misuse by return of reference ????
+    DataObject<int> do9("MisuseTest3", 7);
+    const int &tmp6 = do9.get([](const int &i) {return i;});
+    const_cast<int&>(tmp6) = 8; // Misuse ????
+    do9.get([](const int i) {std::cout << "Misused by return of reference " << i << std::endl;});
+
+    // Atomic Tests, atomic operations are still done within held dataobject mutex
+    int tmp_atomic = 0;
     DataObject<std::atomic_int> do13("AtomicTest");
-    do13.set([](std::atomic_int& i){i = 4;});    
-    //  error: use of deleted function 'std::atomic<int>::atomic(const std::atomic<int>&)'
-//    do13.get([](std::atomic_int i) {std::cout << "tmp2: " << i << std::endl;});
+    do13.set([](std::atomic_int& i){i = 4;});
+    tmp_atomic = do13.get([](const std::atomic_int& i) {return std::atomic_load(&i);});
+    //do13.get([&tmp_atomic](const std::atomic_int& i) {tmp_atomic = std::atomic_load(&i);});
+    std::cout << "tmp_atomic load init " << tmp_atomic << std::endl;
+    do13.set([](std::atomic_int& i){++i;});
+    //do13.get([&tmp_atomic](const std::atomic_int& i) {tmp_atomic = std::atomic_load(&i);});
+    tmp_atomic = do13.get([](const std::atomic_int& i) {return std::atomic_load(&i);});
+    std::cout << "tmp_atomic load after inc " << tmp_atomic << std::endl;
 
     exit(0);
 }
