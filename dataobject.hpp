@@ -1,5 +1,6 @@
 #include <forward_list>
 #include <type_traits>
+#include <atomic>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/null_mutex.hpp>
@@ -24,7 +25,7 @@ class DataObject
         template <class M, class Enable = void>
         struct mutex
         {
-            using type = void; //Invalid type for mutex
+            using type = boost::shared_mutex; //void; //Invalid type for mutex
         };
 
         template <class M>
@@ -34,10 +35,16 @@ class DataObject
         };
 
         template <class M>
-        struct mutex<M, std::enable_if_t<!std::is_integral<M>::value>>
+        struct mutex<M, std::enable_if_t<std::is_same<M, std::atomic_int>::value>>
         {
-            using type = boost::shared_mutex;
+            using type = boost::null_mutex;
         };
+
+//        template <class M>
+//        struct mutex<M, std::enable_if_t<!std::is_integral<M>::value>>
+//        {
+//            using type = boost::shared_mutex;
+//        };
 
         // Make it easier to name it
         using mutex_t = typename mutex<D>::type;

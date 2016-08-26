@@ -133,9 +133,9 @@ int main(void)
     const_cast<int&>(tmp6) = 8; // Misuse ????
     do9.get([](const int i) {std::cout << "Misused by return of reference " << i << std::endl;});
 
-    // Atomic Tests, atomic operations are still done within held dataobject mutex
+    // Atomic Tests, atomic operations are still done within held dataobject mutex ?????
     int tmp_atomic = 0;
-    DataObject<std::atomic_int> do13("AtomicTest");
+    DataObject<std::atomic_int> do13("AtomicTest1");
     do13.set([](std::atomic_int& i){i = 4;});
     tmp_atomic = do13.get([](const std::atomic_int& i) {return std::atomic_load(&i);});
     //do13.get([&tmp_atomic](const std::atomic_int& i) {tmp_atomic = std::atomic_load(&i);});
@@ -144,6 +144,10 @@ int main(void)
     //do13.get([&tmp_atomic](const std::atomic_int& i) {tmp_atomic = std::atomic_load(&i);});
     tmp_atomic = do13.get([](const std::atomic_int& i) {return std::atomic_load(&i);});
     std::cout << "tmp_atomic load after inc " << tmp_atomic << std::endl;
+
+    // Atomic Tests, atomic operations are still done within held dataobject mutex ????
+    DataObject<std::atomic_bool> do14("AtomicTest2");
+    do14.set([](std::atomic_bool& i){i = true;});
 
     exit(0);
 }
