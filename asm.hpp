@@ -10,11 +10,16 @@
 #include <boost/any.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <pthread.h>
+
+#ifdef __linux__
+	#include <pthread.h>
+	#include <sys/timerfd.h>
+	#include <sys/epoll.h>
+	#include <sys/eventfd.h>
+#endif
+
 #include <time.h>
-#include <sys/timerfd.h>
-#include <sys/epoll.h>
-#include <sys/eventfd.h>
+
 
 // AsynchronousMachine
 namespace Asm {
@@ -309,6 +314,8 @@ public:
     }
 };
 
+
+#ifdef __linux__
 class Timer
 {
     friend class TimerReactor; // This enables the timer reactor to access the internals
@@ -576,5 +583,6 @@ public:
         return ret;
     }
 };
+#endif
 
 } // End of namespace

@@ -4,7 +4,9 @@
 
 // The global reactors
 Asm::DataObjectReactor *g_rptr = nullptr;
+#ifdef __linux__
 Asm::TimerReactor *g_trptr = nullptr;
+
 
 class Module1
 {
@@ -267,3 +269,7 @@ int main(void)
     exit(0);
 }
 
+#else
+int main(void)
+{}
+#endif
