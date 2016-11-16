@@ -248,7 +248,7 @@ private:
 
         void wait(boost::unique_lock<boost::mutex> &lock) { _cv.wait(lock); }
 
-        void notifyAll() { _cv.notify_all(); }
+        void notify() { _cv.notify_one(); }
 
         void thrd(unsigned inst) { _f(inst); }
     };
@@ -310,7 +310,7 @@ public:
         }
 
         // Now trigger a synchronization element to release at least a waiting thread
-        _tp.notifyAll();
+        _tp.notify();
     }
 };
 
