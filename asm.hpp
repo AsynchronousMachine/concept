@@ -10,7 +10,9 @@
 #include <boost/any.hpp>
 #include <boost/lexical_cast.hpp>
 
+#ifdef __linux__
 #include <pthread.h>
+#endif
 
 // AsynchronousMachine
 namespace Asm {
