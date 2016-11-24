@@ -7,7 +7,9 @@
 #include <boost/thread/null_mutex.hpp>
 #include <boost/circular_buffer.hpp>
 
+#ifdef __linux__
 #include <pthread.h>
+#endif
 
 // AsynchronousMachine
 namespace Asm {
@@ -163,11 +165,11 @@ class Reactor
 
                     std::string s = "ASM-TP" + std::to_string(i);
                     std::cout << s << std::endl;
-
+#ifdef __linux__
                     if(pthread_setname_np(t->native_handle(), s.data()))
                         std::cout << "Could not set threadpool name" << std::endl;
                 }
-
+#endif
                 std::cout << "Have " << _tg.size() << " thread/s running" << std::endl << std::endl;
             }
 
