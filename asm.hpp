@@ -10,6 +10,8 @@
 #include <boost/any.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include "udpServer.hpp"
+
 
 #ifdef __linux__
 	#include <pthread.h>

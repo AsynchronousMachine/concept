@@ -108,6 +108,11 @@ int main(void)
     Module1 module1("Module1");
     Module2 module2("Module2");
 
+    boost::asio::io_service udpIOService;
+    Asm::UdpServer* udpServer = new Asm::UdpServer(udpIOService, 9500, [](char* receivedString){std::cout << "received: " << receivedString << std::endl;});
+    udpServer->sendTo("127.0.0.1", 9501, "hi");
+    udpIOService.run();
+
 #if 0
     //Reflection
     using dataobject_map = std::unordered_map<std::string, boost::any>;
