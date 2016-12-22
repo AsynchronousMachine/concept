@@ -8,14 +8,12 @@ private:
 	Asm::DataObject<int> doPrivate;
 
 public:
-	Module1() :	do1(1),
-		do2("42"),
+	Module1() :	
+		do1(1, Asm::default_serializer),
+		do2("42", Asm::default_serializer),
 		doPrivate(-2) {}
 
 
 	Asm::DataObject<int> do1;
 	Asm::DataObject<std::string> do2;
-
-	void deserialize(std::string js) { std::cout << "Got: " << js << std::endl; }
-	std::string serialize() { return "{do1:2}"; }
 };
