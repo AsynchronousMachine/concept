@@ -2,14 +2,12 @@
 #include <iostream>
 #include <cstdio>
 
-#include "../../external/rapidjson/include/rapidjson/document.h"
-#include "../../external/rapidjson/include/rapidjson/prettywriter.h"
-#include "../../external/rapidjson/include/rapidjson/filewritestream.h"
-#include "../../external/rapidjson/include/rapidjson/filereadstream.h"
 #include "../asm.hpp"
 #include "../global_reflection.h"
 
-//#include <fstream>
+#include "../../external/rapidjson/include/rapidjson/prettywriter.h"
+#include "../../external/rapidjson/include/rapidjson/filewritestream.h"
+#include "../../external/rapidjson/include/rapidjson/filereadstream.h"
 
 class System
 {

@@ -21,7 +21,7 @@ private:
 
 	void action2(Asm::DataObject<std::string>& doSource, Asm::DataObject<std::map<std::string, double>>& doTarget)
 	{
-		std::string s = doSource.get([](std::string s) { std::cout << "Got DO.value: " << s << std::endl; return s; });
+		std::string s = doSource.get([](std::string s) { return s; });
 		std::cout << "Has DO.value: " << doTarget.get([&s](const std::map<std::string, double>& m) { return m.at(s); }) << std::endl;
 	}
 

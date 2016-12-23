@@ -90,7 +90,6 @@ namespace Asm {
 		{
 			// Shared lock to support concurrent access from multiple visitors in different threads
 			boost::shared_lock_guard<mutex_t> lock(_mtx_content);
-			std::cout << "using direct type getting\n";
 			return _content;
 		}
 
@@ -98,7 +97,6 @@ namespace Asm {
 		{
 			// Shared lock to support concurrent access from multiple visitors in different threads
 			boost::shared_lock_guard<mutex_t> lock(_mtx_content);
-			std::cout << "using direct type setting\n";
 			_content = d;
 		}
 
@@ -106,26 +104,22 @@ namespace Asm {
 
 		template< class  U = D, enable_if_is_same<U, bool> = true>
 		void serialize_impl(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-			std::cout << "is bool:" << get() << " \n";
 			value.SetBool(get());
 		}
 
 		template< typename U = D, enable_if_is_same<U, int> = true>
 		void serialize_impl(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-			std::cout << "is int:" << get() << " \n";
 			value.SetInt(get());
 		}
 
 		template< typename U = D, enable_if_is_same<U, double> = true>
 		void serialize_impl(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-			std::cout << "is double:" << get() << " \n";
 			value.SetDouble(get());
 
 		}
 
 		template< typename U = D, enable_if_is_same<U, std::string> = true>
 		void serialize_impl(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-			std::cout << "is string:" << get() << " \n";
 			value.SetString(get().c_str(), allocator);
 		}
 
@@ -140,29 +134,23 @@ namespace Asm {
 
 		template< class  U = D, enable_if_is_same<U, bool> = true>
 		void deserialize_impl(rapidjson::Value& value) {
-			std::cout << "is bool" << get() << "\n";
 			set(value.GetBool());
 		}
 
 		template< typename U = D, enable_if_is_same<U, int> = true>
 		void deserialize_impl(rapidjson::Value& value) {
-
 			set(value.GetInt());
-			std::cout << "deserialize_impl is int:" << get() << " \n";
 		}
 
 		template< typename U = D, enable_if_is_same<U, double> = true>
 		void deserialize_impl(rapidjson::Value& value) {
-
 			set(value.GetDouble());
-			std::cout << "deserialize_impl is double:" << get() << " \n";
 		}
 
 		template< typename U = D, enable_if_is_same<U, std::string> = true>
 		void deserialize_impl(rapidjson::Value& value) {
 			std::string s{ value.GetString() };
 			set(s);
-			std::cout << "deserialize_impl is string:" << get() << " \n";
 		}
 
 		template< class U = D, std::enable_if_t<
@@ -195,17 +183,8 @@ namespace Asm {
 		{
 			// Exclusive lock for write access
 			boost::lock_guard<mutex_t> lock(_mtx_content);
-			std::cout << "using visitor setting\n";
 			visitor(_content);
 		}
-
-		//void set(const boost::any &value)
-		//{
-		//	// Exclusive lock for write access
-		//	boost::lock_guard<mutex_t> lock(_mtx_content);
-		//	std::cout << "using boost::any setting\n";
-		//	_content = boost::any_cast<D>(value);
-		//}
 
 		// Const member function to avoid that a non-const reference is passed to the visitor
 		// as that would allow the visitor to change the data_ member
@@ -214,7 +193,6 @@ namespace Asm {
 		{
 			// Shared lock to support concurrent access from multiple visitors in different threads
 			boost::shared_lock_guard<mutex_t> lock(_mtx_content);
-			std::cout << "using visitor geting\n";
 			return visitor(_content);
 		}
 
@@ -261,7 +239,6 @@ namespace Asm {
 		template <typename MemFun, typename ThisPtr>
 		Link(MemFun memfun, ThisPtr thisptr) : _cb([thisptr, memfun](D1& d1, D2& d2) { std::mem_fn(memfun)(thisptr, d1, d2); }) {}
 		Link(cb_type cb) : _cb(cb) {}
-		//Link(bool = false);
 
 		// Non-copyable
 		Link(const Link&) = delete;
