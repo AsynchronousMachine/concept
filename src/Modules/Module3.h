@@ -5,7 +5,7 @@ class Module3
 private:
 	void link2IntMethod(Asm::DataObject<int>& doSource, Asm::DataObject<int>& doTarget)
 	{
-		doTarget.set([&doSource](int& i) { i = doSource.get([](int i) {return i; }); });
+		doTarget.set([&doSource](std::atomic<int> &i) { i = doSource.get([](const std::atomic<int> &i) {return static_cast<int>(i); }); });
 	}
 
 	void link2StringMethod(Asm::DataObject<int>& doSource, Asm::DataObject<std::string>& doTarget)
@@ -26,10 +26,10 @@ public:
 		doUInt(0, Asm::default_serializer),
 		doInt(3, Asm::default_serializer),
 		doDouble(1.1, Asm::default_serializer),
-		doBool(false, [&](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {doBool.get([&value](bool b) { value.SetBool(b); }); }, [&](rapidjson::Value& value) {doBool.set([&value](bool& b) {b = value.GetBool(); }); }),
+		doBool(false, [&](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {doBool.get([&value](const std::atomic<bool> &b) { value.SetBool(b); }); }, [&](rapidjson::Value& value) {doBool.set([&value](std::atomic<bool> &b) {b = value.GetBool(); }); }),
 		doString("0-1"), // No serializer
 		doFunc("test", &Module3::testSerFn4doFunc, &Module3::testDeSerFn4doFunc, this),
-		doFuncNo(5, [&](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {doFuncNo.get([&value](int i) {value.SetInt(i); }); }, [&](rapidjson::Value& value) {doFuncNo.set([&value](int& i) {i = value.GetInt(); }); }),
+		doFuncNo(5, [&](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {doFuncNo.get([&value](const std::atomic<int> &i) {value.SetInt(i); }); }, [&](rapidjson::Value& value) {doFuncNo.set([&value](std::atomic<int> &i) {i = value.GetInt(); }); }),
 		link2Int(&Module3::link2IntMethod, this),
 		link2String(&Module3::link2StringMethod, this)
 	{}

@@ -11,10 +11,10 @@ private:
 		int oldvalue = doTarget.get([](int i)->int {return i; });
 		int newValue = doSource.get([](int i)->int {return i; });
 
-		doTarget.set([newValue](int& i) { i = newValue; });
+		doTarget.set([newValue](std::atomic<int> &i) { i = newValue; });
 
 		int setvalue;
-		doTarget.get([&setvalue](int i) {setvalue = i; });
+		doTarget.get([&setvalue](const std::atomic<int> &i) {setvalue = i; });
 		
 		std::cout << "Update value " << do_names.at(&doTarget) << ": " << oldvalue << " -> " << newValue << "(" << setvalue << ")" << std::endl;
 	}
@@ -50,12 +50,12 @@ public:
 
 	void actionComplex(Asm::DataObject<int>& doSource, Asm::DataObject<std::map<std::string, double>>& doTarget)
 	{
-		int newValue = doSource.get([](int i)->int {return i; });
+		int newValue = doSource.get([](const std::atomic<int> &i)->int {return i; });
 		doTarget.set([newValue](std::map<std::string, double>& map) { map[std::to_string(newValue)] = (double)newValue; });
-		doSave.set([](int& i) { ++i; });
+		doSave.set([](std::atomic<int> &i) { ++i; });
 		doProtected.set([newValue](std::list<double>& list) {list.push_back((double)newValue); });
 
-		std::cout << "actionComplex i=" << doSave.get([](int i) {return i; }) << " do2.size= "
+		std::cout << "actionComplex i=" << doSave.get([](const std::atomic<int> &i) {return static_cast<int>(i); }) << " do2.size= "
 			<< doProtected.get([](std::list<double> list) ->int { return (int)list.size(); })
 			<< std::endl;
 	}
