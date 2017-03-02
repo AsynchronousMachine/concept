@@ -23,9 +23,10 @@ public:
 		Value json_value;
 
 		//iterate over all public DOs
-		for (auto map_iter : dataobject_map)
+		for (auto map_iter : do_serialize)
 		{
-			boost::apply_visitor([&](auto& d) { d.serialize(json_value, doc.GetAllocator()); }, map_iter.second);
+			Asm::serializeFnct serializeDO = map_iter.second;
+			serializeDO(json_value, doc.GetAllocator());
 			if (!json_value.IsNull()) {
 				key = map_iter.first;
 				//json_key.SetString(StringRef(*key.c_str)); // always the last key!!!
@@ -34,7 +35,7 @@ public:
 			}
 		}
 
-		std::FILE* fp = std::fopen("output.json", "w"); // Windows use "wb"
+		FILE* fp = fopen("output.json", "wb"); // non-Windows use "w"
 		char writeBuffer[65536];
 		FileWriteStream os(fp, writeBuffer, sizeof(writeBuffer));
 		PrettyWriter<FileWriteStream> writer(os);
@@ -46,7 +47,7 @@ public:
 	void deserialize()
 	{
 		using namespace rapidjson;
-		std::FILE* fp = std::fopen("output.json", "r"); // Windows use "rb"
+		FILE* fp = fopen("output.json", "rb"); // non-Windows use "r"
 		char readBuffer[65536];
 		FileReadStream is(fp, readBuffer, sizeof(readBuffer));
 		Document doc;
@@ -60,12 +61,11 @@ public:
 		}
 
 		//iterate over all public DOs
-		for (auto map_iter : dataobject_map)
+		for (Value::ConstMemberIterator iter = doc.MemberBegin(); iter != doc.MemberEnd(); ++iter)
 		{
-			std::string key = map_iter.first;
+			std::string key = iter->name.GetString();
 			Value& v = doc[key.c_str()];
-			boost::apply_visitor([&](auto& d) { d.deserialize(v); }, map_iter.second);
+			do_deserialize.at(key)(v);
 		}
 	}
-
 };
