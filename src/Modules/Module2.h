@@ -1,6 +1,7 @@
 #pragma once
 #include "../asm.hpp"
 #include "../global_reflection.h"
+
 class Module2
 {
 private:

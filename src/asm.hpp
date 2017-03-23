@@ -23,7 +23,7 @@
 #include "../external/rapidjson/include/rapidjson/document.h"
 
 
-
+#include <boost/variant.hpp>
 
 // AsynchronousMachine
 namespace Asm {
@@ -202,6 +202,7 @@ namespace Asm {
 		{
 			boost::lock_guard<boost::mutex> lock(_mtx_links);
 			_links.insert({ name, [cb, this, &d2] { cb(*this, d2); } });
+			std::cout << "registerLink: " << name << std::endl;
 		}
 
 		// Remove a link to that DO by name
@@ -209,6 +210,7 @@ namespace Asm {
 		{
 			boost::lock_guard<boost::mutex> lock(_mtx_links);
 			_links.erase(name);
+			std::cout << "UNregisterLink: " << name << std::endl;
 		}
 
 
@@ -222,6 +224,29 @@ namespace Asm {
 			doDeserialize(value);
 		}
 	};
+
+	/*TODO
+	umbauen wegen zyklischen includes 
+	struct EmptyDataobject : boost::blank und struct EmptyLinkbject : boost::blank in asm verschieben, nicht mehr über mapmaker generieren.
+	*/
+
+	struct EmptyDataobject : boost::blank
+	{
+		const std::string serialize(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { return "!!!Will never be used!!!"; };
+		const void deserialize(rapidjson::Value& value) {};
+		template <class Visitor>
+		void set(Visitor visitor) {};
+		template <class Visitor>
+		auto get(Visitor visitor) { return 0; }; // !!!Will never be used!!!
+		template <typename D2, typename CB>
+		void registerLink(const std::string name, DataObject<D2>& d2, CB cb)		{};
+		void unregisterLink(const std::string name) {};
+	};
+
+	using dataobjects = boost::variant<EmptyDataobject&, Asm::DataObject<bool>&, Asm::DataObject<double>&, Asm::DataObject<int>&, Asm::DataObject<std::map<std::string, double> >&, Asm::DataObject<std::string>&, Asm::DataObject<unsigned int>&>;
+
+
+
 
 	// Template class for a link
 	template <typename D1, typename D2>
@@ -251,18 +276,46 @@ namespace Asm {
 		// Necessary if someone want to inherit from that
 		virtual ~Link() = default;
 
-		void set(const std::string name, boost::any a1, boost::any a2)
+		//void set(const std::string name, boost::any a1, boost::any a2)
+		//{
+		//	D1 *d1 = boost::any_cast<D1*>(a1);
+		//	D2 *d2 = boost::any_cast<D2*>(a2);
+		//	d1->registerLink(name, *d2, _cb);
+		//}
+
+		//void clear(const std::string name, boost::any a)
+		//{
+		//	D1 *d1 = boost::any_cast<D1*>(a);
+		//	d1->unregisterLink(name);
+		//}
+
+		void set(const std::string name, dataobjects a1, dataobjects a2)
 		{
-			D1 *d1 = boost::any_cast<D1*>(a1);
-			D2 *d2 = boost::any_cast<D2*>(a2);
-			d1->registerLink(name, *d2, _cb);
+			D1 &d1 = boost::get<D1&>(a1);
+			D2 &d2 = boost::get<D2&>(a2);
+			d1.registerLink(name, d2, _cb);
+
+			//boost::apply_visitor([&](auto& l1) {l1.registerLink(name, boost::get<D2&>(a2), _cb); }, a1);
 		}
 
-		void clear(const std::string name, boost::any a)
+		void clear(const std::string name, dataobjects a)
 		{
-			D1 *d1 = boost::any_cast<D1*>(a);
-			d1->unregisterLink(name);
+			D1 &d1 = boost::get<D1&>(a);
+
+			d1.unregisterLink(name);
 		}
+
+		/* geht nicht
+		void set(const std::string name, D1& d1, D2& d2)
+		{
+			d1->registerLink(name, d2, _cb);
+		}
+
+		void clear(const std::string name, D1& d1)
+		{
+						d1->unregisterLink(name);
+		}
+		*/
 	};
 
 	// Concept of reactor

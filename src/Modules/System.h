@@ -12,6 +12,7 @@
 class System
 {
 public:
+
 	void serialize()
 	{
 		using namespace rapidjson;
@@ -34,7 +35,7 @@ public:
 			}
 		}
 
-		std::FILE* fp = std::fopen("output.json", "w"); // Windows use "wb"
+		std::FILE* fp = std::fopen("output-variant.json", "wb"); // non-Windows use "w"
 		char writeBuffer[65536];
 		FileWriteStream os(fp, writeBuffer, sizeof(writeBuffer));
 		PrettyWriter<FileWriteStream> writer(os);
@@ -42,11 +43,10 @@ public:
 		fclose(fp);
 	}
 
-
 	void deserialize()
 	{
 		using namespace rapidjson;
-		std::FILE* fp = std::fopen("output.json", "r"); // Windows use "rb"
+		std::FILE* fp = std::fopen("output-variant.json", "rb"); // non-Windows use "r"
 		char readBuffer[65536];
 		FileReadStream is(fp, readBuffer, sizeof(readBuffer));
 		Document doc;
@@ -60,12 +60,75 @@ public:
 		}
 
 		//iterate over all public DOs
-		for (auto map_iter : dataobject_map)
+		/*for (auto map_iter : dataobject_map)
 		{
 			std::string key = map_iter.first;
 			Value& v = doc[key.c_str()];
 			boost::apply_visitor([&](auto& d) { d.deserialize(v); }, map_iter.second);
+		}*/
+
+		//iterate over all DO-keys instead
+		for (Value::ConstMemberIterator itr = doc.MemberBegin(); itr != doc.MemberEnd(); ++itr)
+		{
+			//const char* doName = itr->name.GetString();
+			Value& v = doc[itr->name.GetString()];
+			boost::apply_visitor([&](auto& d) { d.deserialize(v); }, dataobject_map.at(itr->name.GetString()));
 		}
 	}
 
+	void walkthrough()
+	{
+		using namespace rapidjson;
+		std::FILE* fp = std::fopen("output-test.json", "rb"); // non-Windows use "r"
+		char readBuffer[65536];
+		FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+		Document doc, answer;
+		doc.ParseStream(is);
+		fclose(fp);
+
+		if (doc.HasParseError() == true)
+		{
+			std::cout << "Parsing error" << std::endl;
+			return;
+		}
+
+		//answer.SetObject();
+		Value answer_key(kStringType);
+		Value answer_value;
+
+
+		Value& v = doc["do"];
+		
+		for (Value::ConstMemberIterator itr = v.MemberBegin(); itr != v.MemberEnd(); ++itr)
+		{
+			
+			const char* doName = itr->name.GetString();
+			printf("Type of member %s %d\n", doName, itr->value.IsNull());
+			auto doInstance = dataobject_map.at(doName);
+			if (itr->value.IsNull())
+			{
+				//init first time
+				if(answer.IsNull())
+					answer.SetObject();
+
+				// request value
+				boost::apply_visitor([&](auto& d) { d.serialize(answer_value, answer.GetAllocator()); }, doInstance);
+				answer_key.SetString(doName, answer.GetAllocator());
+				answer.AddMember(answer_key, answer_value, answer.GetAllocator());
+			}
+			else
+			{
+				// set value
+				boost::apply_visitor([&](auto& d) { d.deserialize(v[itr->name.GetString()]); }, doInstance);
+			}
+		}
+
+		// test write answer to file
+		std::FILE* fp_test = std::fopen("output-test-answer.json", "wb"); // non-Windows use "w"
+		char writeBuffer[65536];
+		FileWriteStream os(fp_test, writeBuffer, sizeof(writeBuffer));
+		PrettyWriter<FileWriteStream> writer(os);
+		answer.Accept(writer);
+		fclose(fp_test);		
+	}
 };
