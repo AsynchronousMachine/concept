@@ -19,21 +19,16 @@ struct EmptyLinkObject : boost::blank
 };
 
 //using dataobjects = boost::variant<EmptyDataobject&, Asm::DataObject<bool>&, Asm::DataObject<double>&, Asm::DataObject<int>&, Asm::DataObject<std::map<std::string, double> >&, Asm::DataObject<std::string>&, Asm::DataObject<unsigned int>&>;
-using linkobjects = boost::variant<EmptyLinkObject&, Asm::Link<Asm::DataObject<int>, Asm::DataObject<int>>&>;
-using module_name_map = std::unordered_map<void*, std::string>;
-//using name_module_map = std::unordered_map<std::string, boost::any>;
-using dataobject_name_map = std::unordered_map<void*, std::string>;
+
+using links_variant = boost::variant<EmptyLinkObject&, Asm::Link<Asm::DataObject<int>, Asm::DataObject<int>>&>;
+using id_string_map = std::unordered_map<void*, std::string>;
 using name_dataobject_map = std::unordered_map<std::string, Asm::dataobjects>;
-using name_link_map = std::unordered_map<std::string, linkobjects>;
-using registerlink_map = std::unordered_map<std::string, std::function<void(std::string, boost::any, boost::any)>>;
-using unregisterlink_map = std::unordered_map<std::string, std::function<void(std::string, boost::any)>>;
+using name_link_map = std::unordered_map<std::string, links_variant>;
 using print_module_map = std::map<std::string, std::string>;
 
-extern const module_name_map module_names;
-//extern const name_module_map modules;
-extern const dataobject_name_map do_names;
-extern const name_link_map link_map;
-extern const registerlink_map set_links;
-extern const unregisterlink_map clear_links;
+extern const id_string_map module_name;
+extern const id_string_map do_names;
+extern const name_dataobject_map name_dataobjects;
+extern const name_link_map name_links;
 extern const print_module_map print_modules;
-extern const name_dataobject_map dataobject_map;
+

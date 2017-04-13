@@ -24,7 +24,7 @@ public:
 		Value json_value;
 
 		//iterate over all public DOs
-		for (auto map_iter : dataobject_map)
+		for (auto map_iter : name_dataobjects)
 		{
 			boost::apply_visitor([&](auto& d) { d.serialize(json_value, doc.GetAllocator()); }, map_iter.second);
 			if (!json_value.IsNull()) {
@@ -72,7 +72,7 @@ public:
 		{
 			//const char* doName = itr->name.GetString();
 			Value& v = doc[itr->name.GetString()];
-			boost::apply_visitor([&](auto& d) { d.deserialize(v); }, dataobject_map.at(itr->name.GetString()));
+			boost::apply_visitor([&](auto& d) { d.deserialize(v); }, name_dataobjects.at(itr->name.GetString()));
 		}
 	}
 
@@ -104,7 +104,7 @@ public:
 			
 			const char* doName = itr->name.GetString();
 			printf("Type of member %s %d\n", doName, itr->value.IsNull());
-			auto doInstance = dataobject_map.at(doName);
+			auto doInstance = name_dataobjects.at(doName);
 			if (itr->value.IsNull())
 			{
 				//init first time

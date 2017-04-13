@@ -36,16 +36,14 @@ void sendConfigFile()
 
 }
 
-Asm::DataObjectReactor *rptr = new Asm::DataObjectReactor();
+std::unique_ptr<Asm::DataObjectReactor> rptr (new Asm::DataObjectReactor());
 void testlauf()
 {
 	//init receiver
 	Asm::UdpCommand command;
 
 	boost::asio::io_service udpIOService;
-	Asm::UdpServer* udpServer = new Asm::UdpServer(udpIOService);
-
-	
+	std::unique_ptr<Asm::UdpServer> udpServer (new Asm::UdpServer(udpIOService));
 
 	//setlink
 	udpServer->sendTo("127.0.0.1", 9501, "{\"Module2.link1\" :[\"LINK1\",\"Module1.m1.do1\",\"Module2.m2.do1\"]}");
@@ -56,8 +54,7 @@ void testlauf()
 	std::cout << "m1.do1=" << m1.do1.get([](auto i) {return i; }) << "  m2.do1=" << m2.do1.get([](auto i) {return i; }) << std::endl;
 
 	//now update m1.do1
-	m1.do1.set([](int &i) { i = 5; });
-	rptr->trigger(m1.do1);
+	m1.do1.setAndTrigger([](int &i) { i = 5; }, *rptr);
 	boost::this_thread::sleep_for(boost::chrono::seconds(2));
 
 	//read m2.do1 again
@@ -68,15 +65,16 @@ void testlauf()
 	boost::this_thread::sleep_for(boost::chrono::seconds(2));
 
 	//now update m1.do1
-	m1.do1.set([](int &i) { i = 8; });
-	rptr->trigger(m1.do1);
+	m1.do1.setAndTrigger([](int &i) { i = 8; }, *rptr);
+	
 
 	/*TODO
 	trigger ist nicht mit dem Datentyp boost::variant<EmptyDataobject&, ...> ausführbar, deshalb
 	DataObject um eine Funktion setAndTrigger erweitern, die selbst trigger auslöst
-	*/
 
-	//boost::apply_visitor([&](auto &d) {rptr->trigger(d);}, dataobject_map.at("Module1.m1.do1"));
+    rptr->trigger(dataobject_map.at("Module1.m1.do1"));
+	boost::apply_visitor([&](auto &d) {rptr->trigger(d);}, dataobject_map.at("Module1.m1.do1"));
+	*/
 
 	boost::this_thread::sleep_for(boost::chrono::seconds(2));
 
@@ -91,13 +89,8 @@ int main() {
 	testlauf();
 	return 0;
 
-
 	//start command service as thread for non-blocking at listener
 	Asm::UdpCommand command;
-	//boost::thread* t1 = new boost::thread(boost::bind(&boost::asio::io_service::run, &command.udpIOService));
-	//boost::thread* t1 = new boost::thread([&command]() {command.udpIOService.run();});
-	//t1->detach();
-
 
 	//init DO values
 	sys.deserialize();

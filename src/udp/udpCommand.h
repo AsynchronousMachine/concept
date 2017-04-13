@@ -5,17 +5,23 @@
 
 namespace Asm {
 
-	class UdpCommand {
+	class UdpCommand 
+	{
+	private:
+		boost::asio::io_service udpIOService1;
+		boost::asio::io_service udpIOService2;
+		//Asm::UdpServer* udpServer;
+		std::unique_ptr<Asm::UdpServer> udpHandler4DO;
+		std::unique_ptr<Asm::UdpServer> udpHandler4Link;
 
 	public:
 
 
 		//UdpCommand() : port(9500) { runServer(); }
 
-		UdpCommand(int port = 9500) :
-			port(port),
-			udpHandler4DO(new Asm::UdpServer(udpIOService1, port, [&](char *json) {receivedDO(json); })),
-			udpHandler4Link(new Asm::UdpServer(udpIOService2, port + 1, [&](char *json) {receivedLink(json); }))
+		UdpCommand(int port1 = 9500, int port2 = 9501) :
+			udpHandler4DO(new Asm::UdpServer(udpIOService1, port1, [&](char *json) {receivedDO(json); })),
+			udpHandler4Link(new Asm::UdpServer(udpIOService2, port2, [&](char *json) {receivedLink(json); }))
 		{
 			run();
 		}
@@ -50,9 +56,9 @@ namespace Asm {
 			{
 
 				const char* doName = itr->name.GetString();
-				if (dataobject_map.find(doName) != dataobject_map.end())
+				if (name_dataobjects.find(doName) != name_dataobjects.end())
 				{
-					auto doInstance = dataobject_map.at(doName);
+					auto doInstance = name_dataobjects.at(doName);
 					if (itr->value.IsNull())
 					{
 						//init first time
@@ -112,19 +118,19 @@ namespace Asm {
 			for (Value::ConstMemberIterator itr = doc.MemberBegin(); itr != doc.MemberEnd(); ++itr)
 			{
 				const char* linkName = itr->name.GetString();
-				if (link_map.find(linkName) != link_map.end())
+				if (name_links.find(linkName) != name_links.end())
 				{
-					auto linkInstance = link_map.at(linkName);
+					auto linkInstance = name_links.at(linkName);
 					const Value& av = itr->value;
 					if (av.IsArray()) {
 						std::cout << "array found " << av.GetArray().Size() << std::endl;
 						if (av.GetArray().Size() == 3)
 						{
-							boost::apply_visitor([&](auto& l) {l.set(av.GetArray()[0].GetString(), dataobject_map.at(av.GetArray()[1].GetString()), dataobject_map.at(av.GetArray()[2].GetString()));  }, linkInstance);
+							boost::apply_visitor([&](auto& l) {l.set(av.GetArray()[0].GetString(), name_dataobjects.at(av.GetArray()[1].GetString()), name_dataobjects.at(av.GetArray()[2].GetString()));  }, linkInstance);
 						}
 						else
 						{
-							boost::apply_visitor([&](auto& l) {l.clear(av.GetArray()[0].GetString(), dataobject_map.at(av.GetArray()[1].GetString()));  }, linkInstance);
+							boost::apply_visitor([&](auto& l) {l.clear(av.GetArray()[0].GetString(), name_dataobjects.at(av.GetArray()[1].GetString()));  }, linkInstance);
 						}
 					}
 					//boost::apply_visitor([&](auto& l) {l.clear(av.GetArray()[0].GetString(),boost::get<Asm::DataObject<int>&>(dataobject_map.at(av.GetArray()[1].GetString())));  }, linkInstance);
@@ -159,13 +165,7 @@ namespace Asm {
 		}
 
 
-	private:
-		int port;
-		boost::asio::io_service udpIOService1;
-		boost::asio::io_service udpIOService2;
-		//Asm::UdpServer* udpServer;
-		std::shared_ptr<Asm::UdpServer> udpHandler4DO;
-		std::shared_ptr<Asm::UdpServer> udpHandler4Link;
+
 	};
 
 }

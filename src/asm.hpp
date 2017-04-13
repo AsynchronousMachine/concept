@@ -186,6 +186,13 @@ namespace Asm {
 			visitor(_content);
 		}
 
+		template <class Visitor>
+		void setAndTrigger(Visitor visitor, Asm::DataObjectReactor& reactor)
+		{
+			set(visitor);
+			reactor.trigger(*this);
+		}
+
 		// Const member function to avoid that a non-const reference is passed to the visitor
 		// as that would allow the visitor to change the data_ member
 		template <class Visitor>
@@ -237,6 +244,8 @@ namespace Asm {
 		template <class Visitor>
 		void set(Visitor visitor) {};
 		template <class Visitor>
+		void setAndTrigger(Visitor visitor, Asm::DataObjectReactor& reactor) {};
+		template <class Visitor>
 		auto get(Visitor visitor) { return 0; }; // !!!Will never be used!!!
 		template <typename D2, typename CB>
 		void registerLink(const std::string name, DataObject<D2>& d2, CB cb)		{};
@@ -276,26 +285,16 @@ namespace Asm {
 		// Necessary if someone want to inherit from that
 		virtual ~Link() = default;
 
-		//void set(const std::string name, boost::any a1, boost::any a2)
-		//{
-		//	D1 *d1 = boost::any_cast<D1*>(a1);
-		//	D2 *d2 = boost::any_cast<D2*>(a2);
-		//	d1->registerLink(name, *d2, _cb);
-		//}
-
-		//void clear(const std::string name, boost::any a)
-		//{
-		//	D1 *d1 = boost::any_cast<D1*>(a);
-		//	d1->unregisterLink(name);
-		//}
-
 		void set(const std::string name, dataobjects a1, dataobjects a2)
 		{
 			D1 &d1 = boost::get<D1&>(a1);
 			D2 &d2 = boost::get<D2&>(a2);
 			d1.registerLink(name, d2, _cb);
 
-			//boost::apply_visitor([&](auto& l1) {l1.registerLink(name, boost::get<D2&>(a2), _cb); }, a1);
+			/*TODO
+			Aktuell nicht übersetzbar
+			boost::apply_visitor([&](D1& d1) {d1.registerLink(name, d2, _cb); }, d1);
+			*/
 		}
 
 		void clear(const std::string name, dataobjects a)
@@ -304,18 +303,6 @@ namespace Asm {
 
 			d1.unregisterLink(name);
 		}
-
-		/* geht nicht
-		void set(const std::string name, D1& d1, D2& d2)
-		{
-			d1->registerLink(name, d2, _cb);
-		}
-
-		void clear(const std::string name, D1& d1)
-		{
-						d1->unregisterLink(name);
-		}
-		*/
 	};
 
 	// Concept of reactor
