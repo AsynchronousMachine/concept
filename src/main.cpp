@@ -1,5 +1,6 @@
-#include "global_instances.h"
-#include "global_reflection.cpp"
+#include "modules/global_modules.hpp"
+#include "modules/maker_reflection.hpp"
+
 #include "udp/udpCommand.h"
 
 #include <fstream>
@@ -37,56 +38,62 @@ void sendConfigFile()
 }
 
 std::unique_ptr<Asm::DataObjectReactor> rptr (new Asm::DataObjectReactor());
-void testlauf()
-{
-	//init receiver
-	Asm::UdpCommand command;
-
-	boost::asio::io_service udpIOService;
-	std::unique_ptr<Asm::UdpServer> udpServer (new Asm::UdpServer(udpIOService));
-
-	//setlink
-	udpServer->sendTo("127.0.0.1", 9501, "{\"Module2.link1\" :[\"LINK1\",\"Module1.m1.do1\",\"Module2.m2.do1\"]}");
-	// wait till link is set
-	boost::this_thread::sleep_for(boost::chrono::seconds(2));
-
-	//read m2.do1
-	std::cout << "m1.do1=" << m1.do1.get([](auto i) {return i; }) << "  m2.do1=" << m2.do1.get([](auto i) {return i; }) << std::endl;
-
-	//now update m1.do1
-	m1.do1.setAndTrigger([](int &i) { i = 5; }, *rptr);
-	boost::this_thread::sleep_for(boost::chrono::seconds(2));
-
-	//read m2.do1 again
-	std::cout << "m1.do1=" << m1.do1.get([](auto i) {return i; }) << "  m2.do1=" << m2.do1.get([](auto i) {return i; }) << std::endl;
-
-	//clearlink
-	udpServer->sendTo("127.0.0.1", 9501, "{\"Module2.link1\" :[\"LINK1\",\"Module1.m1.do1\"]}");
-	boost::this_thread::sleep_for(boost::chrono::seconds(2));
-
-	//now update m1.do1
-	m1.do1.setAndTrigger([](int &i) { i = 8; }, *rptr);
-	
-
-	/*TODO
-	trigger ist nicht mit dem Datentyp boost::variant<EmptyDataobject&, ...> ausführbar, deshalb
-	DataObject um eine Funktion setAndTrigger erweitern, die selbst trigger auslöst
-
-    rptr->trigger(dataobject_map.at("Module1.m1.do1"));
-	boost::apply_visitor([&](auto &d) {rptr->trigger(d);}, dataobject_map.at("Module1.m1.do1"));
-	*/
-
-	boost::this_thread::sleep_for(boost::chrono::seconds(2));
-
-	//read m2.do1 again
-	std::cout << "m1.do1=" << m1.do1.get([](auto i) {return i; }) << "  m2.do1=" << m2.do1.get([](auto i) {return i; }) << std::endl;
-
-}
+//void testlauf()
+//{
+//	//init receiver
+//	Asm::UdpCommand command;
+//
+//	boost::asio::io_service udpIOService;
+//	std::unique_ptr<Asm::UdpServer> udpServer (new Asm::UdpServer(udpIOService));
+//
+//	//setlink
+//	udpServer->sendTo("127.0.0.1", 9501, "{\"Module2.link1\" :[\"LINK1\",\"Module1.m1.do1\",\"Module2.m2.do1\"]}");
+//	// wait till link is set
+//	boost::this_thread::sleep_for(boost::chrono::seconds(2));
+//
+//	//read m2.do1
+//	std::cout << "m1.do1=" << m1.do1.get([](auto i) {return i; }) << "  m2.do1=" << m2.do1.get([](auto i) {return i; }) << std::endl;
+//
+//	//now update m1.do1
+//	m1.do1.setAndTrigger([](int &i) { i = 5; }, *rptr);
+//	boost::this_thread::sleep_for(boost::chrono::seconds(2));
+//
+//	//read m2.do1 again
+//	std::cout << "m1.do1=" << m1.do1.get([](auto i) {return i; }) << "  m2.do1=" << m2.do1.get([](auto i) {return i; }) << std::endl;
+//
+//	//clearlink
+//	udpServer->sendTo("127.0.0.1", 9501, "{\"Module2.link1\" :[\"LINK1\",\"Module1.m1.do1\"]}");
+//	boost::this_thread::sleep_for(boost::chrono::seconds(2));
+//
+//	//now update m1.do1
+//	m1.do1.setAndTrigger([](int &i) { i = 8; }, *rptr);
+//
+//
+//	/*
+//	TODO trigger ist nicht mit dem Datentyp boost::variant<EmptyDataobject&, ...> ausführbar,
+//	deshalb DataObject um eine Funktion setAndTrigger erweitern, die selbst trigger auslöst
+//
+//    rptr->trigger(dataobject_map.at("Module1.m1.do1"));
+//	boost::apply_visitor([&](auto &d) {rptr->trigger(d);}, dataobject_map.at("Module1.m1.do1"));
+//	*/
+//
+//	boost::this_thread::sleep_for(boost::chrono::seconds(2));
+//
+//	//read m2.do1 again
+//	std::cout << "m1.do1=" << m1.do1.get([](auto i) {return i; }) << "  m2.do1=" << m2.do1.get([](auto i) {return i; }) << std::endl;
+//
+//}
 
 
 int main() {
+	my.initdo();
+	my.initdo2();
+	sys.deserialize();
 
-	testlauf();
+	std::cout << my.myDO.get([](auto& i) {return i; }).inputCounter << my.myDO.get([](auto& i) {return i; }).outputCounter << my.myDO.get([](auto& i) {return i; }).message << std::endl;
+	std::cout << my.myDO.get([](auto& i) {return &i; })<< std::endl;
+	std::cout << my.myDO.get([](auto& i) {return &i; }) << std::endl;
+	//testlauf();
 	return 0;
 
 	//start command service as thread for non-blocking at listener

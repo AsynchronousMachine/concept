@@ -1,7 +1,14 @@
 #pragma once
+
+#include <iostream>
+
 #include "../../external/rapidjson/include/rapidjson/document.h"
+#include "../../external/rapidjson/include/rapidjson/filewritestream.h"
+#include "../../external/rapidjson/include/rapidjson/prettywriter.h"
 
 #include "../udp/udpServer.hpp"
+
+#include "../modules/maker_reflection.hpp"
 
 namespace Asm {
 

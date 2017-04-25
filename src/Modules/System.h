@@ -2,8 +2,8 @@
 #include <iostream>
 #include <cstdio>
 
-#include "../asm.hpp"
-#include "../global_reflection.h"
+#include "../asm/asm.hpp"
+#include "maker_reflection.hpp"
 
 #include "../../external/rapidjson/include/rapidjson/prettywriter.h"
 #include "../../external/rapidjson/include/rapidjson/filewritestream.h"
@@ -72,7 +72,13 @@ public:
 		{
 			//const char* doName = itr->name.GetString();
 			Value& v = doc[itr->name.GetString()];
-			boost::apply_visitor([&](auto& d) { d.deserialize(v); }, name_dataobjects.at(itr->name.GetString()));
+			try {
+				boost::apply_visitor([&](auto& d) { d.deserialize(v); }, name_dataobjects.at(itr->name.GetString()));
+			}
+			catch (const std::out_of_range& e) {
+				std::cout << "Missing " << itr->name.GetString() << std::endl;
+			}
+			
 		}
 	}
 
