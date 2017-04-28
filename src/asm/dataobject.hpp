@@ -1,8 +1,11 @@
 #pragma once
 
+#include <type_traits>
 #include <functional>
 #include <unordered_map>
+#include <atomic>
 
+#include <boost/thread/mutex.hpp>
 #include <boost/thread/null_mutex.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/lock_guard.hpp>
@@ -36,32 +39,16 @@ namespace Asm {
 	template <typename D>
 	class DataObject
 	{
+		static_assert(!std::is_void<D>::value, "DataObjects don't support void");
+
 		friend class DataObjectReactor; // This enables the reactor to traverse the links from outside
 
 	private:
-		template <class M, class Enable = void>
-		struct mutex
-		{
-			using type = void; //Invalid type for mutex
-		};
-
-		template <class M>
-		struct mutex<M, std::enable_if_t<std::is_integral<M>::value>>
-		{
-			using type = boost::null_mutex;
-		};
-
-		template <class M>
-		struct mutex<M, std::enable_if_t<!std::is_integral<M>::value>>
-		{
-			using type = boost::shared_mutex;
-		};
-
-		// Make it easier to name it
-		using mutex_t = typename mutex<D>::type;
+		using content_t = std::conditional_t<std::is_trivially_copyable<D>::value, std::atomic<D>, D>;
+		using mutex_t = std::conditional_t<std::is_trivially_copyable<D>::value, boost::null_mutex, boost::shared_mutex>;
 
 		// Content for this DO
-		D _content;
+		content_t _content;
 
 		// Mutable member as it needs to be modified in the const member function get()
 		mutable mutex_t _mtx_content;
@@ -219,7 +206,6 @@ namespace Asm {
 			doDeserialize(value);
 		}
 	};
-
 
 	struct EmptyDataobject : boost::blank
 	{

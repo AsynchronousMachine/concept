@@ -19,7 +19,7 @@ public:
 			MyComplexDOType{ 1, 2, "12" },
 		//	//MyComplexDOType{ inputCounter{1}; outputCounter{2}; message{"12"}; },
 			&MyComplexDOType::serializeMe, &MyComplexDOType::deserializeMe, true), // function pointer
-		messageLengthDO(0, [&](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {messageLengthDO.get([&value](int i) {value.SetInt(i); }); }, [&](rapidjson::Value& value) {messageLengthDO.set([&value](int& i) {i = value.GetInt(); }); }), // lambda expression, does the same as default implementation
+		messageLengthDO(0, [&](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {messageLengthDO.get([&value](const std::atomic<int> &i) {value.SetInt(i); }); }, [&](rapidjson::Value& value) {messageLengthDO.set([&value](std::atomic<int>& i) {i = value.GetInt(); }); }), // lambda expression, does the same as default implementation
 		messageDO("")
 	{
 		
