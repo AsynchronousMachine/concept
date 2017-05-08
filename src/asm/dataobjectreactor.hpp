@@ -3,7 +3,7 @@
 #include <functional>
 #include <iostream>
 
-#include <boost/thread/thread.hpp>
+#include <boost/thread.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 

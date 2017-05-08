@@ -1,4 +1,3 @@
-#pragma once
 #include "testcases/UseCase1-DO.cpp"
 
 #include <cstdlib>

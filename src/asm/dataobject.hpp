@@ -13,6 +13,7 @@
 #include <boost/variant.hpp>
 
 #include "../../external/rapidjson/include/rapidjson/document.h"
+#include "dataobjectreactor.hpp"
 
 namespace Asm {
 
