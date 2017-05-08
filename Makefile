@@ -5,7 +5,7 @@ TARGET          := asm
 STRIP           ?= strip
 CPPFLAGS        += -std=c++17 -fdiagnostics-color=always -Ofast -Wall \
                    -DTARGET_PLATFORM=$(TARGET_PLATFORM) \
-									 -I/usr/local/include #e.g. custom boost include dir
+                   -I/usr/local/include #e.g. custom boost include dir
 
 all: $(TARGET)
 
@@ -14,3 +14,5 @@ $(TARGET): src/*
 
 clean:
 	-rm $(TARGET)
+
+# run with custom lib path: LD_LIBRARY_PATH="/usr/local/lib" ./asm
