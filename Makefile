@@ -1,4 +1,4 @@
-LDLIBS          := -lboost_timer -lboost_thread -lboost_system
+LDLIBS          := -lboost_timer -lboost_thread -lboost_system -lpthread
 LDFLAGS         := -L/usr/local/lib #e.g. custom boost lib dir
 TARGET_PLATFORM ?= linux
 TARGET          := asmExec
