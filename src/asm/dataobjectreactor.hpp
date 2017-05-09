@@ -15,6 +15,8 @@
 #include <sys/eventfd.h>
 #endif
 
+#include <tbb/tbb.h>
+
 namespace Asm {
 
 	template <typename D>
@@ -38,16 +40,12 @@ namespace Asm {
 		// Realtime priority
 		static constexpr int RT_PRIO = 30;
 
-		// This is a circular buffer to hold all links from dataobjects which content has been changed
-		boost::circular_buffer<std::function<void()>> _triggeredLinks{ MAX_CAPACITY };
-
-		// Protect the circular buffer of triggered DOs
-		boost::mutex _mtx;
+		//TBB
+		tbb::concurrent_bounded_queue<std::function<void()>> _tbbExecutionQueue; ///< contains links to be executed by @see run
 
 		struct Threadpool
 		{
 			boost::thread_group _tg;
-			boost::condition_variable _cv;
 			std::function<void(unsigned inst)> _f;
 
 			Threadpool(unsigned thrd_cnt, std::function<void(unsigned inst)> f) : _f(f)
@@ -85,14 +83,10 @@ namespace Asm {
 
 			~Threadpool()
 			{
-				std::cout << "Delete treadpool" << std::endl;
+				std::cout << "Delete threadpool" << std::endl;
 				_tg.interrupt_all();
 				_tg.join_all();
 			}
-
-			void wait(boost::unique_lock<boost::mutex>& lock) { _cv.wait(lock); }
-
-			void notify() { _cv.notify_one(); }
 
 			void thrd(unsigned inst) { _f(inst); }
 		};
@@ -106,23 +100,15 @@ namespace Asm {
 		{
 			std::function<void()> f;
 
-			for (;;)
-			{
+			try {
+
+				for (;;)
 				{
-					boost::unique_lock<boost::mutex> lock(_mtx);
-
-					while (_triggeredLinks.empty())
-					{
-						_tp.wait(lock);
-						std::cout << ">>>" << inst << "<<<" << std::endl;
-					}
-
-					f = _triggeredLinks.front();
-					_triggeredLinks.pop_front();
+					_tbbExecutionQueue.pop(f); // pop of concurrent_bounded_queue waits if queue empty
+					f();
 				}
-
-				// Execute the link without holding the lock
-				f();
+			}catch(tbb::user_abort abortException){
+				// std::cerr << "Ending run() of thread " << inst << "!" << std::endl;
 			}
 		}
 
@@ -137,7 +123,10 @@ namespace Asm {
 		DataObjectReactor(DataObjectReactor&&) = delete;
 		DataObjectReactor &operator=(DataObjectReactor&&) = delete;
 
-		~DataObjectReactor() { std::cout << std::endl << "Delete reactor" << std::endl; }
+		~DataObjectReactor() {
+			_tbbExecutionQueue.abort(); // stops waiting of pop() in @see run
+			std::cout << std::endl << "Delete reactor" << std::endl;
+		}
 
 		// Announce the change of the content of a dataobject to the reactor
 		template <class D>
@@ -149,14 +138,9 @@ namespace Asm {
 				if (d._links.empty())
 					return;
 
-				// synchronize circular_buffer push/pop
-				boost::unique_lock<boost::mutex> lockBuffer(_mtx);
 				for (auto &p : d._links)
-					_triggeredLinks.push_back(p.second);
+					_tbbExecutionQueue.push(p.second); // queue is synchronized by tbb
 			}
-
-			// Now trigger a synchronization element to release at least a waiting thread
-			_tp.notify();
 		}
 	};
 }
