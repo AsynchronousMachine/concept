@@ -149,6 +149,8 @@ namespace Asm {
 				if (d._links.empty())
 					return;
 
+				// synchronize circular_buffer push/pop
+				boost::unique_lock<boost::mutex> lockBuffer(_mtx);
 				for (auto &p : d._links)
 					_triggeredLinks.push_back(p.second);
 			}
