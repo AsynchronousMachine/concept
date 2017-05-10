@@ -45,8 +45,8 @@ namespace Asm {
 		friend class DataObjectReactor; // This enables the reactor to traverse the links from outside
 
 	private:
-		using content_t = std::conditional_t<std::is_trivially_copyable<D>::value, std::atomic<D>, D>;
-		using mutex_t = std::conditional_t<std::is_trivially_copyable<D>::value, boost::null_mutex, boost::shared_mutex>;
+		using content_t = std::conditional_t<std::is_arithmetic<D>::value, std::atomic<D>, D>;
+		using mutex_t = std::conditional_t<std::is_arithmetic<D>::value, boost::null_mutex, boost::shared_mutex>;
 
 		// Content for this DO
 		content_t _content;

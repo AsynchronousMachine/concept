@@ -5,21 +5,19 @@
 struct CustomStruct
 {
 	int i;
-    std::string x;
 } cs;
 
 class CustomClass
 {
 public:
 	int inputCounter;
-    std::string x;
 };
 
 void runDOReactorExamples(){
 
     Asm::DataObject<int> doExInt(10);
     Asm::DataObject<CustomStruct> doExStruct(cs);
-    Asm::DataObject<CustomClass> doExClass(CustomClass{ 1, "" });
+    Asm::DataObject<CustomClass> doExClass(CustomClass{ 1 });
 
     // DataObjectReactor Tests
 	std::cout << std::endl << "*****************************************" << std::endl;
