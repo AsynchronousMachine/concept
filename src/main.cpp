@@ -1,9 +1,10 @@
-#include "testcases/UseCase1-DO.cpp"
+#include "testcases/DataObjectAccess.cpp"
 
 #include <cstdlib>
 
 int main() {
-	runcase1();
+
+	runDOAccessExamples();
 
 	exit(0);
 }
