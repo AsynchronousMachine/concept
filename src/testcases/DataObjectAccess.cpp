@@ -148,38 +148,4 @@ void runDOAccessExamples() {
 	//doInt.get([&tmp_atomic](const std::atomic_int& i) {tmp_atomic = std::atomic_load(&i);});
 	tmp_atomic = doInt.get([](const std::atomic_int& i) {return std::atomic_load(&i); });
 	std::cout << "tmp_atomic load after inc " << tmp_atomic << std::endl;
-
-
-	// DataObjectReactor Tests
-	std::cout << std::endl << "*****************************************" << std::endl;
-	std::cout << "DataObjectReactor Tests..." << std::endl;
-	std::cout << "-----------------------------------------" << std::endl;
-
-	std::unique_ptr<Asm::DataObjectReactor> reactor(new Asm::DataObjectReactor(4));
-
-	doInt.set([](std::atomic<int> &i) { i = 123; });
-	doStruct.set([](ComplexStruct &complexStruct){ complexStruct.i = 456; });
-	doClass.set([](ComplexClass &m) {m.inputCounter = 789; });
-
-	// this shall be executed after [doInt->doClass]
-	doInt.registerLink("doInt->doStruct", doStruct, [](Asm::DataObject<int>& triggeredDoInt, Asm::DataObject<ComplexStruct>& triggeredDoStruct){
-
-		boost::this_thread::sleep_for(boost::chrono::seconds(3));
-		int doIntVal = triggeredDoInt.get([](int i){return i;});
-		ComplexStruct doStructVal = triggeredDoStruct.get([](ComplexStruct complexStruct){return complexStruct;});
-		std::cout << "Triggered link [doInt->doStruct] with values doInt: " << doIntVal << ", doStruct.i: " << doStructVal.i << std::endl;
-	});
-	reactor->trigger(doInt);
-	doInt.unregisterLink("doInt->doStruct");
-
-	doInt.set([](std::atomic<int> &i) { i = 321; }); // notice that in [doInt->doStruct] value will be updated!
-	doInt.registerLink("doInt->doClass", doClass, [](Asm::DataObject<int>& triggeredDoInt, Asm::DataObject<ComplexClass>& triggeredDoClass){
-
-		int doIntVal = triggeredDoInt.get([](int i){return i;});
-		ComplexClass doClassVal = triggeredDoClass.get([](ComplexClass complexClass){return complexClass;});
-		std::cout << "Triggered link [doInt->doClass] with values doInt: " << doIntVal << ", doClass.inputCounter: " << doClassVal.inputCounter << std::endl;
-	});
-	reactor->trigger(doInt);
-	// wait for links to be executed
-	boost::this_thread::sleep_for(boost::chrono::seconds(5));
 }
