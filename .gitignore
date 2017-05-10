@@ -1,6 +1,7 @@
 /bin
 /obj
 concept.*
+asmExec
 
 ### Eclipse ###
 *.bak
@@ -29,7 +30,7 @@ tmp/
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
-Makefile
+# Makefile
 cmake_install.cmake
 install_manifest.txt
 
