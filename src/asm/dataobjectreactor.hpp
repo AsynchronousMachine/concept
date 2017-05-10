@@ -34,9 +34,6 @@ namespace Asm {
 	class DataObjectReactor
 	{
 	private:
-		// Max. queue capacity
-		static constexpr size_t MAX_CAPACITY = 1024;
-
 		// Realtime priority
 		static constexpr int RT_PRIO = 30;
 
@@ -70,7 +67,7 @@ namespace Asm {
 					if (pthread_setname_np(t->native_handle(), s.data()))
 						std::cout << "Could not set threadpool name" << std::endl;
 
-					struct sched_param param = {};
+					struct sched_param param{};
 					param.sched_priority = RT_PRIO;
 
 					if (pthread_setschedparam(t->native_handle(), SCHED_FIFO, &param))
@@ -104,11 +101,11 @@ namespace Asm {
 
 				for (;;)
 				{
-					_tbbExecutionQueue.pop(f); // pop of concurrent_bounded_queue waits if queue empty
+					_tbbExecutionQueue.pop(f); // Pop of concurrent_bounded_queue waits if queue empty
 					f();
 				}
 			}catch(tbb::user_abort abortException){
-				// std::cerr << "Ending run() of thread " << inst << "!" << std::endl;
+				std::cout << "Ending ASM-TP with instance " << inst << std::endl;
 			}
 		}
 
@@ -124,7 +121,7 @@ namespace Asm {
 		DataObjectReactor &operator=(DataObjectReactor&&) = delete;
 
 		~DataObjectReactor() {
-			_tbbExecutionQueue.abort(); // stops waiting of pop() in @see run
+			_tbbExecutionQueue.abort(); // Stops waiting of pop() in @see run
 			std::cout << std::endl << "Delete reactor" << std::endl;
 		}
 
@@ -139,7 +136,7 @@ namespace Asm {
 					return;
 
 				for (auto &p : d._links)
-					_tbbExecutionQueue.push(p.second); // queue is synchronized by tbb
+					_tbbExecutionQueue.push(p.second); // Queue is synchronized by tbb
 			}
 		}
 	};

@@ -131,7 +131,7 @@ void runcase1() {
 	// DataObjectReactor Tests
 	std::cout << std::endl << "*****************************************" << std::endl;
 	std::cout << "DataObjectReactor Tests..." << std::endl;
-	std::shared_ptr<Asm::DataObjectReactor> reactor(new Asm::DataObjectReactor(4));
+	std::unique_ptr<Asm::DataObjectReactor> reactor(new Asm::DataObjectReactor(4));
 
 	doInt.set([](std::atomic<int> &i) { i = 123; });
 	doStruct.set([](ComplexStruct &complexStruct){ complexStruct.i = 456; });
