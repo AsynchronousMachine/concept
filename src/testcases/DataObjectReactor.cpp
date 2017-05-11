@@ -21,7 +21,7 @@ void runDOReactorExamples(){
 
     // DataObjectReactor Tests
 	std::cout << std::endl << "*****************************************" << std::endl;
-	std::cout << "DataObjectReactor Tests..." << std::endl;
+	std::cout << "DataObjectReactor tests..." << std::endl;
 	std::cout << "-----------------------------------------" << std::endl;
 
 	std::unique_ptr<Asm::DataObjectReactor> reactor(new Asm::DataObjectReactor(4));
