@@ -8,7 +8,10 @@ int main() {
 
 	runDOAccessExamples();
 	runDOReactorExamples();
+
+#ifdef __linux__
 	runDOTimerExample();
+#endif // __linux__
 
 	exit(0);
 }

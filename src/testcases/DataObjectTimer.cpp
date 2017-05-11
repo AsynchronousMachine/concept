@@ -1,5 +1,7 @@
 #include "../asm/asm.hpp"
 
+#ifdef __linux__
+
 void tickTack(std::shared_ptr<Asm::TimerObject> timer){
 
     for(int i = 0; i < 5; ++i)
@@ -33,3 +35,5 @@ void runDOTimerExample(){
     tickTack(timer);
     timer->stop();
 }
+
+#endif//__linux__
