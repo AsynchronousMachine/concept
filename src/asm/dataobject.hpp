@@ -142,6 +142,7 @@ namespace Asm {
 		DataObject(D content, MemFun ser, MemFun2 deser, ThisPtr thisptr) : _content(content), doSerialize([thisptr, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(thisptr, value, allocator); }), doDeserialize([thisptr, deser](rapidjson::Value& value) { std::mem_fn(deser)(thisptr, value); }) { std::cout << "### A ###" << std::endl; }
 		template <typename MemFun, typename MemFun2>
 		DataObject(D content, MemFun ser, MemFun2 deser, bool b) : _content(content), doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(&_content, value, allocator); }), doDeserialize([&, deser](rapidjson::Value& value) { std::mem_fn(deser)(&_content, value); }) { std::cout << "### B ###" << std::endl; }
+		DataObject() : doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}), doDeserialize([](rapidjson::Value& value) {}) {}
 
 		// Non-copyable
 		DataObject(const DataObject&) = delete;
