@@ -59,15 +59,7 @@ public:
 			return;
 		}
 
-		//iterate over all public DOs
-		/*for (auto map_iter : dataobject_map)
-		{
-			std::string key = map_iter.first;
-			Value& v = doc[key.c_str()];
-			boost::apply_visitor([&](auto& d) { d.deserialize(v); }, map_iter.second);
-		}*/
-
-		//iterate over all DO-keys instead
+		//iterate over all DO-keys from json file
 		for (Value::ConstMemberIterator itr = doc.MemberBegin(); itr != doc.MemberEnd(); ++itr)
 		{
 			//const char* doName = itr->name.GetString();

@@ -4,5 +4,3 @@
 
 Module1 m1;
 System sys;
-
-MyModuleX my;
