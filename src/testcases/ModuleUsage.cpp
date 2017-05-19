@@ -1,5 +1,3 @@
-#pragma once
-
 #include "../asm/dataobjectreactor.hpp"
 #include "../asm/dataobject.hpp"
 #include "../asm/linkobject.hpp"
@@ -30,7 +28,7 @@ class ProcessModule
 {
 private:
 	//handles the data flow from the source to the target DataObject, including converting the data type if necessary
-	//if the data change in the target has to be published use the setAndTrigger function with the responsible reactor else use only the set function  
+	//if the data change in the target has to be published use the setAndTrigger function with the responsible reactor else use only the set function
 	void actionInt(Asm::DataObject<int>& doSource, Asm::DataObject<MyComplexDOType>& doTarget)
 	{
 		//combined action: first increase inputCounter
@@ -49,7 +47,7 @@ public:
 	ProcessModule() :
 		DOcomplexInOut(MyComplexDOType{ 0, 0, "" }),
 		//the callback funtion for a link can only be set in the constructor
-		//Guideline: the link is defined in the same module where its target DataObject is, the same applies to the implementation of the callback function 
+		//Guideline: the link is defined in the same module where its target DataObject is, the same applies to the implementation of the callback function
 		LinkInt(&ProcessModule::actionInt, this),
 		LinkString(&ProcessModule::actionString, this)
 	{}
@@ -127,8 +125,12 @@ void runModuleUsageExample() {
 	/*
 			InputModule.inModul.DOintOutput     ---|													|---> OutputModule.outModul.DOintInput
 												   |--->  ProcessModule.processModule.DOcomplexInOut ---|
-			InputModule.inModul.DOstringOutput  ---|													|---> OutputModule.outModul.DOstringInput					
+			InputModule.inModul.DOstringOutput  ---|													|---> OutputModule.outModul.DOstringInput
 	*/
+
+    std::cout << std::endl << "*****************************************" << std::endl;
+	std::cout << "ModuleUsage tests..." << std::endl;
+	std::cout << "-----------------------------------------" << std::endl;
 
 	processModule.LinkInt.set("Int", name_dataobjects_uc2.at("InputModule.inModul.DOintOutput"), name_dataobjects_uc2.at("ProcessModule.processModule.DOcomplexInOut"));
 	processModule.LinkString.set("String", name_dataobjects_uc2.at("InputModule.inModul.DOstringOutput"), name_dataobjects_uc2.at("ProcessModule.processModule.DOcomplexInOut"));
@@ -152,7 +154,7 @@ void runModuleUsageExample() {
 	{
 		boost::get<Asm::DataObject<int> &>(name_dataobjects_uc2.at("InputModule.inModul.DOintOutput")).setAndTrigger([&](std::atomic<int> &i) { i = std::pow(10, ii); }, *rptr);
 		//wait till reactor has processed
-		boost::this_thread::sleep_for(boost::chrono::seconds(2)); 
+		boost::this_thread::sleep_for(boost::chrono::seconds(2));
 		printline();
 	}
 
@@ -165,4 +167,3 @@ void runModuleUsageExample() {
 	printline();
 
 };
-
