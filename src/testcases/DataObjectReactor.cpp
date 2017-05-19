@@ -47,6 +47,11 @@ void runDOReactorExamples(){
 		int doExIntVal = triggeredDoInt.get([](int i){return i;});
 		const CustomClass doExClassVal = triggeredDoClass.get([](const CustomClass& complexClass){return complexClass;});
 		std::cout << "Triggered link [doExInt->doExClass] with values doExInt: " << doExIntVal << ", doExClass.inputCounter: " << doExClassVal.inputCounter << std::endl;
+
+#ifdef __linux__
+		std::cout << "Tid of " << syscall(SYS_gettid) << " for datalink test" << std::endl;
+#endif
+
 	});
 	reactor->trigger(doExInt);
 	// wait for links to be executed

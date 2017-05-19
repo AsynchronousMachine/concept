@@ -27,13 +27,49 @@ void runDOTimerExample(){
     timer->stop();
     timer->restart();
     tickTack(timer);
-    timer->stop();
 
     std::cout << "Change interval to 0.5s and restart..." << std::endl;
+    timer->stop();
     timer->setRelativeInterval(500, 3000);
     // No need to restart manually. done with setRelativeInterval
     tickTack(timer);
     timer->stop();
+
+
+    std::cout << "TimerReactor test..." << std::endl;
+	std::cout << "-----------------------------------------" << std::endl;
+    std::unique_ptr<Asm::DataObjectReactor> dataObjectReactor(new Asm::DataObjectReactor(4));
+    // timer reactor uses object reactor for triggering links
+    std::unique_ptr<Asm::TimerObjectReactor> timerReactor(new Asm::TimerObjectReactor(*dataObjectReactor.get()));
+
+    // example do who's link will be triggered
+    Asm::DataObject<Asm::TimerObject> dataObjectTimer;
+    Asm::DataObject<int> dataObjectInt;
+
+    // init interval with example capture of local timer
+    dataObjectTimer.set([timer](Asm::TimerObject& to){
+        to.setRelativeInterval(timer->getInterval(),0);
+    });
+
+    // link to be triggered in timerreactor by objectreactor every interval
+    dataObjectTimer.registerLink("doTimer->doInt", dataObjectInt, [](Asm::DataObject<Asm::TimerObject>& timer, Asm::DataObject<int>& intVal){
+
+        std::cout << "[doTimer->doInt] was triggered by timer-reactor." << std::endl;
+
+#ifdef __linux__
+        std::cout << "Tid of " << syscall(SYS_gettid) << " for timerlink test" << std::endl;
+#endif
+
+    });
+
+    // add timer and let it be triggered triggerAmount=sleep/interval of timer
+    timerReactor->registerTimer(dataObjectTimer);
+    boost::this_thread::sleep_for(boost::chrono::seconds(5));
+    timerReactor->unregisterTimer(dataObjectTimer);
+
+    dataObjectTimer.unregisterLink("doTimer->doInt");
+
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
 }
 
 #endif//__linux__
