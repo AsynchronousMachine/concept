@@ -1,3 +1,4 @@
+#pragma once
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
@@ -100,4 +101,3 @@ private:
 	void handleSend(const boost::system::error_code& error, std::size_t bytes_transferred){}
 };
 }
-
