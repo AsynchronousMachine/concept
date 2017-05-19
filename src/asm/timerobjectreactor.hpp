@@ -42,6 +42,11 @@ namespace Asm {
 		// Threaded timer function mechanism
 		void run()
 		{
+
+#ifdef __linux__
+			std::cout << "Tid of " << syscall(SYS_gettid) << " for timer reactor" << std::endl;
+#endif
+
 			for (;;)
 			{
 				epoll_event evt[MAX_CAPACITY];
@@ -75,10 +80,12 @@ namespace Asm {
 						std::cout << "Timer has fired" << std::endl;
 
 						boost::unique_lock<boost::mutex> lock(_mtx);
-						DataObject<TimerObject>& dot = _notify.at(evt[i].data.fd);
-						lock.unlock();
-
-						_dor.trigger(dot);
+						auto itr = _notify.find(evt[i].data.fd);
+						if ( itr != _notify.end() )
+						{
+							lock.unlock();
+							_dor.trigger(itr->second);
+						}
 					}
 				}
 			}
