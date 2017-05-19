@@ -1,9 +1,7 @@
-#pragma once
 #include "../asm/dataobject.hpp"
 #include "../modules/maker_reflection.hpp"
 
 #include <string>
-//#include <vector>
 #include <atomic>
 
 //developer defined complex datatpyes for DO
@@ -19,6 +17,18 @@ public:
 	int inputCounter;
 	int outputCounter;
 	std::string message;
+
+    ComplexClass() : inputCounter(0), outputCounter(0), message("+") {
+		std::cout << "ComplexClass() with: " << inputCounter << "|" << outputCounter << "|" << message << std::endl;
+	}
+
+    ComplexClass(int a, int b, std::string c) : inputCounter(a), outputCounter(b), message(c) {
+		std::cout << "ComplexClass(int a, int b, std::string c) with: " << inputCounter << "|" << outputCounter << "|" << message << std::endl;
+	}
+
+	ComplexClass(const ComplexClass& cc) : inputCounter(cc.inputCounter), outputCounter(cc.outputCounter), message(cc.message) {
+		std::cout << "ComplexClass(const ComplexClass& cc) with: " << inputCounter << "|" << outputCounter << "|" << message << std::endl;
+	}
 };
 
 // Helper for data access
@@ -34,13 +44,6 @@ struct cb
 }
 cbi;
 
-
-//Hint: all DOs in this example are not serializeable
-Asm::DataObject<int> doInt(10);
-Asm::DataObject<std::string> doString("11");
-Asm::DataObject<ComplexStruct> doStruct(csInst);
-Asm::DataObject<ComplexClass> doClass(ComplexClass{ 1, 2, "step1" });
-
 template<typename T>
 class ato
 {
@@ -49,12 +52,72 @@ public:
 	ato(T i) : a(i) {}
 };
 
-void runDOAccessExamples() {
+void initializingExamples(){
+
+	std::cout << std::endl << "*****************************************" << std::endl;
+	std::cout << "DO initialize examples..." << std::endl;
+
+	Asm::DataObject<ComplexClass> doClass1(ComplexClass{ 1, 2, "step1" }); // will use DataObject(D content)
+	doClass1.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+
+	Asm::DataObject<ComplexClass> doClass2(ComplexClass{}); // will use DataObject(D content)
+	doClass2.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+
+	Asm::DataObject<ComplexClass> doClass3(*new ComplexClass({ 3, 4, "step2" })); // will use DataObject(D content)
+	doClass3.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+
+	Asm::DataObject<ComplexClass> doClass4(*new ComplexClass); // will use DataObject(D content)
+	doClass4.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+
+	Asm::DataObject<ComplexClass> doClass5(ComplexClass({})); // will use DataObject(D content)
+	doClass5.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+
+	Asm::DataObject<ComplexClass> doClass6(*new ComplexClass({})); // will use DataObject(D content)
+	doClass6.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+
+	Asm::DataObject<ComplexClass> doClass7; // will use DataObject()
+	doClass7.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+
+	Asm::DataObject<ComplexClass> doClass8{}; // will use DataObject()
+	doClass8.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+
+	doClass1.set([](ComplexClass& c){c.inputCounter = 1;});
+	doClass2.set([](ComplexClass& c){c.inputCounter = 2;});
+	doClass3.set([](ComplexClass& c){c.inputCounter = 3;});
+	doClass4.set([](ComplexClass& c){c.inputCounter = 4;});
+	doClass5.set([](ComplexClass& c){c.inputCounter = 5;});
+	doClass6.set([](ComplexClass& c){c.inputCounter = 6;});
+	doClass7.set([](ComplexClass& c){c.inputCounter = 7;});
+	doClass8.set([](ComplexClass& c){c.inputCounter = 8;});
+
+	std::cout << "-----------------------------------------" << std::endl;
+
+	doClass1.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+	doClass2.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+	doClass3.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+	doClass4.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+	doClass5.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+	doClass6.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+	doClass7.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+	doClass8.get([](const ComplexClass& c){std::cout << "inputcounter: " << c.inputCounter << std::endl;});
+}
+
+void runDOAccessExamples()
+{
+	initializingExamples();
 
 	// Access content consistently
 	std::cout << std::endl << "*****************************************" << std::endl;
 	std::cout << "DO simple examples..." << std::endl;
 	std::cout << "-----------------------------------------" << std::endl;
+
+	//Hint: all DOs in this example are not serializeable
+	Asm::DataObject<int> doInt(10);
+	Asm::DataObject<std::string> doString("11");
+	Asm::DataObject<ComplexStruct> doStruct(csInst);
+
+	Asm::DataObject<ComplexClass> doClass(ComplexClass{ 1, 2, "step1" });
+	doClass.get([](const ComplexClass& c){std::cout << c.inputCounter << std::endl;});
 
 	doInt.get(fi);
 	doInt.set([](std::atomic<int> &i) { i = 1; });
@@ -68,7 +131,9 @@ void runDOAccessExamples() {
 	std::cout << "DO vector examples..." << std::endl;
 	std::cout << "-----------------------------------------" << std::endl;
 
-	Asm::DataObject<std::vector<int>> doVector({}); //init empty
+	Asm::DataObject<std::vector<int>> doVector({1, 2}); //init empty
+	Asm::DataObject<std::vector<int>> doVector2({3, 4}); //init empty
+	// Asm::DataObject<std::vector<int>> doVector3({}); //init empty <- not working as call of ambiguous overload initializer list
 	doVector.set([](std::vector<int> &v) {v = std::vector<int>{ 1, 2, 3 }; });
 	doVector.get([](const std::vector<int> &v) { std::cout << v[0] << ',' << v[1] << '\n'; });
 
@@ -148,4 +213,6 @@ void runDOAccessExamples() {
 	//doInt.get([&tmp_atomic](const std::atomic_int& i) {tmp_atomic = std::atomic_load(&i);});
 	tmp_atomic = doInt.get([](const std::atomic_int& i) {return std::atomic_load(&i); });
 	std::cout << "tmp_atomic load after inc " << tmp_atomic << std::endl;
+
+	boost::this_thread::sleep_for(boost::chrono::seconds(3));
 }
