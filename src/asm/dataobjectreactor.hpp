@@ -10,6 +10,7 @@
 
 #ifdef __linux__
 #include <pthread.h>
+#include <sys/syscall.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
@@ -98,6 +99,10 @@ namespace Asm {
 			std::function<void()> f;
 
 			try {
+				
+#ifdef __linux__
+				std::cout << "Tid of " << syscall(SYS_gettid) << " for dataobject reactor instance " << inst << std::endl;
+#endif
 
 				for (;;)
 				{
