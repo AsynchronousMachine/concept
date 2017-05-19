@@ -14,6 +14,7 @@
 
 #include "../../external/rapidjson/include/rapidjson/document.h"
 #include "dataobjectreactor.hpp"
+// #include "timerobject.hpp"
 
 namespace Asm {
 
@@ -112,9 +113,7 @@ namespace Asm {
 		}
 
 		template< typename U = D, enable_if_is_same<U, int> = true>
-		void deserialize_impl(rapidjson::Value& value) {
-			set(value.GetInt());
-		}
+		void deserialize_impl(rapidjson::Value& value) { set(value.GetInt()); }
 
 		template< typename U = D, enable_if_is_same<U, double> = true>
 		void deserialize_impl(rapidjson::Value& value) {
@@ -142,6 +141,8 @@ namespace Asm {
 		DataObject(D content, MemFun ser, MemFun2 deser, ThisPtr thisptr) : _content(content), doSerialize([thisptr, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(thisptr, value, allocator); }), doDeserialize([thisptr, deser](rapidjson::Value& value) { std::mem_fn(deser)(thisptr, value); }) { std::cout << "### A ###" << std::endl; }
 		template <typename MemFun, typename MemFun2>
 		DataObject(D content, MemFun ser, MemFun2 deser, bool b) : _content(content), doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(&_content, value, allocator); }), doDeserialize([&, deser](rapidjson::Value& value) { std::mem_fn(deser)(&_content, value); }) { std::cout << "### B ###" << std::endl; }
+        //template< typename U = D, enable_if_is_same<U, Asm::TimerObject> = true>
+		//Selects Asm::timerObject exclusively for default constructor if upper line is uncommented
 		DataObject() : doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}), doDeserialize([](rapidjson::Value& value) {}) {}
 
 		// Non-copyable
