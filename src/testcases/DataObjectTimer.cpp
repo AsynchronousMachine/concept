@@ -55,11 +55,7 @@ void runDOTimerExample(){
     dataObjectTimer.registerLink("doTimer->doInt", dataObjectInt, [](Asm::DataObject<Asm::TimerObject>& timer, Asm::DataObject<int>& intVal){
 
         std::cout << "[doTimer->doInt] was triggered by timer-reactor." << std::endl;
-
-#ifdef __linux__
         std::cout << "Tid of " << syscall(SYS_gettid) << " for timerlink test" << std::endl;
-#endif
-
     });
 
     // add timer and let it be triggered triggerAmount=sleep/interval of timer
