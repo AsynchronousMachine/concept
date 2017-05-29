@@ -1,7 +1,5 @@
 #include "../asm/asm.hpp"
 
-#ifdef __linux__
-
 void tickTack(std::shared_ptr<Asm::TimerObject> timer){
 
     for(int i = 0; i < 5; ++i)
@@ -17,6 +15,8 @@ void runDOTimerExample(){
     std::cout << std::endl << "*****************************************" << std::endl;
 	std::cout << "DataObjectTimer tests..." << std::endl;
 	std::cout << "-----------------------------------------" << std::endl;
+
+#ifdef __linux__
 
     std::shared_ptr<Asm::TimerObject> timer(new Asm::TimerObject());
     std::cout << "Start timer in 3s with interval 1s" << std::endl;
@@ -65,7 +65,10 @@ void runDOTimerExample(){
 
     dataObjectTimer.unregisterLink("doTimer->doInt");
 
+#endif//__linux__
+#ifndef __linux__
+    std::cout << "Linux only! Skipping DataObjectTimer tests..." << std::endl;
+#endif//!__linux__
+
     boost::this_thread::sleep_for(boost::chrono::seconds(3));
 }
-
-#endif//__linux__

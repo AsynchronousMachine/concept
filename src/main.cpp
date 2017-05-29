@@ -10,10 +10,7 @@ int main() {
 	runDOAccessExamples();
 	runDOReactorExamples();
 	runModuleUsageExample();
-
-#ifdef __linux__
 	runDOTimerExample();
-#endif // __linux__
 
 	exit(0);
 }
