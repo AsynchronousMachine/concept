@@ -3,6 +3,8 @@
 #include "../datatypes/MyComplexDOType.hpp"
 
 
+In the empty constructur of this class you find different examples how data objects of a module can be serialized.
+*/
 class SerializeModule
 {
 private:
@@ -11,12 +13,12 @@ private:
 
 	//example for a serialization function 
 	void testSerFn4doFunc(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-		doFunc.get([&value, &allocator](std::string s) {value.SetString(s.c_str(), allocator); });
+		doString3.get([&value, &allocator](std::string s) {value.SetString(s.c_str(), allocator); });
 	}
 
 	//example for a deserialization function 
 	void testDeSerFn4doFunc(rapidjson::Value& value) {
-		doFunc.set([&value](std::string& s) {s = value.GetString(); });
+		doString3.set([&value](std::string& s) {s = value.GetString(); });
 	}
 
 protected:
@@ -38,11 +40,11 @@ public:
 		doBool(false, [&](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {doBool.get([&value](bool b) { value.SetBool(b); }); }, [&](rapidjson::Value& value) {doBool.set([&value](std::atomic<bool>& b) {b = value.GetBool(); }); }),
 		doString2("dummy", [&](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {doString2.get([&](std::string s) { value.SetString(s.c_str(), allocator); }); }, [&](rapidjson::Value& value) {doString2.set([&value](std::string s) {s = value.GetString(); }); }),
 		//function pointer 
-		doFunc("test", &SerializeModule::testSerFn4doFunc, &SerializeModule::testDeSerFn4doFunc, this),
+		doString3("test", &SerializeModule::testSerFn4doFunc, &SerializeModule::testDeSerFn4doFunc, this),
 		//function pointer on the content
 		//boolean is again a dummy value for selecting the right constructor
 		//This is the prefered way to do serialization on complex types
-		doFunc2(MyComplexDOType{ 1, 2, "12" }, &MyComplexDOType::serializeMe, &MyComplexDOType::deserializeMe, true)
+		doMyComplexDOType(MyComplexDOType{ 1, 2, "12" }, &MyComplexDOType::serializeMe, &MyComplexDOType::deserializeMe, true)
 	{}
 
 	Asm::DataObject<int> doInt;
@@ -50,6 +52,6 @@ public:
 	Asm::DataObject<std::string> doString;
 	Asm::DataObject<bool> doBool;
 	Asm::DataObject<std::string> doString2;
-	Asm::DataObject<std::string> doFunc;
-	Asm::DataObject<MyComplexDOType> doFunc2;
+	Asm::DataObject<std::string> doString3;
+	Asm::DataObject<MyComplexDOType> doMyComplexDOType;
 };
