@@ -8,7 +8,6 @@
 
 namespace Asm {
 	using data_variant = boost::variant<
-		EmptyDataobject&,
 		DataObject<bool>&,
 		DataObject<double>&,
 		DataObject<int>&,

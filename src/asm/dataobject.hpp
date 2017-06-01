@@ -14,14 +14,12 @@
 
 #include "../../external/rapidjson/include/rapidjson/document.h"
 #include "dataobjectreactor.hpp"
-// #include "timerobject.hpp"
 
 namespace Asm {
+	constexpr bool default_serializer = true;
 
 	template<typename DOtype, typename type>
 	using enable_if_is_same = std::enable_if_t<std::is_same<DOtype, type>::value, bool>;
-
-	constexpr bool default_serializer = true;
 
 	using serializeFnct = std::function<void(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator)>;
 	using deserializeFnct = std::function<void(rapidjson::Value& value)>;
@@ -77,7 +75,7 @@ namespace Asm {
 
 		serializeFnct doSerialize;
 
-		template< class  U = D, enable_if_is_same<U, bool> = true>
+		template <typename U = D, enable_if_is_same<U, bool> = true>
 		void serialize_impl(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
 			value.SetBool(get());
 		}
@@ -134,16 +132,36 @@ namespace Asm {
 			void deserialize_impl(rapidjson::Value& value) { }
 
 	public:
-		DataObject(D content, bool b) : _content(content), doSerialize([this](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(&DataObject<D>::serialize_impl<D>)(this, value, allocator); }), doDeserialize([this](rapidjson::Value& value) { std::mem_fn(&DataObject<D>::deserialize_impl<D>)(this, value); }) {}
-		DataObject(D content, serializeFnct ptr, deserializeFnct ptr2) : _content(content), doSerialize(ptr), doDeserialize(ptr2) {}
-		DataObject(D content) : _content(content), doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}), doDeserialize([](rapidjson::Value& value) {}) {}
+		DataObject(D content, bool b) : _content(content), 
+			                            doSerialize([this](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(&DataObject<D>::serialize_impl<D>)(this, value, allocator); }),
+			                            doDeserialize([this](rapidjson::Value& value) { std::mem_fn(&DataObject<D>::deserialize_impl<D>)(this, value); }) {
+				std::cout << "DO-CTOR with implicit trival ser-/deser fct" << std::endl; }
+
+		DataObject(D content, serializeFnct ptr, deserializeFnct ptr2) : _content(content), 
+			                                                             doSerialize(ptr), 
+			                                                             doDeserialize(ptr2) {
+			std::cout << "DO-CTOR with explicit ser-/deser fct" << std::endl; }
+
+		DataObject(D content) : _content(content),
+			                    doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}), 
+			                    doDeserialize([](rapidjson::Value& value) {}) { 
+			std::cout << "DO-CTOR with disabled ser-/deser" << std::endl; }
+
 		template <typename MemFun, typename MemFun2, typename ThisPtr>
-		DataObject(D content, MemFun ser, MemFun2 deser, ThisPtr thisptr) : _content(content), doSerialize([thisptr, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(thisptr, value, allocator); }), doDeserialize([thisptr, deser](rapidjson::Value& value) { std::mem_fn(deser)(thisptr, value); }) { std::cout << "### A ###" << std::endl; }
+		DataObject(D content, MemFun ser, MemFun2 deser, ThisPtr thisptr) : _content(content), 
+			                                                                doSerialize([thisptr, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(thisptr, value, allocator); }),
+			                                                                doDeserialize([thisptr, deser](rapidjson::Value& value) { std::mem_fn(deser)(thisptr, value); }) {
+			std::cout << "DO-CTOR with instance based ser-/deser fct" << std::endl; }
+
 		template <typename MemFun, typename MemFun2>
-		DataObject(D content, MemFun ser, MemFun2 deser, bool b) : _content(content), doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(&_content, value, allocator); }), doDeserialize([&, deser](rapidjson::Value& value) { std::mem_fn(deser)(&_content, value); }) { std::cout << "### B ###" << std::endl; }
-        //template< typename U = D, enable_if_is_same<U, Asm::TimerObject> = true>
-		//Selects Asm::timerObject exclusively for default constructor if upper line is uncommented
-		DataObject() : doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}), doDeserialize([](rapidjson::Value& value) {}) {}
+		DataObject(D content, MemFun ser, MemFun2 deser, bool b) : _content(content),
+			                                                       doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(&_content, value, allocator); }), 
+			                                                       doDeserialize([&, deser](rapidjson::Value& value) { std::mem_fn(deser)(&_content, value); }) {
+			std::cout << "DO-CTOR with content based ser-/deser fct" << std::endl; }
+
+		DataObject() : doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}), 
+			           doDeserialize([](rapidjson::Value& value) {}) {
+			std::cout << "DO-CTOR only for TO" << std::endl; }
 
 		// Non-copyable
 		DataObject(const DataObject&) = delete;
@@ -157,16 +175,14 @@ namespace Asm {
 		virtual ~DataObject() = default;
 
 		template <class Visitor>
-		void set(Visitor visitor)
-		{
+		void set(Visitor visitor) {
 			// Exclusive lock for write access
 			boost::lock_guard<mutex_t> lock(_mtx_content);
 			visitor(_content);
 		}
 
 		template <class Visitor>
-		void setAndTrigger(Visitor visitor, Asm::DataObjectReactor& reactor)
-		{
+		void setAndTrigger(Visitor visitor, Asm::DataObjectReactor& reactor) {
 			set(visitor);
 			reactor.trigger(*this);
 		}
@@ -174,8 +190,7 @@ namespace Asm {
 		// Const member function to avoid that a non-const reference is passed to the visitor
 		// as that would allow the visitor to change the data_ member
 		template <class Visitor>
-		auto get(Visitor visitor) const
-		{
+		auto get(Visitor visitor) const {
 			// Shared lock to support concurrent access from multiple visitors in different threads
 			boost::shared_lock_guard<mutex_t> lock(_mtx_content);
 			return visitor(_content);
@@ -183,45 +198,27 @@ namespace Asm {
 
 		// Link a DO to that DO
 		template <typename D2, typename CB>
-		void registerLink(const std::string name, DataObject<D2>& d2, CB cb)
-		{
+		void registerLink(const std::string name, DataObject<D2>& d2, CB cb) {
 			boost::lock_guard<boost::mutex> lock(_mtx_links);
 			_links.insert({ name, [cb, this, &d2] { cb(*this, d2); } });
 			std::cout << "registerLink: " << name << std::endl;
 		}
 
 		// Remove a link to that DO by name
-		void unregisterLink(const std::string name)
-		{
+		void unregisterLink(const std::string name) {
 			boost::lock_guard<boost::mutex> lock(_mtx_links);
 			_links.erase(name);
 			std::cout << "UNregisterLink: " << name << std::endl;
 		}
 
 
-		void serialize(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator)
-		{
+		void serialize(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
 			return doSerialize(value, allocator);
 		}
 
-		void deserialize(rapidjson::Value& value)
-		{
+		void deserialize(rapidjson::Value& value) {
 			doDeserialize(value);
 		}
 	};
 
-	struct EmptyDataobject : boost::blank
-	{
-		const std::string serialize(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { return "!!!Will never be used!!!"; };
-		const void deserialize(rapidjson::Value& value) {};
-		template <class Visitor>
-		void set(Visitor visitor) {};
-		template <class Visitor>
-		void setAndTrigger(Visitor visitor, Asm::DataObjectReactor& reactor) {};
-		template <class Visitor>
-		auto get(Visitor visitor) { return 0; }; // !!!Will never be used!!!
-		template <typename D2, typename CB>
-		void registerLink(const std::string name, DataObject<D2>& d2, CB cb) {};
-		void unregisterLink(const std::string name) {};
-	};
 }
