@@ -13,7 +13,7 @@
 
 namespace Asm {
 
-#ifdef __linux__
+//#ifdef __linux__
 
 	class TimerObjectReactor
 	{
@@ -45,7 +45,7 @@ namespace Asm {
 
 #ifdef __linux__
 			std::cout << "Tid of " << syscall(SYS_gettid) << " for timer reactor" << std::endl;
-#endif
+
 
 			for (;;)
 			{
@@ -89,11 +89,13 @@ namespace Asm {
 					}
 				}
 			}
+#endif
 		}
 
 	public:
 		TimerObjectReactor(DataObjectReactor& dor) : _epfd(-1), _evtfd(-1), _dor(dor)
 		{
+#ifdef __linux__
 			if ((_evtfd = ::eventfd(0, EFD_CLOEXEC)) < 0)
 			{
 				std::cout << "Eventfd file handle could not be created: " << std::strerror(errno) << std::endl;
@@ -121,6 +123,7 @@ namespace Asm {
 			}
 
 			_thrd = boost::thread([this]() { TimerObjectReactor::run(); });
+#endif
 		}
 
 		// Non-copyable
@@ -137,6 +140,8 @@ namespace Asm {
 
 			uint64_t stop = 1;
 
+#ifdef __linux__
+
 			if (::write(_evtfd, &stop, sizeof(stop)) != sizeof(stop))
 			{
 				std::cout << "Write timer stop failed: " << std::strerror(errno) << std::endl;
@@ -149,12 +154,13 @@ namespace Asm {
 
 			if (_epfd >= 0)
 				::close(_epfd);
+#endif
 		}
 
 		bool registerTimer(DataObject<TimerObject>& dot)
 		{
 			int fd = dot.get([](const TimerObject& t) { return t._fd; });
-
+#ifdef __linux__
 			epoll_event evt;
 			evt.events = EPOLLIN;
 			evt.data.fd = fd;
@@ -175,7 +181,7 @@ namespace Asm {
 				std::cout << "Epoll control error at ADD: " << std::strerror(errno) << std::endl;
 				return false;
 			}
-
+#endif
 			return true;
 		}
 
@@ -184,7 +190,7 @@ namespace Asm {
 			bool ret = true;
 
 			int fd = dot.get([](const TimerObject& t) { return t._fd; });
-
+#ifdef __linux__
 			if (::epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, 0) < 0)
 			{
 				std::cout << "Epoll control error at DEL: " << std::strerror(errno) << std::endl;
@@ -196,9 +202,12 @@ namespace Asm {
 				boost::lock_guard<boost::mutex> lock(_mtx);
 				_notify.erase(fd);
 			}
-
+#endif
 			return ret;
 		}
 	};
-#endif
+
+
+	//well known Reactor
+	extern std::unique_ptr<TimerObjectReactor> trptr;
 }

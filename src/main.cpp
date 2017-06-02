@@ -5,8 +5,12 @@
 
 #include <cstdlib>
 
-int main() {
 
+std::unique_ptr<Asm::DataObjectReactor> Asm::rptr(new Asm::DataObjectReactor());
+
+std::unique_ptr<Asm::TimerObjectReactor> Asm::trptr(new Asm::TimerObjectReactor(*rptr));
+
+int main() {
 	runDOAccessExamples();
 	runDOReactorExamples();
 	runModuleUsageExample();

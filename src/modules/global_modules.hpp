@@ -1,7 +1,10 @@
 #pragma once
 
-#include "Module1.h"
-#include "System.h"
+#include "InputModule.hpp"
+#include "OutputModule.hpp"
+#include "ProcessModule.hpp"
 
-extern Module1 m1;
-extern System sys;
+
+extern InputModule inModule;
+extern ProcessModule processModule;
+extern OutputModule outModule;
