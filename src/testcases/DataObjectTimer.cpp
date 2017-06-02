@@ -18,7 +18,7 @@ void runDOTimerExample(){
 
 #ifdef __linux__
 
-    std::shared_ptr<Asm::TimerObject> timer(new Asm::TimerObject());
+    std::shared_ptr<Asm::TimerObject> timer = std::make_unique<Asm::TimerObject>();
     std::cout << "Start timer in 3s with interval 1s" << std::endl;
     timer->setRelativeInterval(1000, 3000);
     tickTack(timer);

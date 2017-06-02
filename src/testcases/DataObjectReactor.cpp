@@ -24,7 +24,7 @@ void runDOReactorExamples(){
 	std::cout << "DataObjectReactor tests..." << std::endl;
 	std::cout << "-----------------------------------------" << std::endl;
 
-	std::unique_ptr<Asm::DataObjectReactor> reactor(new Asm::DataObjectReactor(4));
+	std::unique_ptr<Asm::DataObjectReactor> reactor = std::make_unique<Asm::DataObjectReactor>(4);
 
 	doExInt.set([](std::atomic<int> &i) { i = 123; });
 	doExStruct.set([](CustomStruct& m){ m.i = 456; });
