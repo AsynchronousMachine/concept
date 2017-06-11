@@ -7,3 +7,9 @@
 #include "../maker/maker_lo.hpp"
 #include "timerobject.hpp"
 #include "timerobjectreactor.hpp"
+
+namespace Asm {
+extern std::unique_ptr<Asm::DataObjectReactor> rptr;
+
+extern std::unique_ptr<Asm::TimerObjectReactor> trptr;
+}

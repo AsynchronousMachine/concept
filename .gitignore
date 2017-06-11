@@ -50,3 +50,12 @@ install_manifest.txt
 .directory
 .Trash-*
 tags
+
+### Codeblocks
+bin/
+obj/
+*.layout
+*.depend
+*.save
+bin/
+obj/

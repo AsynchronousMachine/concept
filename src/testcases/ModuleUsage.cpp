@@ -12,7 +12,7 @@
 
 
 
-void printline()
+static void printline()
 {
 	MyComplexDOType data = processModule.DOcomplexInOut.get([](auto s) {return s; });
 	std::cout << "Process: " << data.message << " In: " << data.inputCounter << " Out: " << data.outputCounter << " --> " << outModule.DOstringInput.get([](const std::string& s) {return s; }) << " length: " << outModule.DOintInput.get([](const int& i) {return i; }) << std::endl;
@@ -25,7 +25,7 @@ void runModuleUsageExample() {
 	/*
 			InputModule.inModule.DOintOutput     ---|													|---> OutputModule.outModule.DOintInput
 												   |--->  ProcessModule.processModule.DOcomplexInOut ---|
-			InputModule.inModule.DOstringOutput  ---|													|---> OutputModule.outModule.DOstringInput					
+			InputModule.inModule.DOstringOutput  ---|													|---> OutputModule.outModule.DOstringInput
 	*/
 
     std::cout << std::endl << "*****************************************" << std::endl;
@@ -55,7 +55,7 @@ void runModuleUsageExample() {
 	{
 		boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([&](std::atomic<int> &i) { i = std::pow(10, ii); }, *Asm::rptr);
 		//wait till reactor has processed
-		boost::this_thread::sleep_for(boost::chrono::seconds(2)); 
+		boost::this_thread::sleep_for(boost::chrono::seconds(2));
 		printline();
 	}
 

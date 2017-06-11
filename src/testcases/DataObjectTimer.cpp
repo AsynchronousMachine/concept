@@ -1,6 +1,6 @@
 #include "../asm/asm.hpp"
 
-void tickTack(std::shared_ptr<Asm::TimerObject> timer){
+static void tickTack(std::shared_ptr<Asm::TimerObject> timer){
 
     for(int i = 0; i < 5; ++i)
     {

@@ -1,5 +1,4 @@
-#include "../asm/dataobject.hpp"
-#include "../asm/linkobject.hpp"
+#include "../asm/asm.hpp"
 
 //Hint: all DOs in this example are not serializeable to keep it simple, look at DataObjectSerialize.cpp for this use case
 

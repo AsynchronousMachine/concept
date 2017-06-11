@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="ASM" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/ASM" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DTBB_USE_DEBUG=1" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/ASM" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-Ofast" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wfatal-errors" />
+			<Add option="-Wall" />
+			<Add option="-std=c++1z" />
+		</Compiler>
+		<Linker>
+			<Add library="boost_system" />
+			<Add library="boost_timer" />
+			<Add library="boost_thread" />
+			<Add library="pthread" />
+			<Add library="tbb" />
+		</Linker>
+		<Unit filename="src/asm/asm.cpp" />
+		<Unit filename="src/asm/asm.hpp" />
+		<Unit filename="src/asm/dataobject.hpp" />
+		<Unit filename="src/asm/dataobjectreactor.hpp" />
+		<Unit filename="src/asm/linkobject.hpp" />
+		<Unit filename="src/asm/timerobject.hpp" />
+		<Unit filename="src/asm/timerobjectreactor.hpp" />
+		<Unit filename="src/datatypes/MyComplexDOType.hpp" />
+		<Unit filename="src/datatypes/global_datatypes.hpp" />
+		<Unit filename="src/main.cpp" />
+		<Unit filename="src/maker/maker_do.hpp" />
+		<Unit filename="src/maker/maker_lo.hpp" />
+		<Unit filename="src/maker/maker_reflection.cpp" />
+		<Unit filename="src/maker/maker_reflection.hpp" />
+		<Unit filename="src/modules/InputModule.hpp" />
+		<Unit filename="src/modules/OutputModule.hpp" />
+		<Unit filename="src/modules/ProcessModule.hpp" />
+		<Unit filename="src/modules/global_modules.cpp" />
+		<Unit filename="src/modules/global_modules.hpp" />
+		<Unit filename="src/testcases/DataObjectAccess.cpp" />
+		<Unit filename="src/testcases/DataObjectReactor.cpp" />
+		<Unit filename="src/testcases/DataObjectSerialize.cpp" />
+		<Unit filename="src/testcases/DataObjectTimer.cpp" />
+		<Unit filename="src/testcases/ModuleUsage.cpp" />
+		<Unit filename="src/testcases/TBBUsage.cpp" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
