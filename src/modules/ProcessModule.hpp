@@ -8,26 +8,26 @@ class ProcessModule
 {
 private:
 	//handles the data flow from the source to the target DataObject, including converting the data type if necessary
-	//if the data change in the target has to be published use the setAndTrigger function with the responsible reactor else use only the set function  
+	//if the data change in the target has to be published use the setAndTrigger function with the responsible reactor else use only the set function
 	void actionInt(Asm::DataObject<int>& doSource, Asm::DataObject<MyComplexDOType>& doTarget)
 	{
 		//combined action: first increase inputCounter
 		doTarget.set([&doSource](MyComplexDOType& cc) { cc.inputCounter = cc.inputCounter + 1; });
-		doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](int i) {return std::to_string(i); }); }, *Asm::rptr);
+		doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](int i) {return std::to_string(i); }); }, *Asm::pDOR);
 	}
 
 	void actionString(Asm::DataObject<std::string>& doSource, Asm::DataObject<MyComplexDOType>& doTarget)
 	{
 		//combined action: first increase inputCounter
 		doTarget.set([&doSource](MyComplexDOType& cc) { cc.inputCounter = cc.inputCounter + 1; });
-		doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](std::string s) {return s; }); }, *Asm::rptr);
+		doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](std::string s) {return s; }); }, *Asm::pDOR);
 	}
 
 public:
 	ProcessModule() :
 		DOcomplexInOut(MyComplexDOType{ 0, 0, "" }),
 		//the callback funtion for a link can only be set in the constructor
-		//Guideline: the link is defined in the same module where its target DataObject is, the same applies to the implementation of the callback function 
+		//Guideline: the link is defined in the same module where its target DataObject is, the same applies to the implementation of the callback function
 		LinkInt(&ProcessModule::actionInt, this),
 		LinkString(&ProcessModule::actionString, this)
 	{}

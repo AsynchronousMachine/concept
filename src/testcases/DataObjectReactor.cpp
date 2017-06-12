@@ -1,6 +1,7 @@
-#include "../asm/dataobject.hpp"
 #include <atomic>
 #include <string>
+
+#include "../asm/asm.hpp"
 
 static struct CustomStruct {
     int i;
@@ -22,21 +23,20 @@ void runDOReactorExamples() {
     std::cout << "DataObjectReactor tests..." << std::endl;
     std::cout << "-----------------------------------------" << std::endl;
 
-    std::unique_ptr<Asm::DataObjectReactor> reactor = std::make_unique<Asm::DataObjectReactor>(4);
-
     doExInt.set([](std::atomic<int> &i) {
         i = 123;
     });
+
     doExStruct.set([](CustomStruct& m) {
         m.i = 456;
     });
+
     doExClass.set([](CustomClass &m) {
         m.inputCounter = 789;
     });
 
     // this shall be executed after [doExInt->doExClass]
     doExInt.registerLink("doExInt->doExStruct", doExStruct, [](Asm::DataObject<int>& triggeredDoInt, Asm::DataObject<CustomStruct>& triggeredDoStruct) {
-
         boost::this_thread::sleep_for(boost::chrono::seconds(3));
         int doExIntVal = triggeredDoInt.get([](int i) {
             return i;
@@ -46,12 +46,14 @@ void runDOReactorExamples() {
         });
         std::cout << "Triggered link [doExInt->doExStruct] with values doExInt: " << doExIntVal << ", doExStruct.i: " << doExStructVal.i << std::endl;
     });
-    reactor->trigger(doExInt);
+
+    Asm::pDOR->trigger(doExInt);
     doExInt.unregisterLink("doExInt->doExStruct");
 
     doExInt.set([](std::atomic<int> &i) {
         i = 321;
     }); // notice that in [doExInt->doExStruct] value will be updated!
+
     doExInt.registerLink("doExInt->doExClass", doExClass, [](Asm::DataObject<int>& triggeredDoInt, Asm::DataObject<CustomClass>& triggeredDoClass) {
 
         int doExIntVal = triggeredDoInt.get([](int i) {
@@ -67,7 +69,8 @@ void runDOReactorExamples() {
 #endif
 
     });
-    reactor->trigger(doExInt);
-    // wait for links to be executed
-    boost::this_thread::sleep_for(boost::chrono::seconds(5));
+
+    Asm::pDOR->trigger(doExInt);
+
+    boost::this_thread::sleep_for(boost::chrono::seconds(5)); // wait for links to be executed
 }

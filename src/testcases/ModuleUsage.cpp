@@ -41,19 +41,19 @@ void runModuleUsageExample() {
 	outModule.LinkString.set("String", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"), name_dataobjects.at("OutputModule.outModule.DOstringInput"));
 
 	//set value and trigger chain
-	boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([](std::atomic<int> &i) { i = 556; }, *Asm::rptr.get());
+	boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([](std::atomic<int> &i) { i = 556; }, *Asm::pDOR.get());
 	//wait till reactor has processed
 	boost::this_thread::sleep_for(boost::chrono::seconds(2));
 	printline();
 
-	inModule.DOstringOutput.setAndTrigger([](auto &s) { s = "Hallo"; }, *Asm::rptr);
+	inModule.DOstringOutput.setAndTrigger([](auto &s) { s = "Hallo"; }, *Asm::pDOR);
 	//wait till reactor has processed
 	boost::this_thread::sleep_for(boost::chrono::seconds(2));
 	printline();
 
 	for (int ii = 1; ii < 10; ii++)
 	{
-		boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([&](std::atomic<int> &i) { i = std::pow(10, ii); }, *Asm::rptr);
+		boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([&](std::atomic<int> &i) { i = std::pow(10, ii); }, *Asm::pDOR);
 		//wait till reactor has processed
 		boost::this_thread::sleep_for(boost::chrono::seconds(2));
 		printline();
@@ -62,7 +62,7 @@ void runModuleUsageExample() {
 	//remove this Link again
 	outModule.LinkString.clear("String", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 
-	boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([](std::atomic<int> &i) { i = 557; }, *Asm::rptr.get());
+	boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([](std::atomic<int> &i) { i = 557; }, *Asm::pDOR.get());
 	//wait till reactor has processed
 	boost::this_thread::sleep_for(boost::chrono::seconds(2));
 	printline();

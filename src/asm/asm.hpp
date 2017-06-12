@@ -9,7 +9,7 @@
 #include "timerobjectreactor.hpp"
 
 namespace Asm {
-extern std::unique_ptr<Asm::DataObjectReactor> rptr;
+extern std::unique_ptr<Asm::DataObjectReactor> pDOR;
 
-extern std::unique_ptr<Asm::TimerObjectReactor> trptr;
+extern std::unique_ptr<Asm::TimerObjectReactor> pTOR;
 }
