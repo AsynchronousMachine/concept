@@ -1,7 +1,7 @@
 /*
 ** Test cases for showing almost all aspects of dealing with DataObjects.
 ** The following code samples exclude the optional interface for
-** ser- and deserilization of the content of a DataObject
+** ser- and deserialization of the content of a DataObject
 */
 
 #include <string>
@@ -316,7 +316,10 @@ void runDOAccessExamples() {
     std::cout <<  "Misused by return of address of reference " << m2.get_ic() << std::endl;
 
     Asm::DataObject<int> do71(31);
-    std::atomic<int> *tmp51 = do71.get([](const std::atomic<int> &i) {
+    std::atomic<int> *tmp51 = do71.get([](const std::atomic<int> &i) {    std::cout << "===================================================================" << std::endl;
+    std::cout << "Enter \'n\' for next test!" << std::endl;
+    char c;
+    std::cin >> c;
         return &const_cast<std::atomic<int>&>(i);
     });
     std::cout << "Value before: " << *tmp51 << std::endl;

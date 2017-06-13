@@ -1,8 +1,10 @@
-#include "../asm/dataobjectreactor.hpp"
-#include "../asm/dataobject.hpp"
-#include "../asm/linkobject.hpp"
+/*
+**
+** The following code samples exclude the optional interface for
+** ser- and deserialization of the content of a DataObject
+*/
 
-//Hint: all DOs in this example are not serializeable to keep it simple, look at DataObjectSerialize.cpp for this use case
+#include "../asm/asm.hpp"
 
 class ProcessModule
 {
@@ -14,6 +16,9 @@ private:
 		//combined action: first increase inputCounter
 		doTarget.set([&doSource](MyComplexDOType& cc) { cc.inputCounter = cc.inputCounter + 1; });
 		doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](int i) {return std::to_string(i); }); }, *Asm::pDOR);
+#ifdef __linux__
+        std::cout << "Use TID-" << syscall(SYS_gettid) << " for ProcessModule/actionInt" << std::endl;
+#endif
 	}
 
 	void actionString(Asm::DataObject<std::string>& doSource, Asm::DataObject<MyComplexDOType>& doTarget)
@@ -21,6 +26,9 @@ private:
 		//combined action: first increase inputCounter
 		doTarget.set([&doSource](MyComplexDOType& cc) { cc.inputCounter = cc.inputCounter + 1; });
 		doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](std::string s) {return s; }); }, *Asm::pDOR);
+#ifdef __linux__
+        std::cout << "Use TID-" << syscall(SYS_gettid) << " for ProcessModule/actionString" << std::endl;
+#endif
 	}
 
 public:

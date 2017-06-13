@@ -1,7 +1,10 @@
-#include "../asm/dataobject.hpp"
-#include "../asm/linkobject.hpp"
+/*
+**
+** The following code samples exclude the optional interface for
+** ser- and deserialization of the content of a DataObject
+*/
 
-//Hint: all DOs in this example are not serializeable to keep it simple, look at DataObjectSerialize.cpp for this use case
+#include "../asm/asm.hpp"
 
 class InputModule
 {

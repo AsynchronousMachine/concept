@@ -12,6 +12,8 @@ extern void runDOTimerExample();
 
 int main() {
     runDOAccessExamples();
+    runDOReactorExamples();
+    runModuleUsageExample();
 
     std::cout << "===================================================================" << std::endl;
     std::cout << "Enter \'q\' for quit tests!" << std::endl;

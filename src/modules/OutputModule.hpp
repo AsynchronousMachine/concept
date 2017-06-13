@@ -1,6 +1,10 @@
-#include "../asm/asm.hpp"
+/*
+**
+** The following code samples exclude the optional interface for
+** ser- and deserialization of the content of a DataObject
+*/
 
-//Hint: all DOs in this example are not serializeable to keep it simple, look at DataObjectSerialize.cpp for this use case
+#include "../asm/asm.hpp"
 
 class OutputModule
 {
@@ -11,6 +15,9 @@ private:
 		doTarget.set([&doSource](std::atomic<int>& i) { i = doSource.get([](MyComplexDOType cc) {return cc.message.length(); }); });
 		//combined action: increase outputCounter in the source
 		doSource.set([](MyComplexDOType& cc) { cc.outputCounter = cc.outputCounter + 1; });
+#ifdef __linux__
+        std::cout << "Use TID-" << syscall(SYS_gettid) << " for OutputModule/actionInt" << std::endl;
+#endif
 	}
 
 	void actionString(Asm::DataObject<MyComplexDOType>& doSource, Asm::DataObject<std::string>& doTarget)
@@ -18,6 +25,9 @@ private:
 		doTarget.set([&](std::string& s) { s = doSource.get([](MyComplexDOType cc) {return cc.message; }); });
 		//combined action: increase outputCounter in the source
 		doSource.set([](MyComplexDOType& cc) { cc.outputCounter = cc.outputCounter + 1; });
+#ifdef __linux__
+        std::cout << "Use TID-" << syscall(SYS_gettid) << " for OutputModule/actionString" << std::endl;
+#endif
 	}
 
 public:

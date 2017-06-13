@@ -103,6 +103,7 @@ class DataObjectReactor {
             }
         } catch(tbb::user_abort abortException) {
             std::cout << "Abort DOR-THRD-" << inst << std::endl;
+            _run_state = false;
         }
         std::cout << "DOR-THRD-" << inst << " has stopped" << std::endl;
     }
