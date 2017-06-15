@@ -10,6 +10,8 @@ namespace Asm {
 using data_variant = boost::variant<
                      Asm::DataObject<MyComplexDOType>&,
                      Asm::DataObject<int>&,
-                     Asm::DataObject<std::string>&
+                     Asm::DataObject<std::string>&,
+                     Asm::DataObject<bool>&,
+                     Asm::DataObject<double>&
                      >;
 }

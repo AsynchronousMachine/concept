@@ -1,4 +1,5 @@
-//#pragma once
+#pragma once
+
 #include <string>
 #include <iostream>
 
@@ -47,7 +48,7 @@ public:
 			//const char* doName = itr->name.GetString();
 			std::string name = itr->name.GetString();
 			Value& v = value[itr->name.GetString()];
-			if (name=="amount inputs") 
+			if (name=="amount inputs")
 			{
 				inputCounter = v.GetInt();
 			}

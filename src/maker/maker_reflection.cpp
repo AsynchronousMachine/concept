@@ -1,11 +1,12 @@
-#include "../modules/global_modules.hpp"
 #include "maker_reflection.hpp"
+#include "../modules/global_modules.hpp"
 
 // Get out the module name for humans
 const id_string_map module_name {
 	{&inModule, "InputModule.inModule"},
 	{&outModule, "OutputModule.outModule"},
 	{&processModule, "ProcessModule.processModule"},
+	{&serModule, "SerializeModule.serModule"},
 };
 
 // Get out the DO name for humans
@@ -16,6 +17,13 @@ const id_string_map do_names
 	{&outModule.DOintInput, "OutputModule.outModule.DOintInput"},
 	{&outModule.DOstringInput, "OutputModule.outModule.DOstringInput"},
 	{&processModule.DOcomplexInOut, "ProcessModule.processModule.DOcomplexInOut"},
+	{&serModule.doInt, "SerializeModule.serModule.doInt"},
+	{&serModule.doDouble, "SerializeModule.serModule.doDouble"},
+	{&serModule.doString, "SerializeModule.serModule.doString"},
+	{&serModule.doBool, "SerializeModule.serModule.doBool"},
+	{&serModule.doString2, "SerializeModule.serModule.doString2"},
+	{&serModule.doString3, "SerializeModule.serModule.doString3"},
+	{&serModule.doMyComplexDOType, "SerializeModule.serModule.doMyComplexDOType"},
 };
 
 // Get out by name all modules, all their dataobjects with type and their links for humans
@@ -31,6 +39,13 @@ const name_dataobject_map name_dataobjects {
 	{"OutputModule.outModule.DOintInput", outModule.DOintInput},
 	{"OutputModule.outModule.DOstringInput", outModule.DOstringInput},
 	{"ProcessModule.processModule.DOcomplexInOut", processModule.DOcomplexInOut},
+    {"SerializeModule.serModule.doInt", serModule.doInt},
+	{"SerializeModule.serModule.doDouble", serModule.doDouble},
+	{"SerializeModule.serModule.doString", serModule.doString},
+	{"SerializeModule.serModule.doBool", serModule.doBool},
+	{"SerializeModule.serModule.doString2", serModule.doString2},
+	{"SerializeModule.serModule.doString3", serModule.doString3},
+	{"SerializeModule.serModule.doMyComplexDOType", serModule.doMyComplexDOType},
 };
 
 const name_link_map name_links {
