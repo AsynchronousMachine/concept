@@ -16,7 +16,7 @@ static void printline()
 	std::cout << "Process: " << data.message << " In: " << data.inputCounter << " Out: " << data.outputCounter << " --> " << outModule.DOstringInput.get([](const std::string& s) {return s; }) << " length: " << outModule.DOintInput.get([](const int& i) {return i; }) << std::endl;
 }
 
-void runModuleUsageExample() {
+void runModuleUsageExamples() {
 
 	//Linked global DataObjects:
 	/*

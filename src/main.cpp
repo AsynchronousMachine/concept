@@ -7,13 +7,15 @@
 
 extern void runDOAccessExamples();
 extern void runDOReactorExamples();
-extern void runModuleUsageExample();
-extern void runDOTimerExample();
+extern void runModuleUsageExamples();
+extern void runDOTimerExamples();
+extern void runDOSerializationExamples();
 
 int main() {
     runDOAccessExamples();
     runDOReactorExamples();
-    runModuleUsageExample();
+    runModuleUsageExamples();
+    runDOSerializationExamples();
 
     std::cout << "===================================================================" << std::endl;
     std::cout << "Enter \'q\' for quit tests!" << std::endl;

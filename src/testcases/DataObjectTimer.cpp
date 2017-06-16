@@ -10,7 +10,7 @@ static void tickTack(std::shared_ptr<Asm::TimerObject> timer){
     }
 }
 
-void runDOTimerExample(){
+void runDOTimerExamples(){
 
     std::cout << std::endl << "*****************************************" << std::endl;
 	std::cout << "DataObjectTimer tests..." << std::endl;
