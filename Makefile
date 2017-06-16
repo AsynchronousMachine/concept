@@ -8,9 +8,9 @@ CPPFLAGS        += -std=c++1z -fdiagnostics-color=always -Ofast -Wall \
 all: $(TARGET)
 
 $(TARGET): src/*
-	$(CXX) $(LDFLAGS) $(CPPFLAGS) -o $(TARGET) src/main.cpp $(LDLIBS)
+	$(CXX) $(LDFLAGS) $(CPPFLAGS) -o $(TARGET) src/asm/asm.cpp src/modules/global_modules.cpp src/maker/maker_reflection.cpp src/testcases/*.cpp src/main.cpp $(LDLIBS)
 
 clean:
 	-rm $(TARGET)
 
-# run with custom lib path: LD_LIBRARY_PATH="/usr/local/lib" ./asm
+# run with custom lib path: LD_LIBRARY_PATH="/usr/local/lib" ./asmExec
