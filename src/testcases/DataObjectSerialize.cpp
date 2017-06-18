@@ -56,14 +56,19 @@ void runDOSerializationExamples() {
     // involved DataObjects must be wellknown.
     // For this reason a reflection interface is also available.
     {
-        std::cout << "Typical usage for the public de-/serialization interface of a DataObject ..." << std::endl;
+        std::cout << std::endl << "Typical usage for the public de-/serialization interface of a DataObject ..." << std::endl;
 
         rapidjson::Document rjdoc(rapidjson::kObjectType);
-        rapidjson::Value rjval;
+        rapidjson::Value rjval(rapidjson::kObjectType);
 
-        std::cout << "This is for humans:" << std::endl << std::endl;
+        std::cout << "This is for humans:" << std::endl;
         for(const auto& m : print_modules) {
             std::cout << "Instance: " << m.first << std::endl << m.second << std::endl;
+        }
+
+        std::cout << "This is for humans, alternate format ???:" << std::endl;
+        for(const auto& m : print_modules2) {
+            std::cout << m.first << std::endl << m.second << std::endl;
         }
 
         // Wellknown name by reflection gives access to generic interface to DataObject
@@ -82,11 +87,24 @@ void runDOSerializationExamples() {
         boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doMyComplexDOType"));
         rjdoc.AddMember("SerializeModule.serModule.doMyComplexDOType", rjval, rjdoc.GetAllocator());
 
-        std::cout << "Stringify and output the created DOM:" << std::endl << std::endl;
+        std::cout << "Stringify and output the created DOM:" << std::endl;
         rapidjson::StringBuffer sb;
         rapidjson::PrettyWriter<rapidjson::StringBuffer> pw(sb);
         rjdoc.Accept(pw);
         std::cout << sb.GetString() << std::endl;
+
+        // Wellknown name by reflection gives access to generic interface to DataObject
+        rapidjson::Value& rjdoint = rjdoc["SerializeModule.serModule.doInt"];
+        rjdoint.SetInt(10);
+        boost::apply_visitor([&](auto& d) { d.deserialize(rjdoint); }, name_dataobjects.at("SerializeModule.serModule.doInt"));
+
+        std::cout << "Deserialized serModule.doInt " << serModule.doInt.get([](int i) {return i;}) << std::endl;
+
+        rapidjson::Value& rjdoMCDOT = rjdoc["SerializeModule.serModule.doMyComplexDOType"];
+        rjdoMCDOT["amount outputs"].SetInt(20);
+        boost::apply_visitor([&](auto& d) { d.deserialize(rjdoMCDOT); }, name_dataobjects.at("SerializeModule.serModule.doMyComplexDOType"));
+
+        std::cout << "Deserialized serModule.doMyComplexDOType.amount_outputs " << serModule.doMyComplexDOType.get([](const MyComplexDOType& d) {return d.outputCounter;}) << std::endl;
     }
 
     std::cout << "===================================================================" << std::endl;
