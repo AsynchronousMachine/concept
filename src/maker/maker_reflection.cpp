@@ -31,7 +31,16 @@ const print_module_map print_modules {
 	{"inModule","InputModule::inModule\n  |> Asm::DataObject<int> DOintOutput\n  |> Asm::DataObject<std::string> DOstringOutput\n"},
 	{"outModule","OutputModule::outModule\n  |> Asm::DataObject<int> DOintInput\n  |> Asm::DataObject<std::string> DOstringInput\n  |> Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<int> > LinkInt\n  |> Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<std::string> > LinkString\n"},
 	{"processModule","ProcessModule::processModule\n  |> Asm::DataObject<MyComplexDOType> DOcomplexInOut\n  |> Asm::LinkObject<Asm::DataObject<int>, Asm::DataObject<MyComplexDOType> > LinkInt\n  |> Asm::LinkObject<Asm::DataObject<std::string>, Asm::DataObject<MyComplexDOType> > LinkString\n"},
+	{"serModule","SerializeModule::serModule\n  |> Asm::DataObject<int> doInt\n  |> Asm::DataObject<double> doDouble\n  |> Asm::DataObject<std::string> doString\n  |> Asm::DataObject<bool> doBool\n  |> Asm::DataObject<std::string> doString2\n  |> Asm::DataObject<std::string> doString3\n  |> Asm::DataObject<MyComplexDOType> doMyComplexDOType\n"},
 };
+
+// Besser Instance/Class/DOs ???
+//const print_module_map print_modules {
+//	{"inModule","InputModule\n  |> Asm::DataObject<int> DOintOutput\n  |> Asm::DataObject<std::string> DOstringOutput\n"},
+//	{"outModule","OutputModule\n  |> Asm::DataObject<int> DOintInput\n  |> Asm::DataObject<std::string> DOstringInput\n  |> Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<int> > LinkInt\n  |> Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<std::string> > LinkString\n"},
+//	{"processModule","ProcessModule\n  |> Asm::DataObject<MyComplexDOType> DOcomplexInOut\n  |> Asm::LinkObject<Asm::DataObject<int>, Asm::DataObject<MyComplexDOType> > LinkInt\n  |> Asm::LinkObject<Asm::DataObject<std::string>, Asm::DataObject<MyComplexDOType> > LinkString\n"},
+//	{"serModule","SerializeModule\n  |> Asm::DataObject<int> doInt\n  |> Asm::DataObject<double> doDouble\n  |> Asm::DataObject<std::string> doString\n  |> Asm::DataObject<bool> doBool\n  |> Asm::DataObject<std::string> doString2\n  |> Asm::DataObject<std::string> doString3\n  |> Asm::DataObject<MyComplexDOType> doMyComplexDOType\n"},
+//};
 
 const name_dataobject_map name_dataobjects {
 	{"InputModule.inModule.DOintOutput", inModule.DOintOutput},
