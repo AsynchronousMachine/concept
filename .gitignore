@@ -57,5 +57,6 @@ obj/
 *.layout
 *.depend
 *.save
+*.xml
 bin/
 obj/

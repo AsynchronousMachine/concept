@@ -17,10 +17,10 @@ int main() {
     // Wait for all instantiation processes to finish
     boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
-    runDOAccessExamples();
-    runDOReactorExamples();
-    runModuleUsageExamples();
-    runDOSerializationExamples();
+//    runDOAccessExamples();
+//    runDOReactorExamples();
+//    runModuleUsageExamples();
+//    runDOSerializationExamples();
 
     std::cout << "===================================================================" << std::endl;
     std::cout << "Enter \'q\' for quit tests!" << std::endl;
