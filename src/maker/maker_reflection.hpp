@@ -12,4 +12,3 @@ extern const id_string_map do_names;
 extern const name_dataobject_map name_dataobjects;
 extern const name_link_map name_links;
 extern const print_module_map print_modules;
-extern const print_module_map print_modules2;
