@@ -18,6 +18,7 @@ class DataObjectReactor;
 
 class TimerObjectReactor {
   private:
+    static constexpr int RT_PRIO = 31; // Realtime priority, at least one higher than DOR
     static constexpr size_t MAX_CAPACITY = 256; // Max. epoll capacity, can be found at /proc/sys/fs/epoll/max_user_watches
 
     // File descriptor for epoll mechanism
@@ -41,7 +42,7 @@ class TimerObjectReactor {
     // Threaded timer function mechanism
     void run() {
 #ifdef __linux__
-        std::cout << "TOR-THRD has TID-" << syscall(SYS_gettid) << std::endl;
+        std::cout << "TOR-THRD-0 has TID-" << syscall(SYS_gettid) << std::endl;
 
         for (;;) {
             epoll_event evt[MAX_CAPACITY];
@@ -79,7 +80,7 @@ class TimerObjectReactor {
             }
         }
 
-        std::cout << "TOR-THRD has stopped" << std::endl;
+        std::cout << "TOR-THRD-0 has stopped" << std::endl;
 #endif
     }
 
@@ -112,6 +113,20 @@ class TimerObjectReactor {
         _thrd = boost::thread([this]() {
             TimerObjectReactor::run();
         });
+
+        //The thread name is a meaningful C language string, whose length is
+        //restricted to 16 characters, including the terminating null byte ('\0')
+        std::string s = "TOR-THRD-0";
+        std::cout << "Created " << s << std::endl;
+
+        if (pthread_setname_np(_thrd.native_handle(), s.data()))
+            std::cout << "Could not set name for TOR-THRD-0" << std::endl;
+
+        struct sched_param param {};
+        param.sched_priority = RT_PRIO;
+
+        if (pthread_setschedparam(_thrd.native_handle(), SCHED_FIFO, &param))
+            std::cout << "Could not set realtime parameter for TOR-THRD-0" << std::endl;
 #endif
     }
 
