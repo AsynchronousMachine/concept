@@ -66,11 +66,6 @@ void runDOSerializationExamples() {
             std::cout << "Instance: " << m.first << std::endl << m.second << std::endl;
         }
 
-        std::cout << "This is for humans, alternate format ???:" << std::endl;
-        for(const auto& m : print_modules2) {
-            std::cout << m.first << std::endl << m.second << std::endl;
-        }
-
         // Wellknown name by reflection gives access to generic interface to DataObject
         boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doInt"));
         rjdoc.AddMember("SerializeModule.serModule.doInt", rjval, rjdoc.GetAllocator());

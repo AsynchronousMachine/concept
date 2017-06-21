@@ -16,14 +16,14 @@ static void printline()
 	std::cout << "Process: " << data.message << " In: " << data.inputCounter << " Out: " << data.outputCounter << " --> " << outModule.DOstringInput.get([](const std::string& s) {return s; }) << " length: " << outModule.DOintInput.get([](const int& i) {return i; }) << std::endl;
 }
 
-void runModuleUsageExamples() {
+void runTBBUsageExamples() {
 
 	//Linked global DataObjects:
 	/*
 	InputModule.inModule.DOintOutput   |--->  TBBModule.tbbModule.DOcomplexInOut
 	*/
 	std::cout << "===================================================================" << std::endl;
-	std::cout << "Run module usage samples .." << std::endl;
+	std::cout << "Run TBB usage samples .." << std::endl;
 
 	name_dataobjects.at("InputModule.inModule.DOintOutput");
 	name_dataobjects.at("TBBModule.tbbModule.DOcomplexInOut");
