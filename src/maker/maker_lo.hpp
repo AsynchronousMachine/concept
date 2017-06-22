@@ -9,7 +9,6 @@
 namespace Asm {
 
 using link_variant = boost::variant<
-                     EmptyLinkObject&, 
                      Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<int> >&, 
                      Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<std::string> >&, 
                      Asm::LinkObject<Asm::DataObject<int>, Asm::DataObject<MyComplexDOType> >&, 
