@@ -6,5 +6,5 @@ void TBBModule::actionInt(Asm::DataObject<int>& doSource, Asm::DataObject<MyComp
 {
 	//combined action: first increase inputCounter
 	doTarget.set([&doSource](MyComplexDOType& cc) { cc.inputCounter = cc.inputCounter + 1; });
-	doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](int i) {return std::to_string(i); }); }, *Asm::rptr);
+	doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](int i) {return std::to_string(i); }); }, *Asm::pDOR);
 }
