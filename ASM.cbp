@@ -59,6 +59,8 @@
 		<Unit filename="src/modules/OutputModule.hpp" />
 		<Unit filename="src/modules/ProcessModule.hpp" />
 		<Unit filename="src/modules/SerializeModule.hpp" />
+		<Unit filename="src/modules/TBBModule.cpp" />
+		<Unit filename="src/modules/TBBModule.hpp" />
 		<Unit filename="src/modules/global_modules.cpp" />
 		<Unit filename="src/modules/global_modules.hpp" />
 		<Unit filename="src/testcases/DataObjectAccess.cpp" />

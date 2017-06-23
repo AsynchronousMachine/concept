@@ -57,6 +57,8 @@ void runModuleUsageExamples() {
 
 	// Remove this link again
 	outModule.LinkString.clear("String", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
+    processModule.LinkInt.clear("Int", name_dataobjects.at("InputModule.inModule.DOintOutput"));
+	outModule.LinkInt.clear("Int", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 
 	boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([](std::atomic<int> &i) { i = 557; }, *Asm::pDOR.get());
 	// Wait till reactor has processed

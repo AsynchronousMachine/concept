@@ -1,6 +1,7 @@
 /*
 ** Global entry for all test cases
 */
+
 #include <pthread.h>
 #include <sys/syscall.h>
 
@@ -20,9 +21,10 @@ extern void runTBBUsageExamples();
 
 struct Observer : tbb::task_scheduler_observer
 {
+    static constexpr int RT_PRIO = 30; // Realtime priority
     int _rt_prio;
 
-    Observer(bool b = true, int rt_prio = 30) : _rt_prio(rt_prio) { observe(b); }
+    Observer(bool b = true, int rt_prio = RT_PRIO) : _rt_prio(rt_prio) { observe(b); }
 
     void on_scheduler_entry(bool)
     {
@@ -49,42 +51,24 @@ struct Observer : tbb::task_scheduler_observer
     void on_scheduler_exit(bool) { std::cout << "Off:" << pthread_self() << std::endl; }
 };
 
-void f3(const tbb::blocked_range<size_t>& r)
-{
-#ifdef __linux__
-    pid_t tid = syscall(SYS_gettid);
-    std::cout << "TID of job f3: " << tid<< std::endl;
-#endif
-
-    boost::this_thread::sleep_for(boost::chrono::seconds(5));
-    std::cout << r.begin() << "/"<< r.end() << std::endl;
-    std::cout << "Job done ..." << std::endl;
-};
-
 int main() {
     Observer observer;
     tbb::task_scheduler_init tbb_init;
 
     // Wait for all instantiation processes to finish
-    boost::this_thread::sleep_for(boost::chrono::seconds(3));
+    boost::this_thread::sleep_for(boost::chrono::seconds(5));
 
 #ifdef __linux__
-    pid_t tid = syscall(SYS_gettid);
-    std::cout << "TID of main: " << tid<< std::endl;
+    std::cout << "TID of main: " << syscall(SYS_gettid)<< std::endl;
 #endif
 
     std::cout << "TBB threads, max available: " << tbb_init.default_num_threads() << std::endl;
 
-    std::function<void(const tbb::blocked_range<size_t>& r)> f = f3;
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, 16, tbb_init.default_num_threads()), f, tbb::simple_partitioner());
-
-    std::cout << "All parallel_for jobs done ..." << std::endl;
-
-//    runDOAccessExamples();
-//    runDOReactorExamples();
-//    runModuleUsageExamples();
-//    runDOSerializationExamples();
-//	runTBBUsageExamples();
+    runDOAccessExamples();
+    runDOReactorExamples();
+    runModuleUsageExamples();
+    runDOSerializationExamples();
+	runTBBUsageExamples();
 
     std::cout << "===================================================================" << std::endl;
     std::cout << "Enter \'q\' for quit tests!" << std::endl;

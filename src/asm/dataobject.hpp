@@ -220,14 +220,14 @@ class DataObject {
     void registerLink(const std::string name, DataObject<D2>& d2, CB cb) {
         boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.insert({ name, [cb, this, &d2] { cb(*this, d2); } });
-        std::cout << "registerLink: " << name << std::endl;
+        std::cout << "RegisterLink: " << name << std::endl;
     }
 
     // Remove a link to that DO by name
     void unregisterLink(const std::string name) {
         boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.erase(name);
-        std::cout << "UNregisterLink: " << name << std::endl;
+        std::cout << "UnregisterLink: " << name << std::endl;
     }
 
 
