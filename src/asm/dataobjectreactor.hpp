@@ -1,8 +1,6 @@
 /*
-** Concept of DataObjectReactor
-**
-** All registered callback functions (aka LinkObjects) should be called within the reactor
-** This decouples the changing of data (content of a DataObject) and the notify process based on that
+** All stored/registered callback functions (aka LINKs) should be called within the reactor
+** This decouples the changing of the content of a DataObject) and the notify process based on that
 ** This allows the introduction of priorities how important a change has to be notified
 */
 
@@ -46,7 +44,7 @@ class DataObjectReactor {
                 thrd_cnt = cores;
 
             for (unsigned i = 0; i < thrd_cnt; ++i) {
-                boost::thread *t = _tg.create_thread([this, i]() { Threadpool::thrd(i); });
+                boost::thread *t = _tg.create_thread([this, i](){ Threadpool::_f(i); });
 
                 //The thread name is a meaningful C language string, whose length is
                 //restricted to 16 characters, including the terminating null byte ('\0')
@@ -73,19 +71,13 @@ class DataObjectReactor {
             _tg.interrupt_all();
             _tg.join_all();
         }
-
-        void thrd(unsigned inst) {
-            _f(inst);
-        }
     };
 
-    tbb::concurrent_bounded_queue<std::function<void()>> _tbbExecutionQueue; // TBB
-
+    tbb::concurrent_bounded_queue<std::function<void()>> _tbbExecutionQueue;
     bool _run_state;
-
     struct Threadpool _tp;
 
-    // Call all DOs which are linked to that DOs which have been triggered like DO2.CALL(&DO1) / DO1 ---> DO2
+    // Call all DOs which are linked to that DOs which have been triggered
     // These method is typically private and called with in a thread related to a priority
     // This thread is typically waiting on a synchronization element
     void run(unsigned inst) {
@@ -109,7 +101,7 @@ class DataObjectReactor {
     }
 
   public:
-    DataObjectReactor(unsigned thrd_cnt = 0) : _run_state(true), _tp(thrd_cnt, [this](unsigned inst) { DataObjectReactor::run(inst); }) {}
+    DataObjectReactor(unsigned thrd_cnt = 0) : _run_state(true), _tp(thrd_cnt, [this](unsigned inst){ DataObjectReactor::run(inst); }) {}
 
     // Non-copyable
     DataObjectReactor(const DataObjectReactor&) = delete;
@@ -134,7 +126,7 @@ class DataObjectReactor {
             return;
 
         for (auto &p : d._links)
-            _tbbExecutionQueue.push(p.second); // Queue is synchronized by TBB
+            _tbbExecutionQueue.push(p.second);
     }
 };
 

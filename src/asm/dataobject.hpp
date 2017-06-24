@@ -1,14 +1,11 @@
 /*
-** Concept of DataObjects
-**
-** Dataobjects (aka DO) are container to hold data (content) and callback functions (aka LINKS) as notifier
-** DOs can be linked together via LINKS
-** DOs can be locked and unlocked to handle there content consistently
-** The associated callback functions (LINKS) are called if the content of the original DO has been changed
+** DataObjects (aka DO) are container to hold data (content),
+** make it accessible via a visitor idiom for consistency and
+** stores callback functions (aka LINKS) to let it communicate to each other
 **
 ** DO1 ------LINK1-------> DO2    DO1 is linked to DO2
-**        |
-**        +--LINK3-------> DO3    Also DO1 is linked to DO3
+**  |
+**  +--------LINK3-------> DO3    Also DO1 is linked to DO3
 */
 
 #pragma once
@@ -54,7 +51,7 @@ class DataObject {
     // Mutable member as it needs to be modified in the const member function get()
     mutable mutex_t _mtx_content;
 
-    // This holds all callbacks (LINKS) linked to that DO
+    // This holds all callback functions (LINKS) linked to that DO
     std::unordered_map<std::string, std::function<void()>> _links;
 
     // Protect the map of linked DOs
@@ -87,7 +84,6 @@ class DataObject {
     template< typename U = D, enable_if_is_same<U, double> = true>
     void serialize_impl(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
         value.SetDouble(get());
-
     }
 
     template< typename U = D, enable_if_is_same<U, std::string> = true>
@@ -134,53 +130,45 @@ class DataObject {
 
   public:
     DataObject(D content, bool b) : _content(content),
-        doSerialize([this](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-        std::mem_fn(&DataObject<D>::serialize_impl<D>)(this, value, allocator);
-    }),
-    doDeserialize([this](rapidjson::Value& value) {
-        std::mem_fn(&DataObject<D>::deserialize_impl<D>)(this, value);
-    }) {
+                                    doSerialize([this](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
+                                        std::mem_fn(&DataObject<D>::serialize_impl<D>)(this, value, allocator); }),
+                                    doDeserialize([this](rapidjson::Value& value) {
+                                        std::mem_fn(&DataObject<D>::deserialize_impl<D>)(this, value); }) {
         std::cout << "DO-CTOR with implicit trival ser-/deser fct" << std::endl;
     }
 
     DataObject(D content, serializeFnct ptr, deserializeFnct ptr2) : _content(content),
-        doSerialize(ptr),
-        doDeserialize(ptr2) {
+                                                                     doSerialize(ptr),
+                                                                     doDeserialize(ptr2) {
         std::cout << "DO-CTOR with explicit ser-/deser fct" << std::endl;
     }
 
     DataObject(D content) : _content(content),
-        doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}),
-    doDeserialize([](rapidjson::Value& value) {}) {
+                            doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}),
+                            doDeserialize([](rapidjson::Value& value) {}) {
         std::cout << "DO-CTOR with disabled ser-/deser" << std::endl;
     }
 
     template <typename MemFun, typename MemFun2, typename ThisPtr>
     DataObject(D content, MemFun ser, MemFun2 deser, ThisPtr thisptr) : _content(content),
-        doSerialize([thisptr, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-        std::mem_fn(ser)(thisptr, value, allocator);
-    }),
-    doDeserialize([thisptr, deser](rapidjson::Value& value) {
-        std::mem_fn(deser)(thisptr, value);
-    }) {
+                                                                        doSerialize([thisptr, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
+                                                                            std::mem_fn(ser)(thisptr, value, allocator); }),
+                                                                        doDeserialize([thisptr, deser](rapidjson::Value& value) {
+                                                                            std::mem_fn(deser)(thisptr, value); }) {
         std::cout << "DO-CTOR with instance based ser-/deser fct" << std::endl;
     }
 
     template <typename MemFun, typename MemFun2>
     DataObject(D content, MemFun ser, MemFun2 deser, bool b) : _content(content),
-        doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-        std::mem_fn(ser)(&_content, value, allocator);
-    }),
-    doDeserialize([&, deser](rapidjson::Value& value) {
-        std::mem_fn(deser)(&_content, value);
-    }) {
+                                                               doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
+                                                                   std::mem_fn(ser)(&_content, value, allocator); }),
+                                                               doDeserialize([&, deser](rapidjson::Value& value) {
+                                                                   std::mem_fn(deser)(&_content, value); }) {
         std::cout << "DO-CTOR with content based ser-/deser fct" << std::endl;
     }
 
     DataObject() : doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}),
-    doDeserialize([](rapidjson::Value& value) {}) {
-        std::cout << "DO-CTOR only for TO" << std::endl;
-    }
+                   doDeserialize([](rapidjson::Value& value) {}) { std::cout << "DO-CTOR only for TO" << std::endl; }
 
     // Non-copyable
     DataObject(const DataObject&) = delete;
@@ -215,9 +203,9 @@ class DataObject {
         return visitor(_content);
     }
 
-    // Link a DO to that DO
-    template <typename D2, typename CB>
-    void registerLink(const std::string name, DataObject<D2>& d2, CB cb) {
+    // Link a DO to that DO by registering a callback function
+    template <typename D2, typename LINK>
+    void registerLink(const std::string name, DataObject<D2>& d2, LINK cb) {
         boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.insert({ name, [cb, this, &d2] { cb(*this, d2); } });
         std::cout << "RegisterLink: " << name << std::endl;
@@ -230,7 +218,6 @@ class DataObject {
         std::cout << "UnregisterLink: " << name << std::endl;
     }
 
-
     void serialize(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
         return doSerialize(value, allocator);
     }
@@ -239,5 +226,4 @@ class DataObject {
         doDeserialize(value);
     }
 };
-
 }
