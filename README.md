@@ -1,9 +1,9 @@
 # AsynchronousMachine
 
-Refer to *README.md* in git branch ***concept-dataobject***!
+Refer to *src/testcases* in git branch ***master***!
 
 # TODOs
 
-* [ ] More test cases
+* More testing
 
 
