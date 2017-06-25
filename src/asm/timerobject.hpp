@@ -1,3 +1,7 @@
+/*
+** Specific object dealing with timer functionalities.
+*/
+
 #pragma once
 
 #ifdef __linux__
@@ -8,8 +12,6 @@
 #endif
 
 namespace Asm {
-
-
 class TimerObject {
     friend class TimerObjectReactor; // This enables the timer reactor to access the internals
 

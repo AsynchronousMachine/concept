@@ -74,6 +74,7 @@ int main() {
 
     runDOAccessExamples();
     runDOReactorExamples();
+    runDOTimerExamples();
     runModuleUsageExamples();
     runDOSerializationExamples();
     runTBBUsageExamples();
