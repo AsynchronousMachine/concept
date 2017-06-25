@@ -1,3 +1,9 @@
+/*
+** This is the TimerObjectReactor dealing with TimerObjects
+** TimerObjects which have fired will be notified within the DataObjectReactor so the interface is
+** only related to there. This approach avoids to build up its own thread pool
+*/
+
 #pragma once
 
 #include <unordered_map>
@@ -12,7 +18,7 @@
 #endif
 
 namespace Asm {
-
+// Forward declarations
 class TimerObject;
 class DataObjectReactor;
 
@@ -110,9 +116,7 @@ class TimerObjectReactor {
             return;
         }
 
-        _thrd = boost::thread([this]() {
-            TimerObjectReactor::run();
-        });
+        _thrd = boost::thread([this](){ TimerObjectReactor::run(); });
 
         //The thread name is a meaningful C language string, whose length is
         //restricted to 16 characters, including the terminating null byte ('\0')
@@ -145,7 +149,7 @@ class TimerObjectReactor {
 
 #ifdef __linux__
         if (::write(_evtfd, &stop, sizeof(stop)) != sizeof(stop)) {
-            std::cout << "Write timer stop failed: " << std::strerror(errno) << std::endl;
+            std::cout << "Timer stop failed: " << std::strerror(errno) << std::endl;
         }
 
         _thrd.join();
@@ -159,9 +163,7 @@ class TimerObjectReactor {
     }
 
     bool registerTimer(DataObject<TimerObject>& dot) {
-        int fd = dot.get([](const TimerObject& t) {
-            return t._fd;
-        });
+        int fd = dot.get([](const TimerObject& t){ return t._fd; });
 #ifdef __linux__
         epoll_event evt;
         evt.events = EPOLLIN;
@@ -179,7 +181,7 @@ class TimerObjectReactor {
                 _notify.erase(fd);
             }
 
-            std::cout << "Epoll control error at ADD: " << std::strerror(errno) << std::endl;
+            std::cout << "Epoll control error at TimerObjectReactor.registerTimer: " << std::strerror(errno) << std::endl;
             return false;
         }
 #endif
@@ -189,12 +191,10 @@ class TimerObjectReactor {
     bool unregisterTimer(DataObject<TimerObject>& dot) {
         bool ret = true;
 
-        int fd = dot.get([](const TimerObject& t) {
-            return t._fd;
-        });
+        int fd = dot.get([](const TimerObject& t){ return t._fd; });
 #ifdef __linux__
         if (::epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, 0) < 0) {
-            std::cout << "Epoll control error at DEL: " << std::strerror(errno) << std::endl;
+            std::cout << "Epoll control error at TimerObjectReactor.unregisterTimer: " << std::strerror(errno) << std::endl;
             ret = false;
         }
 

@@ -43,7 +43,7 @@ class ComplexClass {
         std::cout << "ComplexClass default CTOR" << std::endl;
     }
     ComplexClass(int i, int j, std::string s) : inputCounter(i), outputCounter(j), message(s) {
-        std::cout << "ComplexClass special copy CTOR" << std::endl;
+        std::cout << "ComplexClass initializer list CTOR" << std::endl;
     }
     ComplexClass(const ComplexClass& cc) : inputCounter(cc.inputCounter), outputCounter(cc.outputCounter), message(cc.message) {
         std::cout << "ComplexClass copy CTOR" << std::endl;

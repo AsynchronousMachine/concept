@@ -1,3 +1,8 @@
+/*
+** Declarations of DataObjectReactor and TimerObjectReactor
+** Should be treaded as singletons
+*/
+
 #pragma once
 
 #include "dataobjectreactor.hpp"
@@ -10,6 +15,5 @@
 
 namespace Asm {
 extern std::unique_ptr<Asm::DataObjectReactor> pDOR;
-
 extern std::unique_ptr<Asm::TimerObjectReactor> pTOR;
 }
