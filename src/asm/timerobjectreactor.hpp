@@ -51,7 +51,7 @@ class TimerObjectReactor {
         std::cout << "TOR-THRD-0 has TID-" << syscall(SYS_gettid) << std::endl;
 
         for (;;) {
-            epoll_event evt[MAX_CAPACITY];
+            epoll_event evt[MAX_CAPACITY] {};
 
             int evt_cnt = ::epoll_wait(_epfd, &evt[0], MAX_CAPACITY, -1);
 
@@ -105,7 +105,7 @@ class TimerObjectReactor {
         }
 
         // Add it first to stop epoll_wait in case of destruction
-        epoll_event evt;
+        epoll_event evt {};
         evt.events = EPOLLIN;
         evt.data.fd = _evtfd;
 
@@ -165,7 +165,7 @@ class TimerObjectReactor {
     bool registerTimer(DataObject<TimerObject>& dot) {
         int fd = dot.get([](const TimerObject& t){ return t._fd; });
 #ifdef __linux__
-        epoll_event evt;
+        epoll_event evt {};
         evt.events = EPOLLIN;
         evt.data.fd = fd;
 
