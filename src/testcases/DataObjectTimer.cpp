@@ -1,3 +1,9 @@
+/*
+** Test cases for showing almost all aspects of dealing with TimerObjects.
+** The following code samples exclude the optional interface for
+** ser- and deserialization of the content of a DataObject
+*/
+
 #include "../asm/asm.hpp"
 
 static void tickTack(Asm::TimerObject& timer) {
@@ -9,7 +15,6 @@ static void tickTack(Asm::TimerObject& timer) {
 }
 
 void runDOTimerExamples() {
-
     std::cout << "===================================================================" << std::endl;
     std::cout << "Run TimerObject handling samples .." << std::endl;
 
@@ -29,37 +34,30 @@ void runDOTimerExamples() {
     tickTack(timer);
     timer.stop();
 
-#if 0
-    // Access content consistently
-    std::cout << "TimerReactor test..." << std::endl;
+    std::cout << "===================================================================" << std::endl;
+    std::cout << "TimerReactor tests .." << std::endl;
 
-    std::unique_ptr<Asm::DataObjectReactor> dataObjectReactor(new Asm::DataObjectReactor(4));
-    // timer reactor uses object reactor for triggering links
-    std::unique_ptr<Asm::TimerObjectReactor> timerReactor(new Asm::TimerObjectReactor(*dataObjectReactor.get()));
-
-    // example do who's link will be triggered
+    // Create the instances for test
     Asm::DataObject<Asm::TimerObject> dataObjectTimer;
     Asm::DataObject<int> dataObjectInt;
-
-    // init interval with example capture of local timer
-    dataObjectTimer.set([timer](Asm::TimerObject& to) {
-        to.setRelativeInterval(timer->getInterval(),0);
+    dataObjectTimer.registerLink("doTimer->doInt", dataObjectInt, [](Asm::DataObject<Asm::TimerObject>& to, Asm::DataObject<int>& i){
+        std::cout << "[doTimer->doInt] was triggered by TOR" << std::endl;
+        std::cout << "Tid of " << syscall(SYS_gettid) << " for TOR test" << std::endl;
     });
 
-    // link to be triggered in timerreactor by objectreactor every interval
-    dataObjectTimer.registerLink("doTimer->doInt", dataObjectInt, [](Asm::DataObject<Asm::TimerObject>& timer, Asm::DataObject<int>& intVal) {
+    // Add TimerObject and let it trigger
+    Asm::pTOR->registerTimer(dataObjectTimer);
 
-        std::cout << "[doTimer->doInt] was triggered by timer-reactor." << std::endl;
-        std::cout << "Tid of " << syscall(SYS_gettid) << " for timerlink test" << std::endl;
-    });
+    // Let timer start
+    dataObjectTimer.set([](Asm::TimerObject& to){ to.setRelativeInterval(500,0); });
 
-    // add timer and let it be triggered triggerAmount=sleep/interval of timer
-    timerReactor->registerTimer(dataObjectTimer);
-    boost::this_thread::sleep_for(boost::chrono::seconds(5));
-    timerReactor->unregisterTimer(dataObjectTimer);
+    boost::this_thread::sleep_for(boost::chrono::seconds(3));
+
+    dataObjectTimer.set([](Asm::TimerObject& to){ to.stop(); });
+
+    Asm::pTOR->unregisterTimer(dataObjectTimer);
 
     dataObjectTimer.unregisterLink("doTimer->doInt");
-#endif
 
     std::cout << "===================================================================" << std::endl;
     std::cout << "Enter \'n\' for next test!" << std::endl;

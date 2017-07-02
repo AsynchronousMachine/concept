@@ -65,16 +65,16 @@ class TimerObjectReactor {
                     uint64_t elapsed;
 
                     if (::read(evt[i].data.fd, &elapsed, sizeof(elapsed)) != sizeof(elapsed)) {
-                        std::cout << "Read TOR returns wrong size: " << std::strerror(errno) << std::endl;
+                        std::cout << "Read TOR event returns wrong size: " << std::strerror(errno) << std::endl;
                         continue;
                     }
 
                     if (evt[i].data.fd == _evtfd && elapsed > 0) {
-                        std::cout << "Read TOR returns stop command" << std::endl;
+                        std::cout << "Read TOR event returns stop command" << std::endl;
                         return;
                     }
 
-                    std::cout << "TOR has fired" << std::endl;
+                    std::cout << "TOR with TID " << syscall(SYS_gettid) << " has fired" << std::endl;
 
                     boost::unique_lock<boost::mutex> lock(_mtx);
                     auto itr = _notify.find(evt[i].data.fd);
