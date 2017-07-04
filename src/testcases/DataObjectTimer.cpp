@@ -42,7 +42,9 @@ void runDOTimerExamples() {
     Asm::DataObject<int> dataObjectInt;
     dataObjectTimer.registerLink("doTimer->doInt", dataObjectInt, [](Asm::DataObject<Asm::TimerObject>& to, Asm::DataObject<int>& i){
         std::cout << "[doTimer->doInt] was triggered by TOR" << std::endl;
+#ifdef __linux__
         std::cout << "Tid of " << syscall(SYS_gettid) << " for TOR test" << std::endl;
+#endif
     });
 
     // Add TimerObject and let it trigger
