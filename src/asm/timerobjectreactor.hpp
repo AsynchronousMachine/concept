@@ -6,16 +6,17 @@
 
 #pragma once
 
-#include <unordered_map>
-
-#include <boost/thread/thread.hpp>
-
 #ifdef __linux__
 #include <pthread.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #endif
+
+#include <unordered_map>
+#include <thread>
+#include <chrono>
+#include <mutex>
 
 namespace Asm {
 // Forward declarations
@@ -37,13 +38,13 @@ class TimerObjectReactor {
     DataObjectReactor &_dor;
 
     // Holds the timer thread reference
-    boost::thread _thrd;
+    std::thread _thrd;
 
     // Holds all epoll file descriptor associated data
     std::unordered_map<int, DataObject<TimerObject>&> _notify;
 
     // Protects the access to epoll file descriptor associated data
-    boost::mutex _mtx;
+    std::mutex _mtx;
 
     // Threaded timer function mechanism
     void run() {
@@ -76,7 +77,7 @@ class TimerObjectReactor {
 
                     std::cout << "TOR with TID " << syscall(SYS_gettid) << " has fired" << std::endl;
 
-                    boost::unique_lock<boost::mutex> lock(_mtx);
+                    std::unique_lock<std::mutex> lock(_mtx);
                     auto itr = _notify.find(evt[i].data.fd);
                     if ( itr != _notify.end() ) {
                         lock.unlock();
@@ -116,7 +117,7 @@ class TimerObjectReactor {
             return;
         }
 
-        _thrd = boost::thread([this](){ TimerObjectReactor::run(); });
+        _thrd = std::thread([this](){ TimerObjectReactor::run(); });
 
         //The thread name is a meaningful C language string, whose length is
         //restricted to 16 characters, including the terminating null byte ('\0')
@@ -170,14 +171,14 @@ class TimerObjectReactor {
         evt.data.fd = fd;
 
         {
-            boost::lock_guard<boost::mutex> lock(_mtx);
+            std::lock_guard<std::mutex> lock(_mtx);
             _notify.insert({ fd, dot });
         }
 
         if (::epoll_ctl(_epfd, EPOLL_CTL_ADD, fd, &evt) < 0) {
             // Delete it again in the case of error
             {
-                boost::lock_guard<boost::mutex> lock(_mtx);
+                std::lock_guard<std::mutex> lock(_mtx);
                 _notify.erase(fd);
             }
 
@@ -200,7 +201,7 @@ class TimerObjectReactor {
 
         // Erase it in any case
         {
-            boost::lock_guard<boost::mutex> lock(_mtx);
+            std::lock_guard<std::mutex> lock(_mtx);
             _notify.erase(fd);
         }
 #endif

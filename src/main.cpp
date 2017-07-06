@@ -9,8 +9,8 @@
 
 #include <cstdlib>
 #include <iostream>
-
-#include <boost/thread/thread.hpp>
+#include <thread>
+#include <chrono>
 
 #include <tbb/tbb.h>
 
@@ -64,7 +64,7 @@ int main() {
     tbb::task_scheduler_init tbb_init;
 
     // Wait for all instantiation processes to finish
-    boost::this_thread::sleep_for(boost::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 
 #ifdef __linux__
     std::cout << "TID of main: " << syscall(SYS_gettid)<< std::endl;
