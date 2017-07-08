@@ -27,8 +27,8 @@ void runModuleUsageExamples() {
     std::cout << "===================================================================" << std::endl;
     std::cout << "Run module usage samples .." << std::endl;
 
-	name_dataobjects.at("InputModule.inModule.DOintOutput");
-	name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut");
+//	name_dataobjects.at("InputModule.inModule.DOintOutput");
+//	name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut");
 	processModule.LinkInt.set("Int", name_dataobjects.at("InputModule.inModule.DOintOutput"), name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 	processModule.LinkString.set("String", name_dataobjects.at("InputModule.inModule.DOstringOutput"), name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 
@@ -56,9 +56,13 @@ void runModuleUsageExamples() {
 	}
 
 	// Remove this link again
-	outModule.LinkString.clear("String", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
-    processModule.LinkInt.clear("Int", name_dataobjects.at("InputModule.inModule.DOintOutput"));
+//	outModule.LinkString.clear("String", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
+//    processModule.LinkInt.clear("Int", name_dataobjects.at("InputModule.inModule.DOintOutput"));
+//	outModule.LinkInt.clear("Int", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
+	processModule.LinkInt.clear("Int", name_dataobjects.at("InputModule.inModule.DOintOutput"));
+	processModule.LinkString.clear("String", name_dataobjects.at("InputModule.inModule.DOstringOutput"));
 	outModule.LinkInt.clear("Int", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
+	outModule.LinkString.clear("String", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 
 	boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([](std::atomic<int> &i) { i = 557; }, *Asm::pDOR.get());
 	// Wait till reactor has processed
