@@ -205,14 +205,14 @@ class DataObject {
 
     // Link a DO to that DO by registering a callback function
     template <typename D2, typename LINK>
-    void registerLink(const std::string name, DataObject<D2>& d2, LINK cb) {
+    void registerLink(const std::string& name, DataObject<D2>& d2, LINK cb) {
         boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.insert({ name, [cb, this, &d2] { cb(*this, d2); } });
         std::cout << "RegisterLink: " << name << std::endl;
     }
 
     // Remove a link to that DO by name
-    void unregisterLink(const std::string name) {
+    void unregisterLink(const std::string& name) {
         boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.erase(name);
         std::cout << "UnregisterLink: " << name << std::endl;
