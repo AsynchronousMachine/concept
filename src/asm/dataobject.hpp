@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <atomic>
 
+#include <boost/core/demangle.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/null_mutex.hpp>
 #include <boost/thread/shared_mutex.hpp>
@@ -209,6 +210,7 @@ class DataObject {
         boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.insert({ name, [cb, this, &d2] { cb(*this, d2); } });
         std::cout << "RegisterLink: " << name << std::endl;
+        std::cout << "From " << boost::core::demangle(typeid(*this).name()) << " to " << boost::core::demangle(typeid(d2).name()) << " via " << boost::core::demangle(typeid(cb).name()) << std::endl;
     }
 
     // Remove a link to that DO by name
@@ -216,6 +218,7 @@ class DataObject {
         boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.erase(name);
         std::cout << "UnregisterLink: " << name << std::endl;
+        std::cout << "From " << boost::core::demangle(typeid(*this).name()) << std::endl;
     }
 
     void serialize(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
