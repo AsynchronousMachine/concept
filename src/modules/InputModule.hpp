@@ -1,17 +1,11 @@
-/*
-**
-** The following code samples exclude the optional interface for
-** ser- and deserialization of the content of a DataObject
-*/
-
 #include "../asm/asm.hpp"
 
 class InputModule
 {
 public:
 	InputModule() :
-		DOintOutput(0),
-		DOstringOutput("")
+		DOintOutput(0, Asm::default_serializer),
+		DOstringOutput("", Asm::default_serializer)
 	{}
 
 	//DataObject is never a target in a LinkObject, only the source -> is an output of the module

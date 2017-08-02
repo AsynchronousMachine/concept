@@ -22,7 +22,7 @@ namespace Asm {
 		template <typename MemFun, typename ThisPtr>
 		LinkObject(MemFun memfun, ThisPtr thisptr) : _cb([thisptr, memfun](D1& d1, D2& d2) { std::mem_fn(memfun)(thisptr, d1, d2); }) {}
 		LinkObject(cb_type cb) : _cb(cb) {}
-		// Only important for boost::variant; don't use this constructor
+		// Only important for boost::variant; don't use this constructor: linking is not possible!
 		LinkObject() : _cb(nullptr) {}
 
 		// Non-copyable
