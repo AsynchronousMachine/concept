@@ -6,8 +6,6 @@
 ** Hint: for Windows systems "WIN32_LEAN_AND_MEAN" has to be defined in preprocessor else you will get boost/asio/detail/socket_types.hpp(24): fatal error C1189: #error:  WinSock.h has already been included
 */
 
-
-
 #ifdef __linux__
 #include <pthread.h>
 #include <sys/syscall.h>
@@ -144,12 +142,8 @@ int main() {
 	//runDOSerializationExamples();
 	//runTBBUsageExamples();
 
-	{
-        std::unique_ptr<Asm::TcpServer> pDOServer = std::make_unique<Asm::TcpServer>(9600, readCallback);
-        boost::this_thread::sleep_for(boost::chrono::seconds(20));
-    }
-
-	//std::unique_ptr<Asm::TCP_SyncServer> pLinkServer = std::make_unique<Asm::TCP_SyncServer>(9601, Asm::receivedLinkHandler);
+    std::unique_ptr<Asm::TcpServer> pDOServer = std::make_unique<Asm::TcpServer>(9600, readCallback);
+    std::unique_ptr<Asm::TcpServer> pLOServer = std::make_unique<Asm::TcpServer>(9601, readCallback);
 
 //	try {
 //		simulateClient();

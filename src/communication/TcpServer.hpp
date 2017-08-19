@@ -9,91 +9,95 @@ namespace Asm {
 
 class TcpServer {
 
-  public:
-    static constexpr int MAX_BUFFER_SIZE = 1000000;
+    public:
+        static constexpr int MAX_BUFFER_SIZE = 1000000;
 
-  private:
-    bool _run_state;
-    unsigned short _port;
-    std::function<void(boost::asio::ip::tcp::socket&, size_t, std::array<char, MAX_BUFFER_SIZE>&)> _readCB;
-    std::thread _thrd;
+        using cb_type = std::function<void(boost::asio::ip::tcp::socket&, size_t, std::array<char, MAX_BUFFER_SIZE>&)>;
 
-    void stop() {
-        _run_state = false;
+    private:
+        bool _run_state;
+        unsigned short _port;
+        cb_type _cb;
+        std::thread _thrd;
 
-        try {
-            boost::asio::io_service io_service;
-            boost::asio::ip::tcp::socket socket{io_service};
-            boost::asio::ip::tcp::resolver resolver{io_service};
-            boost::asio::ip::tcp::resolver::query query{"127.0.0.1", std::to_string(_port)};
+        void stop() {
+            _run_state = false;
 
-            boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+            try {
+                boost::asio::io_service io_service;
+                boost::asio::ip::tcp::socket socket{io_service};
+                boost::asio::ip::tcp::resolver resolver{io_service};
+                boost::asio::ip::tcp::resolver::query query{"127.0.0.1", std::to_string(_port)};
 
-            boost::asio::connect(socket, endpoint_iterator);
+                boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
-            std::cout << "Did connect to stop" << std::endl;
-        } catch (std::exception& e) {
-            std::cerr << "STOP: " << e.what() << std::endl;
-        }
-    }
+                boost::asio::connect(socket, endpoint_iterator);
 
-    void run() {
-        std::array<char, MAX_BUFFER_SIZE> _buffer;
-
-#ifdef __linux__
-        std::cout << "TcpServer-THRD has TID-" << syscall(SYS_gettid) << std::endl;
-#endif
-
-        try {
-            boost::asio::io_service io_service;
-            boost::asio::ip::tcp::socket socket{io_service};
-            boost::asio::ip::tcp::endpoint endpoint{boost::asio::ip::address_v6::any(), _port};
-            boost::asio::ip::tcp::endpoint endpoint_peer;
-            boost::asio::ip::tcp::acceptor acceptor{io_service, endpoint};
-
-            acceptor.set_option(boost::asio::socket_base::linger{true, 3});
-
-            while(_run_state) {
-                std::cout << "Wait for connection" << std::endl;
-
-                acceptor.accept(socket, endpoint_peer);
-
-                std::cout << "Got connection from " << endpoint_peer.address().to_string() << " " << endpoint_peer.port() << std::endl;
-
-                if(!_run_state)
-                    break;
-
-                size_t len = socket.read_some(boost::asio::buffer(_buffer));
-
-                _readCB(socket, len, _buffer);
-
-                socket.close();
+                std::cout << "TcpServer did connect to stop" << std::endl;
+            } catch (std::exception& e) {
+                std::cerr << "TcpServer stop: " << e.what() << std::endl;
             }
-
-            std::cout << "Got stop" << std::endl;
-        } catch (std::exception& e) {
-            std::cerr << "RUN: " << e.what() << std::endl;
         }
-    }
 
-  public:
-    TcpServer(unsigned short port, std::function<void(boost::asio::ip::tcp::socket&, size_t, std::array<char, MAX_BUFFER_SIZE>&)> readCB) : _run_state(true), _port(port), _readCB(readCB) {
-        _thrd = std::thread([this]{ TcpServer::run(); });
-    };
+        void run() {
+            std::array<char, MAX_BUFFER_SIZE> _buffer;
 
-    // Non-copyable
-    TcpServer(const TcpServer&) = delete;
-    TcpServer &operator=(const TcpServer&) = delete;
+    #ifdef __linux__
+            std::cout << "TcpServer-THRD has TID-" << syscall(SYS_gettid) << std::endl;
+    #endif
 
-    // Non-movable
-    TcpServer(TcpServer&&) = delete;
-    TcpServer &operator=(TcpServer&&) = delete;
+            try {
+                boost::asio::io_service io_service;
+                boost::asio::ip::tcp::socket socket{io_service};
+                boost::asio::ip::tcp::endpoint endpoint{boost::asio::ip::address_v6::any(), _port};
+                boost::asio::ip::tcp::endpoint endpoint_peer;
+                boost::asio::ip::tcp::acceptor acceptor{io_service, endpoint};
 
-    ~TcpServer() {
-        std::cout << "Delete TcpServer" << std::endl;
-        stop();
-        _thrd.join();
-    }
+                //acceptor.set_option(boost::asio::socket_base::linger{true, 3});
+
+                while(_run_state) {
+                    std::cout << "TcpServer wait for connection" << std::endl;
+
+                    acceptor.accept(socket, endpoint_peer);
+
+                    std::cout << "TcpServer got connection from " << endpoint_peer.address().to_string() << " " << endpoint_peer.port() << std::endl;
+
+                    if(!_run_state)
+                        break;
+
+                    size_t len = socket.read_some(boost::asio::buffer(_buffer));
+
+                    if(_cb)
+                        _cb(socket, len, _buffer);
+
+                    socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
+                    socket.close();
+                }
+
+                std::cout << "TcpServer got stop" << std::endl;
+            } catch (std::exception& e) {
+                std::cerr << "TcpServer run: " << e.what() << std::endl;
+            }
+        }
+
+    public:
+        TcpServer(unsigned short port, cb_type cb) : _run_state(true), _port(port), _cb(cb) {
+            _thrd = std::thread([this]{ TcpServer::run(); });
+        };
+
+        // Non-copyable
+        TcpServer(const TcpServer&) = delete;
+        TcpServer &operator=(const TcpServer&) = delete;
+
+        // Non-movable
+        TcpServer(TcpServer&&) = delete;
+        TcpServer &operator=(TcpServer&&) = delete;
+
+        ~TcpServer() {
+            std::cout << "Delete TcpServer" << std::endl;
+            stop();
+            _thrd.join();
+        }
 };
 
 }
