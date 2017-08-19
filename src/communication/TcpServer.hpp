@@ -1,84 +1,99 @@
 #pragma once
 
-#include <boost/bind.hpp>
+#include <string>
+#include <functional>
+
 #include <boost/asio.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
 
 namespace Asm {
 
-	using namespace boost::asio;
-	using namespace boost::posix_time;
-	using boost::system::error_code;
+class TcpServer {
 
-#define MAX_DATA_LENGTH 1000000
+  public:
+    static constexpr int MAX_BUFFER_SIZE = 1000000;
 
+  private:
+    bool _run_state;
+    unsigned short _port;
+    std::function<void(boost::asio::ip::tcp::socket&, size_t, std::array<char, MAX_BUFFER_SIZE>&)> _readCB;
+    std::thread _thrd;
 
-	class TCP_SyncServer {
+    void stop() {
+        _run_state = false;
 
-	private:
-		char _readBuffer[MAX_DATA_LENGTH];
-		std::function<void(char*, int, ip::tcp::socket*)> _readCallback;
-		io_service _service;
-		ip::tcp::endpoint _endpoint;
-		boost::thread* _serverThread;
-		bool _run = true;
+        try {
+            boost::asio::io_service io_service;
+            boost::asio::ip::tcp::socket socket{io_service};
+            boost::asio::ip::tcp::resolver resolver{io_service};
+            boost::asio::ip::tcp::resolver::query query{"127.0.0.1", std::to_string(_port)};
 
-		void unlockAccept() {
-			try {
-				ip::tcp::socket socketConnect(_service);
-				ip::tcp::endpoint ep(ip::address::from_string("127.0.0.1"), _endpoint.port());
-				socketConnect.connect(ep); // close is called implicit by leaving the method
-			}
-			catch (std::exception& e) {
-				std::cerr << e.what() << std::endl;
-			}
-		}
+            boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
-		void run() {
-			ip::tcp::acceptor acceptor(_service, _endpoint);
-			ip::tcp::socket socket(_service);
+            boost::asio::connect(socket, endpoint_iterator);
 
-			while (_run) {
-				try {					
-					acceptor.accept(socket);
+            std::cout << "Did connect to stop" << std::endl;
+        } catch (std::exception& e) {
+            std::cerr << "STOP: " << e.what() << std::endl;
+        }
+    }
 
-					boost::asio::socket_base::linger option(true, 30);
-					socket.set_option(option);
+    void run() {
+        std::array<char, MAX_BUFFER_SIZE> _buffer;
 
-					while (_run && socket.available() == 0)
-						boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-					if (_run) {
-						int bytes = socket.read_some(buffer(_readBuffer)); // read(sock, buffer(buff), ec); blocks untill buffer is full, not desired here
-						_readCallback(_readBuffer, bytes, &socket);
-					}
-					socket.close();
-				}
-				catch (std::exception& e) {
-					if (_run)
-						std::cerr << e.what() << std::endl;
-				}
-			}
-		}
+#ifdef __linux__
+        std::cout << "TcpServer-THRD has TID-" << syscall(SYS_gettid) << std::endl;
+#endif
 
-		void start() {
-			_serverThread = new boost::thread([&]() {
-				run();
-			});
-		}
+        try {
+            boost::asio::io_service io_service;
+            boost::asio::ip::tcp::socket socket{io_service};
+            boost::asio::ip::tcp::endpoint endpoint{boost::asio::ip::address_v6::any(), _port};
+            boost::asio::ip::tcp::endpoint endpoint_peer;
+            boost::asio::ip::tcp::acceptor acceptor{io_service, endpoint};
 
-	public:
-		TCP_SyncServer(int listenPort, std::function<void(char*, int, ip::tcp::socket*)> receiveCallback)
-			: _readCallback(receiveCallback),
-			_endpoint(ip::tcp::v6(), listenPort)
-		{
-			start();
-		};
+            acceptor.set_option(boost::asio::socket_base::linger{true, 3});
 
-		~TCP_SyncServer() {
-			_run = false;
-			unlockAccept();
-			_serverThread->join();
-		}
-	};
+            while(_run_state) {
+                std::cout << "Wait for connection" << std::endl;
+
+                acceptor.accept(socket, endpoint_peer);
+
+                std::cout << "Got connection from " << endpoint_peer.address().to_string() << " " << endpoint_peer.port() << std::endl;
+
+                if(!_run_state)
+                    break;
+
+                size_t len = socket.read_some(boost::asio::buffer(_buffer));
+
+                _readCB(socket, len, _buffer);
+
+                socket.close();
+            }
+
+            std::cout << "Got stop" << std::endl;
+        } catch (std::exception& e) {
+            std::cerr << "RUN: " << e.what() << std::endl;
+        }
+    }
+
+  public:
+    TcpServer(unsigned short port, std::function<void(boost::asio::ip::tcp::socket&, size_t, std::array<char, MAX_BUFFER_SIZE>&)> readCB) : _run_state(true), _port(port), _readCB(readCB) {
+        _thrd = std::thread([this]{ TcpServer::run(); });
+    };
+
+    // Non-copyable
+    TcpServer(const TcpServer&) = delete;
+    TcpServer &operator=(const TcpServer&) = delete;
+
+    // Non-movable
+    TcpServer(TcpServer&&) = delete;
+    TcpServer &operator=(TcpServer&&) = delete;
+
+    ~TcpServer() {
+        std::cout << "Delete TcpServer" << std::endl;
+        stop();
+        _thrd.join();
+    }
+};
+
 }

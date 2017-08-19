@@ -21,9 +21,9 @@
 
 #include <tbb/tbb.h>
 
-#include "communication/receiveHandler.hpp"
-#include "communication/tcp/tcpSyncServer.hpp"
-#include "communication/tcp/tcpSyncClient.hpp"
+#include "communication/ReceiveHandler.hpp"
+#include "communication/TcpServer.hpp"
+//#include "communication/tcp/tcpSyncClient.hpp"
 
 extern void runDOAccessExamples();
 extern void runDOReactorExamples();
@@ -88,28 +88,40 @@ std::string readFile(std::string filename)
 
 bool _runClient = true;
 
-void simulateClient() {
-	boost::thread* simClientThread = new boost::thread([&]() {
-		Asm::TCP_SyncClient client("127.0.0.1", 9601);
-		while (_runClient) {
-			std::string msg = readFile("input-link.json");
-			client.send(msg);
-			boost::this_thread::sleep_for(boost::chrono::seconds(5));
-		}
-	});
-}
+//void simulateClient() {
+//	boost::thread* simClientThread = new boost::thread([&]() {
+//		Asm::TCP_SyncClient client("127.0.0.1", 9601);
+//		while (_runClient) {
+//			std::string msg = readFile("input-link.json");
+//			client.send(msg);
+//			boost::this_thread::sleep_for(boost::chrono::seconds(5));
+//		}
+//	});
+//}
+//
+//void simulateClientWithResponse() {
+//	boost::thread* simClientThread = new boost::thread([&]() {
+//		Asm::TCP_SyncClient client("127.0.0.1", 9600);
+//		while (_runClient) {
+//			std::string msg = readFile("input-do.json");
+//			std::string response = client.sendAndRead(msg);
+//			std::cout << "CLIENT Response: " << response << "\n";
+//
+//			boost::this_thread::sleep_for(boost::chrono::seconds(5));
+//		}
+//	});
+//}
 
-void simulateClientWithResponse() {
-	boost::thread* simClientThread = new boost::thread([&]() {
-		Asm::TCP_SyncClient client("127.0.0.1", 9600);
-		while (_runClient) {
-			std::string msg = readFile("input-do.json");
-			std::string response = client.sendAndRead(msg);
-			std::cout << "CLIENT Response: " << response << "\n";
 
-			boost::this_thread::sleep_for(boost::chrono::seconds(5));
-		}
-	});
+
+void readCallback(boost::asio::ip::tcp::socket& socket, size_t len, std::array<char, Asm::TcpServer::MAX_BUFFER_SIZE>& _buffer)
+{
+    std::cout << "Got " << len << " bytes: " << _buffer[0] << _buffer[1] << _buffer[2] << _buffer[3] << _buffer[4] << _buffer[5] << std::endl;
+
+    std::string message{"OK\n"};
+    socket.write_some(boost::asio::buffer(message));
+
+    std::cout << "Did write" << std::endl;
 }
 
 int main() {
@@ -132,20 +144,23 @@ int main() {
 	//runDOSerializationExamples();
 	//runTBBUsageExamples();
 
+	{
+        std::unique_ptr<Asm::TcpServer> pDOServer = std::make_unique<Asm::TcpServer>(9600, readCallback);
+        boost::this_thread::sleep_for(boost::chrono::seconds(20));
+    }
 
-	std::unique_ptr<Asm::TCP_SyncServer> pDOServer = std::make_unique<Asm::TCP_SyncServer>(9600, Asm::receivedDOHandler);
-	std::unique_ptr<Asm::TCP_SyncServer> pLinkServer = std::make_unique<Asm::TCP_SyncServer>(9601, Asm::receivedLinkHandler);
+	//std::unique_ptr<Asm::TCP_SyncServer> pLinkServer = std::make_unique<Asm::TCP_SyncServer>(9601, Asm::receivedLinkHandler);
 
-	try {		
-		simulateClient();
-		boost::this_thread::sleep_for(boost::chrono::seconds(2));
-		simulateClientWithResponse();
-		//boost::this_thread::sleep_for(boost::chrono::seconds(30));
-		//_runClient = false;
-	}
-	catch (std::exception& e) {
-		std::cerr << "Exception:: " << e.what() << std::endl;
-	}
+//	try {
+//		simulateClient();
+//		boost::this_thread::sleep_for(boost::chrono::seconds(2));
+//		simulateClientWithResponse();
+//		//boost::this_thread::sleep_for(boost::chrono::seconds(30));
+//		//_runClient = false;
+//	}
+//	catch (std::exception& e) {
+//		std::cerr << "Exception:: " << e.what() << std::endl;
+//	}
 
 	std::cout << "===================================================================" << std::endl;
 	std::cout << "Enter \'q\' for quit tests!" << std::endl;
