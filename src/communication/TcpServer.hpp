@@ -1,7 +1,14 @@
 #pragma once
 
+#ifdef __linux__
+#include <pthread.h>
+#include <sys/syscall.h>
+#endif
+
+#include <iostream>
 #include <string>
 #include <functional>
+#include <thread>
 
 #include <boost/asio.hpp>
 

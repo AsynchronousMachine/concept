@@ -21,7 +21,6 @@
 
 #include "communication/ReceiveHandler.hpp"
 #include "communication/TcpServer.hpp"
-//#include "communication/tcp/tcpSyncClient.hpp"
 
 extern void runDOAccessExamples();
 extern void runDOReactorExamples();
@@ -103,7 +102,7 @@ bool _runClient = true;
 //		while (_runClient) {
 //			std::string msg = readFile("input-do.json");
 //			std::string response = client.sendAndRead(msg);
-//			std::cout << "CLIENT Response: " << response << "\n";
+//			std::cout << "CLIENT Response: " << response << "\n";#ifdef __linux__
 //
 //			boost::this_thread::sleep_for(boost::chrono::seconds(5));
 //		}
@@ -112,15 +111,18 @@ bool _runClient = true;
 
 
 
-void readCallback(boost::asio::ip::tcp::socket& socket, size_t len, std::array<char, Asm::TcpServer::MAX_BUFFER_SIZE>& _buffer)
-{
-    std::cout << "Got " << len << " bytes: " << _buffer[0] << _buffer[1] << _buffer[2] << _buffer[3] << _buffer[4] << _buffer[5] << std::endl;
-
-    std::string message{"OK\n"};
-    socket.write_some(boost::asio::buffer(message));
-
-    std::cout << "Did write" << std::endl;
-}
+//void readCallback(boost::asio::ip::tcp::socket& socket, size_t len, std::array<char, Asm::TcpServer::MAX_BUFFER_SIZE>& _buffer)
+//{
+//    std::cout << "Got " << len << " bytes: " << _buffer[0] << _buffer[1] << _buffer[2] << _buffer[3] << _buffer[4] << _buffer[5] << std::endl;
+//
+//    std::string message{"OK\n"};
+//    socket.write_some(boost::asio::buffer(message));
+////		if (doc.HasParseError() == true) {
+//			std::cout << "Parsing error" << std::endl;
+//			return;
+//		}
+//    std::cout << "Did write" << std::endl;
+//}
 
 int main() {
 	Observer observer;
@@ -142,8 +144,8 @@ int main() {
 	//runDOSerializationExamples();
 	//runTBBUsageExamples();
 
-    std::unique_ptr<Asm::TcpServer> pDOServer = std::make_unique<Asm::TcpServer>(9600, readCallback);
-    std::unique_ptr<Asm::TcpServer> pLOServer = std::make_unique<Asm::TcpServer>(9601, readCallback);
+    std::unique_ptr<Asm::TcpServer> pDOServer = std::make_unique<Asm::TcpServer>(9600, Asm::do_handler);
+    std::unique_ptr<Asm::TcpServer> pLOServer = std::make_unique<Asm::TcpServer>(9601, Asm::lo_handler);
 
 //	try {
 //		simulateClient();
