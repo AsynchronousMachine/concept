@@ -48,6 +48,9 @@
 		<Unit filename="src/asm/linkobject.hpp" />
 		<Unit filename="src/asm/timerobject.hpp" />
 		<Unit filename="src/asm/timerobjectreactor.hpp" />
+		<Unit filename="src/communication/ReceiveHandler.cpp" />
+		<Unit filename="src/communication/ReceiveHandler.hpp" />
+		<Unit filename="src/communication/TcpServer.hpp" />
 		<Unit filename="src/datatypes/MyComplexDOType.hpp" />
 		<Unit filename="src/datatypes/global_datatypes.hpp" />
 		<Unit filename="src/main.cpp" />
@@ -69,6 +72,7 @@
 		<Unit filename="src/testcases/DataObjectTimer.cpp" />
 		<Unit filename="src/testcases/ModuleUsage.cpp" />
 		<Unit filename="src/testcases/TBBUsage.cpp" />
+		<Unit filename="src/testcases/TcpClient.hpp" />
 		<Extensions>
 			<code_completion />
 			<envvars />
