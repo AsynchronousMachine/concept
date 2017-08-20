@@ -159,12 +159,21 @@ class DataObject {
         std::cout << "DO-CTOR with instance based ser-/deser fct" << std::endl;
     }
 
+//    template <typename MemFun, typename MemFun2>
+//    DataObject(D content, MemFun ser, MemFun2 deser, bool b) : _content(content),
+//                                                               doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
+//                                                                   std::mem_fn(ser)(&_content, value, allocator); }),
+//                                                               doDeserialize([&, deser](rapidjson::Value& value) {
+//                                                                   std::mem_fn(deser)(&_content, value); }) {
+//        std::cout << "DO-CTOR with content based ser-/deser fct" << std::endl;
+//    }
+
     template <typename MemFun, typename MemFun2>
-    DataObject(D content, MemFun ser, MemFun2 deser, bool b) : _content(content),
-                                                               doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-                                                                   std::mem_fn(ser)(&_content, value, allocator); }),
-                                                               doDeserialize([&, deser](rapidjson::Value& value) {
-                                                                   std::mem_fn(deser)(&_content, value); }) {
+    DataObject(D content, MemFun ser, MemFun2 deser, std::enable_if_t<std::is_member_function_pointer<MemFun>::value, bool> = true)
+        : _content(content),
+          doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(&_content, value, allocator); }),
+          doDeserialize([&, deser](rapidjson::Value& value) { std::mem_fn(deser)(&_content, value); })
+    {
         std::cout << "DO-CTOR with content based ser-/deser fct" << std::endl;
     }
 

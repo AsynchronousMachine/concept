@@ -79,6 +79,6 @@ class SerializeModule {
     // Boolean is again a dummy value for selecting the right constructor
     // This is the prefered way to do serialization on complex types
     // Let the DataObject serialize it self, it has the best knowledge what do
-    doMyComplexDOType(MyComplexDOType{ 1, 2, "12" }, &MyComplexDOType::serializeMe, &MyComplexDOType::deserializeMe, true) {
-    }
+    //doMyComplexDOType(MyComplexDOType{ 1, 2, "12" }, &MyComplexDOType::serializeMe, &MyComplexDOType::deserializeMe, true) {}
+    doMyComplexDOType(MyComplexDOType{ 1, 2, "12" }, &MyComplexDOType::serializeMe, &MyComplexDOType::deserializeMe) {}
 };
