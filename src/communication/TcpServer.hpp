@@ -1,3 +1,7 @@
+/*
+** Definition of TCP server used for communication
+*/
+
 #pragma once
 
 #ifdef __linux__

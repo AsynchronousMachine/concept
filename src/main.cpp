@@ -67,63 +67,6 @@ struct Observer : tbb::task_scheduler_observer {
 	}
 };
 
-
-std::string readFile(std::string filename)
-{
-	std::string contents;
-	std::ifstream in(filename, std::ios::in | std::ios::binary);
-	if (in)
-	{
-		in.seekg(0, std::ios::end);
-		contents.resize(in.tellg());
-		in.seekg(0, std::ios::beg);
-		in.read(&contents[0], contents.size());
-		in.close();
-	}
-	return(contents);
-}
-
-bool _runClient = true;
-
-//void simulateClient() {
-//	boost::thread* simClientThread = new boost::thread([&]() {
-//		Asm::TCP_SyncClient client("127.0.0.1", 9601);
-//		while (_runClient) {
-//			std::string msg = readFile("input-link.json");
-//			client.send(msg);
-//			boost::this_thread::sleep_for(boost::chrono::seconds(5));
-//		}
-//	});
-//}
-//
-//void simulateClientWithResponse() {
-//	boost::thread* simClientThread = new boost::thread([&]() {
-//		Asm::TCP_SyncClient client("127.0.0.1", 9600);
-//		while (_runClient) {
-//			std::string msg = readFile("input-do.json");
-//			std::string response = client.sendAndRead(msg);
-//			std::cout << "CLIENT Response: " << response << "\n";#ifdef __linux__
-//
-//			boost::this_thread::sleep_for(boost::chrono::seconds(5));
-//		}
-//	});
-//}
-
-
-
-//void readCallback(boost::asio::ip::tcp::socket& socket, size_t len, std::array<char, Asm::TcpServer::MAX_BUFFER_SIZE>& _buffer)
-//{
-//    std::cout << "Got " << len << " bytes: " << _buffer[0] << _buffer[1] << _buffer[2] << _buffer[3] << _buffer[4] << _buffer[5] << std::endl;
-//
-//    std::string message{"OK\n"};
-//    socket.write_some(boost::asio::buffer(message));
-////		if (doc.HasParseError() == true) {
-//			std::cout << "Parsing error" << std::endl;
-//			return;
-//		}
-//    std::cout << "Did write" << std::endl;
-//}
-
 int main() {
 	Observer observer;
 	tbb::task_scheduler_init tbb_init;
@@ -137,31 +80,23 @@ int main() {
 
 	std::cout << "TBB threads, max available: " << tbb::task_scheduler_init::default_num_threads() << std::endl;
 
-	//runDOAccessExamples();
-	//runDOReactorExamples();
-	//runDOTimerExamples();
-	//runModuleUsageExamples();
-	//runDOSerializationExamples();
-	//runTBBUsageExamples();
+	runDOAccessExamples();
+	runDOReactorExamples();
+	runDOTimerExamples();
+	runModuleUsageExamples();
+	runDOSerializationExamples();
+	runTBBUsageExamples();
 
+	// Should be treaded as singletons
     std::unique_ptr<Asm::TcpServer> pDOServer = std::make_unique<Asm::TcpServer>(9600, Asm::do_handler);
     std::unique_ptr<Asm::TcpServer> pLOServer = std::make_unique<Asm::TcpServer>(9601, Asm::lo_handler);
-
-//	try {
-//		simulateClient();
-//		boost::this_thread::sleep_for(boost::chrono::seconds(2));
-//		simulateClientWithResponse();
-//		//boost::this_thread::sleep_for(boost::chrono::seconds(30));
-//		//_runClient = false;
-//	}
-//	catch (std::exception& e) {
-//		std::cerr << "Exception:: " << e.what() << std::endl;
-//	}
 
 	std::cout << "===================================================================" << std::endl;
 	std::cout << "Enter \'q\' for quit tests!" << std::endl;
 	char c;
 	std::cin >> c;
+
+//	std::this_thread::sleep_for(std::chrono::seconds(45));
 
 	exit(0);
 }
