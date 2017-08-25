@@ -8,6 +8,7 @@
 #include "../../external/rapidjson/include/rapidjson/document.h"
 #include "../../external/rapidjson/include/rapidjson/stringbuffer.h"
 #include "../../external/rapidjson/include/rapidjson/writer.h"
+#include "../../external/rapidjson/include/rapidjson/error/en.h"
 
 #include "../asm/asm.hpp"
 #include "../maker/maker_reflection.hpp"
@@ -25,8 +26,11 @@ void do_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
     rapidjson::StringBuffer rjsb;
     rapidjson::Writer<rapidjson::StringBuffer> rjw(rjsb);
 
+    buffer[len] = 0; //Terminate it with 0x00  definitely
+
     if(rjdoc_in.ParseInsitu(&buffer[0]).HasParseError()) {
-        std::cout << "do_handler has parsing error" << std::endl;
+        std::cout << "do_handler has parsing error at offset " << rjdoc_in.GetErrorOffset() << std::endl;
+        std::cout << ">>>" << rapidjson::GetParseError_En(rjdoc_in.GetParseError()) << std::endl;
         return;
     }
 
@@ -62,8 +66,11 @@ void lo_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
 {
     rapidjson::Document rjdoc_in;
 
+    buffer[len] = 0; //Terminate it with 0x00  definitely
+
     if(rjdoc_in.ParseInsitu(&buffer[0]).HasParseError()) {
-        std::cout << "do_handler has parsing error" << std::endl;
+        std::cout << "lo_handler has parsing error at offset " << rjdoc_in.GetErrorOffset() << std::endl;
+        std::cout << ">>>" << rapidjson::GetParseError_En(rjdoc_in.GetParseError()) << std::endl;
         return;
     }
 

@@ -11,9 +11,11 @@
 #include "ProcessModule.hpp"
 #include "SerializeModule.hpp"
 #include "TBBModule.hpp"
+#include "SystemModule.hpp"
 
 extern InputModule inModule;
 extern ProcessModule processModule;
 extern OutputModule outModule;
 extern SerializeModule serModule;
 extern TBBModule tbbModule;
+extern SystemModule sysModule;

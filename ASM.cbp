@@ -40,6 +40,7 @@
 			<Add library="boost_thread" />
 			<Add library="pthread" />
 			<Add library="tbb" />
+			<Add library="stdc++fs" />
 		</Linker>
 		<Unit filename="src/asm/asm.cpp" />
 		<Unit filename="src/asm/asm.hpp" />
@@ -62,6 +63,7 @@
 		<Unit filename="src/modules/OutputModule.hpp" />
 		<Unit filename="src/modules/ProcessModule.hpp" />
 		<Unit filename="src/modules/SerializeModule.hpp" />
+		<Unit filename="src/modules/SystemModule.hpp" />
 		<Unit filename="src/modules/TBBModule.cpp" />
 		<Unit filename="src/modules/TBBModule.hpp" />
 		<Unit filename="src/modules/global_modules.cpp" />

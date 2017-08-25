@@ -3,6 +3,7 @@
 
 // Get out the module name for humans
 const id_string_map module_name {
+    {&sysModule, "SystemModule.sysModule"},
 	{&inModule, "InputModule.inModule"},
 	{&outModule, "OutputModule.outModule"},
 	{&processModule, "ProcessModule.processModule"},
@@ -11,8 +12,7 @@ const id_string_map module_name {
 };
 
 // Get out the DO name for humans
-const id_string_map do_names
-{
+const id_string_map do_names {
 	{&inModule.DOintOutput, "InputModule.inModule.DOintOutput"},
 	{&inModule.DOstringOutput, "InputModule.inModule.DOstringOutput"},
 	{&outModule.DOintInput, "OutputModule.outModule.DOintInput"},
@@ -38,6 +38,8 @@ const print_module_map print_modules {
 };
 
 const name_dataobject_map name_dataobjects {
+    {"SystemModule.sysModule.deserializeAll", sysModule.deserializeAll},
+	{"SystemModule.sysModule.serializeAll", sysModule.serializeAll},
 	{"InputModule.inModule.DOintOutput", inModule.DOintOutput},
 	{"InputModule.inModule.DOstringOutput", inModule.DOstringOutput},
 	{"OutputModule.outModule.DOintInput", outModule.DOintInput},
