@@ -16,9 +16,11 @@
 #include <fstream>
 #include <thread>
 #include <chrono>
+#include <memory>
 
 #include <tbb/tbb.h>
 
+#include "logger/logger.hpp"
 #include "communication/ReceiveHandler.hpp"
 #include "communication/TcpServer.hpp"
 
@@ -71,14 +73,19 @@ int main() {
 	Observer observer;
 	tbb::task_scheduler_init tbb_init;
 
+	Logger::pLOG->trace("Trace log active");
+    Logger::pLOG->debug("Debug log active");
+    Logger::pLOG->info("Info log active");
+    Logger::pLOG->warn("Warning log active");
+    Logger::pLOG->error("Error log active");
+    Logger::pLOG->critical("Critical log active");
+
+  	Logger::pLOG->info("TID of main: {}", syscall(SYS_gettid));
+
 	// Wait for all instantiation processes to finish
 	std::this_thread::sleep_for(std::chrono::seconds(5));
 
-#ifdef __linux__
-	std::cout << "TID of main: " << syscall(SYS_gettid) << std::endl;
-#endif
-
-	std::cout << "TBB threads, max available: " << tbb::task_scheduler_init::default_num_threads() << std::endl;
+	Logger::pLOG->info("TBB threads, max available: {}", tbb::task_scheduler_init::default_num_threads());
 
 	runDOAccessExamples();
 	runDOReactorExamples();
