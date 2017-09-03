@@ -7,9 +7,7 @@
 #include <string>
 
 #include "../asm/asm.hpp"
-
 #include "../modules/global_modules.hpp"
-
 #include "../maker/maker_reflection.hpp"
 
 void runTBBUsageExamples() {

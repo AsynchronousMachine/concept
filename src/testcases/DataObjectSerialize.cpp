@@ -2,16 +2,14 @@
 ** Test cases for dealing with DataObjects regarding de-/serialization.
 */
 
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/document.h>
+#include <rapidjson/filewritestream.h>
+#include <rapidjson/prettywriter.h>
+
 #include "../asm/asm.hpp"
-
 #include "../modules/global_modules.hpp"
-
 #include "../maker/maker_reflection.hpp"
-
-#include "../../external/rapidjson/include/rapidjson/rapidjson.h"
-#include "../../external/rapidjson/include/rapidjson/document.h"
-#include "../../external/rapidjson/include/rapidjson/filewritestream.h"
-#include "../../external/rapidjson/include/rapidjson/prettywriter.h"
 
 void runDOSerializationExamples() {
     std::cout << "===================================================================" << std::endl;

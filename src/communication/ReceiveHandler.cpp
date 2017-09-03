@@ -4,11 +4,11 @@
 
 #include <iostream>
 
-#include "../../external/rapidjson/include/rapidjson/rapidjson.h"
-#include "../../external/rapidjson/include/rapidjson/document.h"
-#include "../../external/rapidjson/include/rapidjson/stringbuffer.h"
-#include "../../external/rapidjson/include/rapidjson/writer.h"
-#include "../../external/rapidjson/include/rapidjson/error/en.h"
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/error/en.h>
 
 #include "../asm/asm.hpp"
 #include "../maker/maker_reflection.hpp"

@@ -23,7 +23,7 @@
 #include <boost/thread/shared_lock_guard.hpp>
 #include <boost/variant.hpp>
 
-#include "../../external/rapidjson/include/rapidjson/document.h"
+#include <rapidjson/document.h>
 
 #include "dataobjectreactor.hpp"
 

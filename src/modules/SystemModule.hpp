@@ -4,13 +4,13 @@
 #include <iostream>
 #include <experimental/filesystem>
 
+#include <rapidjson/prettywriter.h>
+#include <rapidjson/filewritestream.h>
+#include <rapidjson/filereadstream.h>
+#include <rapidjson/error/en.h>
+
 #include "../asm/asm.hpp"
 #include "../maker/maker_reflection.hpp"
-
-#include "../../external/rapidjson/include/rapidjson/prettywriter.h"
-#include "../../external/rapidjson/include/rapidjson/filewritestream.h"
-#include "../../external/rapidjson/include/rapidjson/filereadstream.h"
-#include "../../external/rapidjson/include/rapidjson/error/en.h"
 
 class SystemModule {
   private:

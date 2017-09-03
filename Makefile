@@ -1,12 +1,12 @@
-CPPFLAGS        = -std=c++1z -fdiagnostics-color=always -Wall -Wfatal-errors \
-				  -DSPDLOG_DEBUG_ON -DSPDLOG_TRACE_ON \
-				  -Iexternal/spdlog/include
+CPPFLAGS        = -std=c++1z -fdiagnostics-color=always -Wall -Wfatal-errors -Iexternal/spdlog/include -Iexternal/rapidjson/include
+
 #Enable if e.g. custom boost include dir
 #CPPFLAGSCUSTOM  = -I/usr/local/include
 
 LDLIBS          = -lstdc++fs -lboost_timer -lboost_thread -lboost_system -lpthread -ltbb
+
 #Enable if e.g. custom boost lib dir
-#LDFLAGSCUSTOM   := -L/usr/local/lib
+#LDFLAGSCUSTOM   = -L/usr/local/lib
 
 FILES           = src/asm/asm.cpp src/maker/maker_reflection.cpp src/communication/ReceiveHandler.cpp src/logger/logger.cpp src/modules/*.cpp src/testcases/*.cpp src/main.cpp
 TARGET          = asm
@@ -24,7 +24,7 @@ help:
 	@$(ECHO) "make cachegrind"
 
 $(TARGET)_debug: $(FILES)
-	$(CXX) $(CPPFLAGS) -Og -g $(CPPFLAGSCUSTOM) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
+	$(CXX) $(CPPFLAGS) -Og -g -DTBB_USE_DEBUG=1 -DSPDLOG_DEBUG_ON -DSPDLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
 
 $(TARGET)_release: $(FILES)
 	$(CXX) $(CPPFLAGS) -Ofast $(CPPFLAGSCUSTOM) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)

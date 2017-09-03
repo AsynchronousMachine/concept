@@ -5,7 +5,6 @@
 */
 
 #include "../asm/asm.hpp"
-
 #include "../datatypes/MyComplexDOType.hpp"
 
 class SerializeModule {

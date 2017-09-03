@@ -6,14 +6,6 @@
 
 #pragma once
 
-#include <functional>
-#include <iostream>
-#include <string>
-
-#include <boost/thread.hpp>
-
-#include <tbb/tbb.h>
-
 #ifdef __linux__
 #include <pthread.h>
 #include <sys/syscall.h>
@@ -21,6 +13,14 @@
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #endif
+
+#include <functional>
+#include <iostream>
+#include <string>
+
+#include <boost/thread.hpp>
+
+#include <tbb/tbb.h>
 
 namespace Asm {
 

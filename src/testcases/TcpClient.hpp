@@ -1,4 +1,5 @@
 #pragma once
+
 #include <boost/asio.hpp>
 
 namespace Asm {
@@ -11,7 +12,7 @@ namespace Asm {
 	class TCP_SyncClient {
 
 	private:
-		
+
 		io_service _service;
 		ip::tcp::endpoint _endpoint;
 
@@ -34,7 +35,7 @@ namespace Asm {
 			char _readBuffer[MAX_DATA_LENGTH];
 			int bytes = _socket.read_some(boost::asio::buffer(_readBuffer));
 			std::string response(_readBuffer, bytes);
-			
+
 			_socket.close();
 			return response;
 		}

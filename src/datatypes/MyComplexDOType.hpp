@@ -3,7 +3,7 @@
 #include <string>
 #include <iostream>
 
-#include "../../external/rapidjson/include/rapidjson/document.h"
+#include <rapidjson/document.h>
 
 class MyComplexDOType {
   public:
