@@ -7,6 +7,10 @@
 
 #include <memory>
 
+// Adjust settings for spdlog, ref. spdlog/tweakme.h
+#define SPDLOG_FINAL final
+#define SPDLOG_PREVENT_CHILD_FD
+#define SPDLOG_ENABLE_SYSLOG
 #include <spdlog/spdlog.h>
 
 namespace Logger {
