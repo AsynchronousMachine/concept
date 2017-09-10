@@ -3,7 +3,7 @@ CPPFLAGS        = -std=c++1z -fdiagnostics-color=always -Wall -Wfatal-errors -Ie
 #Enable if e.g. custom boost include dir
 #CPPFLAGSCUSTOM  = -I/usr/local/include
 
-LDLIBS          = -lstdc++fs -lboost_timer -lboost_thread -lboost_system -lpthread -ltbb
+LDLIBS          = -lboost_system -lboost_timer -lboost_thread  -lpthread -ltbb -lstdc++fs
 
 #Enable if e.g. custom boost lib dir
 #LDFLAGSCUSTOM   = -L/usr/local/lib

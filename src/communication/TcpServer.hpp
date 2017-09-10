@@ -16,6 +16,8 @@
 
 #include <boost/asio.hpp>
 
+#include "../logger/logger.hpp"
+
 namespace Asm {
 
 class TcpServer {
@@ -44,9 +46,9 @@ class TcpServer {
 
                 boost::asio::connect(socket, endpoint_iterator);
 
-                std::cout << "TcpServer did connect to stop" << std::endl;
+                Logger::pLOG->info("TcpServer did connect to stop");
             } catch (std::exception& e) {
-                std::cerr << "TcpServer stop: " << e.what() << std::endl;
+                Logger::pLOG->error("TcpServer exception in stop: {}", e.what());
             }
         }
 
@@ -54,7 +56,7 @@ class TcpServer {
             std::array<char, MAX_BUFFER_SIZE> _buffer;
 
     #ifdef __linux__
-            std::cout << "TcpServer-THRD has TID-" << syscall(SYS_gettid) << std::endl;
+            Logger::pLOG->info("TcpServer-THRD has TID-{}", syscall(SYS_gettid));
     #endif
 
             try {
@@ -67,11 +69,11 @@ class TcpServer {
                 //acceptor.set_option(boost::asio::socket_base::linger{true, 3});
 
                 while(_run_state) {
-                    std::cout << "TcpServer wait for connection" << std::endl;
+                    Logger::pLOG->trace("TcpServer wait for connection");
 
                     acceptor.accept(socket, endpoint_peer);
 
-                    std::cout << "TcpServer got connection from " << endpoint_peer.address().to_string() << " " << endpoint_peer.port() << std::endl;
+                    Logger::pLOG->trace("TcpServer got connection from {} {}", endpoint_peer.address().to_string(), endpoint_peer.port());
 
                     if(!_run_state)
                         break;
@@ -85,9 +87,9 @@ class TcpServer {
                     socket.close();
                 }
 
-                std::cout << "TcpServer got stop" << std::endl;
+                Logger::pLOG->info("TcpServer got stop");
             } catch (std::exception& e) {
-                std::cerr << "TcpServer run: " << e.what() << std::endl;
+                Logger::pLOG->error("TcpServer exception in run: {}", e.what());
             }
         }
 
@@ -105,7 +107,7 @@ class TcpServer {
         TcpServer &operator=(TcpServer&&) = delete;
 
         ~TcpServer() {
-            std::cout << "Delete TcpServer" << std::endl;
+            Logger::pLOG->info("Delete TcpServer");
             stop();
             _thrd.join();
         }

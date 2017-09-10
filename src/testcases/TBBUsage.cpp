@@ -6,13 +6,14 @@
 
 #include <string>
 
+#include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 #include "../modules/global_modules.hpp"
 #include "../maker/maker_reflection.hpp"
 
 void runTBBUsageExamples() {
-	std::cout << "===================================================================" << std::endl;
-	std::cout << "Run TBB usage samples .." << std::endl;
+	Logger::pLOG->trace("===================================================================");
+	Logger::pLOG->trace("Run TBB usage samples ..");
 
 	// Establish a Link for testing purpose
 	// InputModule.inModule.DOintOutput |---> TBBModule.tbbModule.DOcomplexInOut
@@ -27,7 +28,7 @@ void runTBBUsageExamples() {
 	// Clear the Link after testing purpose
     tbbModule.LinkInt.clear("TBB-Int", name_dataobjects.at("InputModule.inModule.DOintOutput"));
 
-	std::cout << "===================================================================" << std::endl;
+	Logger::pLOG->trace("===================================================================");
 	std::cout << "Enter \'n\' for next test!" << std::endl;
 	char c;
 	std::cin >> c;

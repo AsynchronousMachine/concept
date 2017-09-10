@@ -11,6 +11,8 @@
 #include <sys/eventfd.h>
 #endif
 
+#include "../logger/logger.hpp"
+
 namespace Asm {
 class TimerObject {
     friend class TimerObjectReactor; // This enables the timer reactor to access the internals
@@ -24,7 +26,7 @@ class TimerObject {
     TimerObject() : _fd(-1), _interval(0), _next(0) {
 #ifdef __linux__
         if ((_fd = ::timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC)) < 0) {
-            std::cout << "Timer could not be created: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Timer could not be created: {}", std::strerror(errno));
         }
 #endif
     }
@@ -46,10 +48,10 @@ class TimerObject {
 
     bool setRelativeInterval(long interval, long next = 0) {
 #ifdef __linux__
-        itimerspec val;
+        itimerspec val{};
 
         if (interval == 0 && next == 0) {
-            std::cout << "Interval and next start time must be different from zero" << std::endl;
+            Logger::pLOG->error("Interval and next start time must be different from zero");
             return false;
         }
 
@@ -63,7 +65,7 @@ class TimerObject {
 
 
         if (::timerfd_settime(_fd, 0, &val, 0) < 0) {
-            std::cout << "Timer could not set: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Timer could not set: {}", std::strerror(errno));
             return false;
         }
 #endif
@@ -72,10 +74,10 @@ class TimerObject {
 
     bool stop() {
 #ifdef __linux__
-        itimerspec val {};
+        itimerspec val{};
 
         if (::timerfd_settime(_fd, 0, &val, 0) < 0) {
-            std::cout << "Timer could not stopped: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Timer could not stopped: {}", std::strerror(errno));
             return false;
         }
 #endif
@@ -93,7 +95,7 @@ class TimerObject {
     bool wait(uint64_t& elapsed) {
 #ifdef __linux__
         if (::read(_fd, &elapsed, sizeof(uint64_t)) != sizeof(uint64_t)) {
-            std::cout << "Timer could not read: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Timer could not read: {}", std::strerror(errno));
             return false;
         }
 #endif

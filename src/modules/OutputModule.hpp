@@ -4,6 +4,7 @@
 ** ser- and deserialization of the content of a DataObject
 */
 
+#include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 
 class OutputModule
@@ -16,7 +17,7 @@ private:
 		//combined action: increase outputCounter in the source
 		doSource.set([](MyComplexDOType& cc) { cc.outputCounter = cc.outputCounter + 1; });
 #ifdef __linux__
-        std::cout << "Use TID-" << syscall(SYS_gettid) << " for OutputModule/actionInt" << std::endl;
+        Logger::pLOG->trace("Use TID-{} for OutputModule/actionInt", syscall(SYS_gettid));
 #endif
 	}
 
@@ -26,7 +27,7 @@ private:
 		//combined action: increase outputCounter in the source
 		doSource.set([](MyComplexDOType& cc) { cc.outputCounter = cc.outputCounter + 1; });
 #ifdef __linux__
-        std::cout << "Use TID-" << syscall(SYS_gettid) << " for OutputModule/actionString" << std::endl;
+        Logger::pLOG->trace("Use TID-{} for OutputModule/actionString", syscall(SYS_gettid));
 #endif
 	}
 

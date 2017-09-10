@@ -6,29 +6,32 @@
 
 #include <string>
 
+#include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 #include "../modules/global_modules.hpp"
 #include "../maker/maker_reflection.hpp"
 
 static void printline()
 {
-	MyComplexDOType data = processModule.DOcomplexInOut.get([](auto s) {return s; });
-	std::cout << "Process: " << data.message << " In: " << data.inputCounter << " Out: " << data.outputCounter << " --> " << outModule.DOstringInput.get([](const std::string& s) {return s; }) << " length: " << outModule.DOintInput.get([](const int& i) {return i; }) << std::endl;
+	MyComplexDOType data = processModule.DOcomplexInOut.get([](auto s) { return s; });
+
+	Logger::pLOG->trace("Process: {}  In: {} Out: {} --> {} Length: {}",
+                        data.message, data.inputCounter, data.outputCounter,
+                        outModule.DOstringInput.get([](const std::string& s) { return s; }), outModule.DOintInput.get([](const int& i) { return i; }));
 }
 
 void runModuleUsageExamples() {
 
 	//Linked global DataObjects:
 	/*
-			InputModule.inModule.DOintOutput    ---|													|---> OutputModule.outModule.DOintInput
-												   |--->  ProcessModule.processModule.DOcomplexInOut ---|
-			InputModule.inModule.DOstringOutput ---|													|---> OutputModule.outModule.DOstringInput
+			InputModule.inModule.DOintOutput    ---|													 |---> OutputModule.outModule.DOintInput
+												   |--->  ProcessModule.processModule.DOcomplexInOut --->|
+			InputModule.inModule.DOstringOutput ---|													 |---> OutputModule.outModule.DOstringInput
 	*/
-    std::cout << "===================================================================" << std::endl;
-    std::cout << "Run module usage samples .." << std::endl;
 
-//	name_dataobjects.at("InputModule.inModule.DOintOutput");
-//	name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut");
+    Logger::pLOG->trace("===================================================================");
+    Logger::pLOG->trace("Run module usage samples ..");
+
 	processModule.LinkInt.set("Int", name_dataobjects.at("InputModule.inModule.DOintOutput"), name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 	processModule.LinkString.set("String", name_dataobjects.at("InputModule.inModule.DOstringOutput"), name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 
@@ -56,9 +59,6 @@ void runModuleUsageExamples() {
 	}
 
 	// Remove this link again
-//	outModule.LinkString.clear("String", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
-//    processModule.LinkInt.clear("Int", name_dataobjects.at("InputModule.inModule.DOintOutput"));
-//	outModule.LinkInt.clear("Int", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 	processModule.LinkInt.clear("Int", name_dataobjects.at("InputModule.inModule.DOintOutput"));
 	processModule.LinkString.clear("String", name_dataobjects.at("InputModule.inModule.DOstringOutput"));
 	outModule.LinkInt.clear("Int", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
@@ -69,7 +69,7 @@ void runModuleUsageExamples() {
 	boost::this_thread::sleep_for(boost::chrono::seconds(3));
 	printline();
 
-    std::cout << "===================================================================" << std::endl;
+    Logger::pLOG->trace("===================================================================");
     std::cout << "Enter \'n\' for next test!" << std::endl;
     char c;
     std::cin >> c;

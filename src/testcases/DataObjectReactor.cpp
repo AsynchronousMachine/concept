@@ -8,6 +8,7 @@
 #include <string>
 #include <atomic>
 
+#include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 
 static struct CustomStruct {
@@ -20,8 +21,8 @@ class CustomClass {
 };
 
 void runDOReactorExamples() {
-    std::cout << "===================================================================" << std::endl;
-    std::cout << "Run DataObjectReactor test .." << std::endl;
+    Logger::pLOG->trace("===================================================================");
+    Logger::pLOG->trace("Run DataObjectReactor test ..");
 
     Asm::DataObject<int> doExInt(10);
     Asm::DataObject<CustomStruct> doExStruct(cs);
@@ -37,9 +38,9 @@ void runDOReactorExamples() {
     doExInt.registerLink("doExInt->doExStruct", doExStruct, [](Asm::DataObject<int>& triggeredDoInt, Asm::DataObject<CustomStruct>& triggeredDoStruct) {
         int doExIntVal = triggeredDoInt.get([](int i) { return i; });
         const CustomStruct doExStructVal = triggeredDoStruct.get([](const CustomStruct& customStruct) { return customStruct; });
-        std::cout << "Triggered link [doExInt->doExStruct] with values doExInt: " << doExIntVal << ", doExStruct.i: " << doExStructVal.i << std::endl;
+        Logger::pLOG->trace("Triggered link [doExInt->doExStruct] with values doExInt: {}, doExStruct.i: {}", doExIntVal, doExStructVal.i);
 #ifdef __linux__
-        std::cout << "Use TID-" << syscall(SYS_gettid) << " for datalink test1" << std::endl;
+        Logger::pLOG->trace("Use TID-{} for datalink test1", syscall(SYS_gettid));
 #endif
     });
 
@@ -52,17 +53,17 @@ void runDOReactorExamples() {
     doExInt.registerLink("doExInt->doExClass", doExClass, [](Asm::DataObject<int>& triggeredDoInt, Asm::DataObject<CustomClass>& triggeredDoClass) {
         int doExIntVal = triggeredDoInt.get([](int i) { return i; });
         const CustomClass doExClassVal = triggeredDoClass.get([](const CustomClass& complexClass) { return complexClass; });
-        std::cout << "Triggered link [doExInt->doExClass] with values doExInt: " << doExIntVal << ", doExClass.inputCounter: " << doExClassVal.inputCounter << std::endl;
+        Logger::pLOG->trace("Triggered link [doExInt->doExClass] with values doExInt: {}, doExClass.inputCounter: {}", doExIntVal, doExClassVal.inputCounter);
 
 #ifdef __linux__
-        std::cout << "Use TID- " << syscall(SYS_gettid) << " for datalink test2" << std::endl;
+        Logger::pLOG->trace("Use TID-{} for datalink test2", syscall(SYS_gettid));
 #endif
     });
 
     Asm::pDOR->trigger(doExInt);
     boost::this_thread::sleep_for(boost::chrono::seconds(3)); // wait for links to be executed
 
-    std::cout << "===================================================================" << std::endl;
+    Logger::pLOG->trace("===================================================================");
     std::cout << "Enter \'n\' for next test!" << std::endl;
     char c;
     std::cin >> c;

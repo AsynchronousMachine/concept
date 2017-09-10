@@ -4,6 +4,7 @@
 ** ser- and deserialization of the content of a DataObject
 */
 
+#include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 
 class ProcessModule
@@ -17,7 +18,7 @@ private:
 		doTarget.set([&doSource](MyComplexDOType& cc) { cc.inputCounter = cc.inputCounter + 1; });
 		doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](int i) {return std::to_string(i); }); }, *Asm::pDOR);
 #ifdef __linux__
-        std::cout << "Use TID-" << syscall(SYS_gettid) << " for ProcessModule/actionInt" << std::endl;
+        Logger::pLOG->trace("Use TID-{} for ProcessModule/actionInt", syscall(SYS_gettid));
 #endif
 	}
 
@@ -27,7 +28,7 @@ private:
 		doTarget.set([&doSource](MyComplexDOType& cc) { cc.inputCounter = cc.inputCounter + 1; });
 		doTarget.setAndTrigger([&doSource](MyComplexDOType& cc) { cc.message = doSource.get([](std::string s) {return s; }); }, *Asm::pDOR);
 #ifdef __linux__
-        std::cout << "Use TID-" << syscall(SYS_gettid) << " for ProcessModule/actionString" << std::endl;
+        Logger::pLOG->trace("Use TID-{} for ProcessModule/actionString", syscall(SYS_gettid));
 #endif
 	}
 

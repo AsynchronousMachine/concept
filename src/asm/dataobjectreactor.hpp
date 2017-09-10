@@ -22,6 +22,8 @@
 
 #include <tbb/tbb.h>
 
+#include "../logger/logger.hpp"
+
 namespace Asm {
 
 template <typename D>
@@ -38,7 +40,7 @@ class DataObjectReactor {
         Threadpool(unsigned thrd_cnt, std::function<void(unsigned inst)> f) : _f(f) {
             unsigned cores = boost::thread::hardware_concurrency();
 
-            std::cout << "Found " << cores << " cores for DOR" << std::endl;
+            Logger::pLOG->info("Found {} cores for DOR", cores);
 
             if (thrd_cnt == 0 || thrd_cnt > cores)
                 thrd_cnt = cores;
@@ -49,25 +51,25 @@ class DataObjectReactor {
                 //The thread name is a meaningful C language string, whose length is
                 //restricted to 16 characters, including the terminating null byte ('\0')
                 std::string s = "DOR-THRD-" + std::to_string(i);
-                std::cout << "Created " << s << std::endl;
+                Logger::pLOG->info("Created {}", s);
 
 #ifdef __linux__
                 if (pthread_setname_np(t->native_handle(), s.data()))
-                    std::cout << "Could not set name for DOR-THRD-" << std::to_string(i) << std::endl;
+                    Logger::pLOG->warn("Could not set name for {}", s);
 
                 struct sched_param param {};
                 param.sched_priority = RT_PRIO;
 
                 if (pthread_setschedparam(t->native_handle(), SCHED_FIFO, &param))
-                    std::cout << "Could not set realtime parameter for DOR-THRD-" << std::to_string(i) << std::endl;
+                    Logger::pLOG->warn("Could not set realtime parameter for {}", s);
 #endif
             }
 
-            std::cout << "DOR has " << _tg.size() << " thread/s running" << std::endl;
+            Logger::pLOG->info("DOR has {} thread/s running", _tg.size());
         }
 
         ~Threadpool() {
-            std::cout << "Delete threadpool of DOR" << std::endl;
+            Logger::pLOG->info("Delete threadpool of DOR");
             _tg.interrupt_all();
             _tg.join_all();
         }
@@ -86,7 +88,7 @@ class DataObjectReactor {
         try {
 
 #ifdef __linux__
-            std::cout << "DOR-THRD-" << inst << " has TID-" << syscall(SYS_gettid) << std::endl;
+            Logger::pLOG->info("DOR-THRD-{} has TID-{}", inst, syscall(SYS_gettid));
 #endif
 
             while (_run_state) {
@@ -94,10 +96,10 @@ class DataObjectReactor {
                 f();
             }
         } catch(tbb::user_abort abortException) {
-            std::cout << "Abort DOR-THRD-" << inst << std::endl;
+            Logger::pLOG->info("Abort DOR-THRD-{}", inst);
             _run_state = false;
         }
-        std::cout << "DOR-THRD-" << inst << " has stopped" << std::endl;
+        Logger::pLOG->info("DOR-THRD-{} has stopped", inst);
     }
 
   public:
@@ -112,7 +114,7 @@ class DataObjectReactor {
     DataObjectReactor &operator=(DataObjectReactor&&) = delete;
 
     ~DataObjectReactor() {
-        std::cout << std::endl << "Delete DOR" << std::endl;
+        Logger::pLOG->info("Delete DOR");
         _run_state = false;
         _tbbExecutionQueue.abort(); // Stops waiting of pop() in run()
     }

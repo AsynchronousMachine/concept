@@ -10,6 +10,7 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/error/en.h>
 
+#include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 #include "../maker/maker_reflection.hpp"
 #include "../modules/global_modules.hpp"
@@ -29,8 +30,8 @@ void do_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
     buffer[len] = 0; //Terminate it with 0x00  definitely
 
     if(rjdoc_in.ParseInsitu(&buffer[0]).HasParseError()) {
-        std::cout << "do_handler has parsing error at offset " << rjdoc_in.GetErrorOffset() << std::endl;
-        std::cout << ">>>" << rapidjson::GetParseError_En(rjdoc_in.GetParseError()) << std::endl;
+        Logger::pLOG->error("do_handler has parsing error at offset {}", rjdoc_in.GetErrorOffset());
+        Logger::pLOG->error(">{}", rapidjson::GetParseError_En(rjdoc_in.GetParseError()));
         return;
     }
 
@@ -39,25 +40,25 @@ void do_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
         if (name_dataobjects.find(doName) != name_dataobjects.end()) {
             auto doInstance = name_dataobjects.at(doName);
             if (itr->value.IsNull()) {
-                std::cout << "do_handler got read request" << std::endl;
+                Logger::pLOG->trace("do_handler got read request");
                 boost::apply_visitor([&](auto& d) { d.serialize(rjval_out, rjdoc_out.GetAllocator()); }, doInstance);
                 rjdoc_out.AddMember(rapidjson::StringRef(doName), rjval_out, rjdoc_out.GetAllocator());
             }
             else {
-                std::cout << "do_handler got write request" << std::endl;
+                Logger::pLOG->trace("do_handler got write request");
                 boost::apply_visitor([&](auto& d) { d.deserialize(const_cast<rapidjson::Value&>(itr->value)); }, doInstance);
             }
         }
     }
 
-    std::cout << "Direct access to the DataObjects of the test case:" << std::endl;
-    inModule.DOintOutput.get([](const int i) { std::cout << "inModule.DOintOutput got: " << i << std::endl; });
-    inModule.DOstringOutput.get([](const std::string s) { std::cout << "inModuleDOstringOutput got: " << s << std::endl; });
+    Logger::pLOG->trace("Direct access to the DataObjects of the test case:");
+    inModule.DOintOutput.get([](const int i) { Logger::pLOG->trace("inModule.DOintOutput got: {}", i ); });
+    inModule.DOstringOutput.get([](const std::string s) { Logger::pLOG->trace("inModuleDOstringOutput got: {}", s); });
 
     rjdoc_out.Accept(rjw);
 
-    std::cout << "Stringify and output the created DOM:" << std::endl;
-    std::cout << rjsb.GetString() << std::endl;
+    Logger::pLOG->trace("Stringify and output the created DOM:");
+    Logger::pLOG->trace("{}", rjsb.GetString());
 
     socket.write_some(boost::asio::buffer(rjsb.GetString(), rjsb.GetSize()));
 }
@@ -69,8 +70,8 @@ void lo_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
     buffer[len] = 0; //Terminate it with 0x00  definitely
 
     if(rjdoc_in.ParseInsitu(&buffer[0]).HasParseError()) {
-        std::cout << "lo_handler has parsing error at offset " << rjdoc_in.GetErrorOffset() << std::endl;
-        std::cout << ">>>" << rapidjson::GetParseError_En(rjdoc_in.GetParseError()) << std::endl;
+        Logger::pLOG->error("lo_handler has parsing error at offset {}", rjdoc_in.GetErrorOffset());
+        Logger::pLOG->error(">{}", rapidjson::GetParseError_En(rjdoc_in.GetParseError()));
         return;
     }
 
@@ -81,11 +82,11 @@ void lo_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
             const rapidjson::Value& v = itr->value;
             if (v.IsArray()) {
                 if (v.GetArray().Size() == 3) {
-                    std::cout << "link_handler got set request" << std::endl;
+                    Logger::pLOG->trace("link_handler got set request");
                     boost::apply_visitor([&](auto& l) {l.set(v.GetArray()[0].GetString(), name_dataobjects.at(v.GetArray()[1].GetString()), name_dataobjects.at(v.GetArray()[2].GetString())); }, linkInstance);
                 }
                 else {
-                    std::cout << "link_handler got clear request" << std::endl;
+                    Logger::pLOG->trace("link_handler got clear request");
                     boost::apply_visitor([&](auto& l) {l.clear(v.GetArray()[0].GetString(), name_dataobjects.at(v.GetArray()[1].GetString())); }, linkInstance);
                 }
             }

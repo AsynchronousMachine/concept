@@ -9,6 +9,7 @@
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/error/en.h>
 
+#include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 #include "../maker/maker_reflection.hpp"
 
@@ -16,16 +17,16 @@ class SystemModule {
   private:
 
     void emptySer(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
-        std::cout << "Serialize not implemented" << std::endl;
+        Logger::pLOG->warn("Serialize not implemented");
     }
 
     void emptyDeser(rapidjson::Value& value) {
-        std::cout << "Deserialize not implemented" << std::endl;
+        Logger::pLOG->warn("Deserialize not implemented");
     }
 
     void runSerializeAll(rapidjson::Value& value) {
         if (value.IsBool() && value.GetBool()) {
-            std::cout << "Dump <system-dump.json> to disk" << std::endl;
+            Logger::pLOG->trace("Dump <system-dump.json> to disk");
             using namespace rapidjson;
             Document doc; // Null
             doc.SetObject();
@@ -58,7 +59,7 @@ class SystemModule {
 
     void runDeserializeAll(rapidjson::Value& value) {
         if (value.IsBool() && value.GetBool()) {
-            std::cout << "Try to read <system-dump.json> from disk" << std::endl;
+            Logger::pLOG->trace("Try to read <system-dump.json> from disk");
 
             if (!std::experimental::filesystem::exists("system-dump.json"))
                 return;
@@ -72,8 +73,8 @@ class SystemModule {
             fclose(fp);
 
             if (doc.HasParseError() == true) {
-                std::cout << "Deserialize has parsing error at offset " << doc.GetErrorOffset() << std::endl;
-                std::cout << ">>>" << GetParseError_En(doc.GetParseError()) << std::endl;
+                Logger::pLOG->error("Deserialize has parsing error at offset {}", doc.GetErrorOffset());
+                Logger::pLOG->error(">{}", GetParseError_En(doc.GetParseError()));
                 return;
             }
 
@@ -86,8 +87,8 @@ class SystemModule {
                         d.deserialize(v);
                     }, name_dataobjects.at(itr->name.GetString()));
                 } catch (const std::exception& e) {
-                    std::cerr << "Deserialize exeption: " << e.what() << std::endl;
-                    std::cout << "Missing " << itr->name.GetString() << std::endl;
+                    Logger::pLOG->error("Deserialize exeption: {}", e.what());
+                    Logger::pLOG->error(">Missing {}", itr->name.GetString());
                 }
 
             }
@@ -99,13 +100,14 @@ class SystemModule {
 
         value.SetObject();
 
-        std::cout << "This is for humans:" << std::endl;
+        Logger::pLOG->trace("This is for humans:");
 
         for(const auto& m : print_modules) {
             rjvalue.SetString(m.second.c_str(), allocator);
             value.AddMember(rapidjson::StringRef(m.first.c_str()), rjvalue, allocator);
 
-            std::cout << m.first << std::endl << m.second << std::endl;
+            Logger::pLOG->trace("{}", m.first);
+            Logger::pLOG->trace("{}", m.second);
         }
     }
 

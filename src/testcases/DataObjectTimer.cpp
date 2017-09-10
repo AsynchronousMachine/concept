@@ -4,46 +4,53 @@
 ** ser- and deserialization of the content of a DataObject
 */
 
+#include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 
 static void tickTack(Asm::TimerObject& timer) {
     for (int i = 0; i < 3; ++i) {
         uint64_t t; // Amount of intervals between wait()s
+
         timer.wait(t); // Wait for the timer to return
-        std::cout << (!(i%2) ? "tick (" : "tack (") << (t * timer.getInterval()) << "ms)" << std::endl;
+
+        if(!(i%2))
+            Logger::pLOG->trace("tick ({}ms)", t * timer.getInterval());
+        else
+            Logger::pLOG->trace("tack ({}ms)", t * timer.getInterval());
     }
 }
 
 void runDOTimerExamples() {
-    std::cout << "===================================================================" << std::endl;
-    std::cout << "Run TimerObject handling samples .." << std::endl;
+    Logger::pLOG->trace("===================================================================");
+    Logger::pLOG->trace("Run TimerObject handling samples ..");
 
     Asm::TimerObject timer;
-    std::cout << "Start timer in 3s with interval 2s" << std::endl;
+    Logger::pLOG->trace("Start timer in 3s with interval 2s");
     timer.setRelativeInterval(2000, 3000);
     tickTack(timer);
 
-    std::cout << "Timer stop and restart..." << std::endl;
+    Logger::pLOG->trace("Timer stop and restart...");
     timer.stop();
     timer.restart();
     tickTack(timer);
 
-    std::cout << "Change interval to 1s with interval 1s and restart..." << std::endl;
+    Logger::pLOG->trace("Change interval to 1s with interval 1s and restart...");
     timer.stop();
     timer.setRelativeInterval(1000, 1000); // No need to restart manually. done with setRelativeInterval
     tickTack(timer);
     timer.stop();
 
-    std::cout << "===================================================================" << std::endl;
-    std::cout << "TimerReactor tests .." << std::endl;
+    Logger::pLOG->trace("===================================================================");
+    Logger::pLOG->trace("TimerReactor tests ..");
 
     // Create the instances for test
     Asm::DataObject<Asm::TimerObject> dataObjectTimer;
     Asm::DataObject<int> dataObjectInt;
+
     dataObjectTimer.registerLink("doTimer->doInt", dataObjectInt, [](Asm::DataObject<Asm::TimerObject>& to, Asm::DataObject<int>& i){
-        std::cout << "[doTimer->doInt] was triggered by TOR" << std::endl;
+        Logger::pLOG->trace("[doTimer->doInt] was triggered by TOR");
 #ifdef __linux__
-        std::cout << "Tid of " << syscall(SYS_gettid) << " for TOR test" << std::endl;
+        Logger::pLOG->trace("Tid of {} for TOR test", syscall(SYS_gettid));
 #endif
     });
 
@@ -61,7 +68,7 @@ void runDOTimerExamples() {
 
     dataObjectTimer.unregisterLink("doTimer->doInt");
 
-    std::cout << "===================================================================" << std::endl;
+    Logger::pLOG->trace("===================================================================");
     std::cout << "Enter \'n\' for next test!" << std::endl;
     char c;
     std::cin >> c;

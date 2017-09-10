@@ -25,6 +25,8 @@
 
 #include <rapidjson/document.h>
 
+#include "../logger/logger.hpp"
+
 #include "dataobjectreactor.hpp"
 
 namespace Asm {
@@ -135,19 +137,19 @@ class DataObject {
                                         std::mem_fn(&DataObject<D>::serialize_impl<D>)(this, value, allocator); }),
                                     doDeserialize([this](rapidjson::Value& value) {
                                         std::mem_fn(&DataObject<D>::deserialize_impl<D>)(this, value); }) {
-        std::cout << "DO-CTOR with implicit trival ser-/deser fct" << std::endl;
+        Logger::pLOG->trace("DO-CTOR with implicit trival ser-/deser fct");
     }
 
     DataObject(D content, serializeFnct ptr, deserializeFnct ptr2) : _content(content),
                                                                      doSerialize(ptr),
                                                                      doDeserialize(ptr2) {
-        std::cout << "DO-CTOR with explicit ser-/deser fct" << std::endl;
+        Logger::pLOG->trace("DO-CTOR with explicit ser-/deser fct");
     }
 
     DataObject(D content) : _content(content),
                             doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}),
                             doDeserialize([](rapidjson::Value& value) {}) {
-        std::cout << "DO-CTOR with disabled ser-/deser" << std::endl;
+        Logger::pLOG->trace("DO-CTOR with disabled ser-/deser");
     }
 
     template <typename MemFun, typename MemFun2, typename ThisPtr>
@@ -156,7 +158,7 @@ class DataObject {
                                                                             std::mem_fn(ser)(thisptr, value, allocator); }),
                                                                         doDeserialize([thisptr, deser](rapidjson::Value& value) {
                                                                             std::mem_fn(deser)(thisptr, value); }) {
-        std::cout << "DO-CTOR with instance based ser-/deser fct" << std::endl;
+        Logger::pLOG->trace("DO-CTOR with instance based ser-/deser fct");
     }
 
 //    template <typename MemFun, typename MemFun2>
@@ -165,7 +167,7 @@ class DataObject {
 //                                                                   std::mem_fn(ser)(&_content, value, allocator); }),
 //                                                               doDeserialize([&, deser](rapidjson::Value& value) {
 //                                                                   std::mem_fn(deser)(&_content, value); }) {
-//        std::cout << "DO-CTOR with content based ser-/deser fct" << std::endl;
+//        Logger::pLOG->trace("DO-CTOR with content based ser-/deser fct");
 //    }
 
     template <typename MemFun, typename MemFun2>
@@ -174,11 +176,11 @@ class DataObject {
           doSerialize([&, ser](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { std::mem_fn(ser)(&_content, value, allocator); }),
           doDeserialize([&, deser](rapidjson::Value& value) { std::mem_fn(deser)(&_content, value); })
     {
-        std::cout << "DO-CTOR with content based ser-/deser fct" << std::endl;
+        Logger::pLOG->trace("DO-CTOR with content based ser-/deser fct");
     }
 
     DataObject() : doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}),
-                   doDeserialize([](rapidjson::Value& value) {}) { std::cout << "DO-CTOR only for TO" << std::endl; }
+                   doDeserialize([](rapidjson::Value& value) {}) { Logger::pLOG->trace("DO-CTOR only for TO"); }
 
     // Non-copyable
     DataObject(const DataObject&) = delete;
@@ -218,16 +220,18 @@ class DataObject {
     void registerLink(const std::string& name, DataObject<D2>& d2, LINK cb) {
         boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.insert({ name, [cb, this, &d2] { cb(*this, d2); } });
-        std::cout << "RegisterLink: " << name << std::endl;
-        std::cout << "From " << boost::core::demangle(typeid(*this).name()) << " to " << boost::core::demangle(typeid(d2).name()) << " via " << boost::core::demangle(typeid(cb).name()) << std::endl;
+        Logger::pLOG->trace("RegisterLink: {}", name);
+        Logger::pLOG->trace("From {} to {} via {}", boost::core::demangle(typeid(*this).name()),
+                                                    boost::core::demangle(typeid(d2).name()),
+                                                    boost::core::demangle(typeid(cb).name()));
     }
 
     // Remove a link to that DO by name
     void unregisterLink(const std::string& name) {
         boost::lock_guard<boost::mutex> lock(_mtx_links);
         _links.erase(name);
-        std::cout << "UnregisterLink: " << name << std::endl;
-        std::cout << "From " << boost::core::demangle(typeid(*this).name()) << std::endl;
+        Logger::pLOG->trace("UnregisterLink: {}", name);
+        Logger::pLOG->trace("From {}", boost::core::demangle(typeid(*this).name()));
     }
 
     void serialize(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {

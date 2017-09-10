@@ -18,6 +18,8 @@
 #include <chrono>
 #include <mutex>
 
+#include "../logger/logger.hpp"
+
 namespace Asm {
 // Forward declarations
 class TimerObject;
@@ -49,7 +51,7 @@ class TimerObjectReactor {
     // Threaded timer function mechanism
     void run() {
 #ifdef __linux__
-        std::cout << "TOR-THRD-0 has TID-" << syscall(SYS_gettid) << std::endl;
+        Logger::pLOG->info("TOR-THRD-0 has TID-{}", syscall(SYS_gettid));
 
         for (;;) {
             epoll_event evt[MAX_CAPACITY] {};
@@ -57,7 +59,7 @@ class TimerObjectReactor {
             int evt_cnt = ::epoll_wait(_epfd, &evt[0], MAX_CAPACITY, -1);
 
             if (evt_cnt <= 0) {
-                std::cout << "Epoll wait error: " << std::strerror(errno) << std::endl;
+                Logger::pLOG->error("Epoll wait error: {}", std::strerror(errno));
                 continue;
             }
 
@@ -66,16 +68,16 @@ class TimerObjectReactor {
                     uint64_t elapsed;
 
                     if (::read(evt[i].data.fd, &elapsed, sizeof(elapsed)) != sizeof(elapsed)) {
-                        std::cout << "Read TOR event returns wrong size: " << std::strerror(errno) << std::endl;
+                        Logger::pLOG->error("Read TOR event returns wrong size: {}", std::strerror(errno));
                         continue;
                     }
 
                     if (evt[i].data.fd == _evtfd && elapsed > 0) {
-                        std::cout << "Read TOR event returns stop command" << std::endl;
+                        Logger::pLOG->info("Read TOR event returns stop command");
                         return;
                     }
 
-                    std::cout << "TOR with TID " << syscall(SYS_gettid) << " has fired" << std::endl;
+                    Logger::pLOG->trace("TOR with TID {} has fired", syscall(SYS_gettid));
 
                     std::unique_lock<std::mutex> lock(_mtx);
                     auto itr = _notify.find(evt[i].data.fd);
@@ -87,7 +89,7 @@ class TimerObjectReactor {
             }
         }
 
-        std::cout << "TOR-THRD-0 has stopped" << std::endl;
+        Logger::pLOG->info("TOR-THRD-0 has stopped");
 #endif
     }
 
@@ -95,12 +97,12 @@ class TimerObjectReactor {
     TimerObjectReactor(DataObjectReactor& dor) : _epfd(-1), _evtfd(-1), _dor(dor) {
 #ifdef __linux__
         if ((_evtfd = ::eventfd(0, EFD_CLOEXEC)) < 0) {
-            std::cout << "Eventfd file handle could not be created in TOR: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Eventfd file handle could not be created in TOR: {}", std::strerror(errno));
             return;
         }
 
         if ((_epfd = ::epoll_create1(EPOLL_CLOEXEC)) < 0) {
-            std::cout << "Epoll file handle could not be created in TOR: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Epoll file handle could not be created in TOR: {}", std::strerror(errno));
             close(_evtfd);
             return;
         }
@@ -111,7 +113,7 @@ class TimerObjectReactor {
         evt.data.fd = _evtfd;
 
         if (::epoll_ctl(_epfd, EPOLL_CTL_ADD, _evtfd, &evt) < 0) {
-            std::cout << "Epoll control error at ADD stop event in TOR: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Epoll control error at ADD stop event in TOR: {}", std::strerror(errno));
             close(_epfd);
             close(_evtfd);
             return;
@@ -122,16 +124,16 @@ class TimerObjectReactor {
         //The thread name is a meaningful C language string, whose length is
         //restricted to 16 characters, including the terminating null byte ('\0')
         std::string s = "TOR-THRD-0";
-        std::cout << "Created " << s << std::endl;
+        Logger::pLOG->info("Created {}", s);
 
         if (pthread_setname_np(_thrd.native_handle(), s.data()))
-            std::cout << "Could not set name for TOR-THRD-0" << std::endl;
+            Logger::pLOG->warn("Could not set name for {}", s);
 
         struct sched_param param {};
         param.sched_priority = RT_PRIO;
 
         if (pthread_setschedparam(_thrd.native_handle(), SCHED_FIFO, &param))
-            std::cout << "Could not set realtime parameter for TOR-THRD-0" << std::endl;
+            Logger::pLOG->warn("Could not set realtime parameter for {}", s);
 #endif
     }
 
@@ -144,13 +146,13 @@ class TimerObjectReactor {
     TimerObjectReactor &operator=(TimerObjectReactor&&) = delete;
 
     ~TimerObjectReactor() {
-        std::cout << "Delete TOR" << std::endl;
+        Logger::pLOG->info("Delete TOR");
 
         uint64_t stop = 1;
 
 #ifdef __linux__
         if (::write(_evtfd, &stop, sizeof(stop)) != sizeof(stop)) {
-            std::cout << "Timer stop failed: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Timer stop failed: {}", std::strerror(errno));
         }
 
         _thrd.join();
@@ -182,7 +184,7 @@ class TimerObjectReactor {
                 _notify.erase(fd);
             }
 
-            std::cout << "Epoll control error at TimerObjectReactor.registerTimer: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Epoll control error at TimerObjectReactor.registerTimer: {}", std::strerror(errno));
             return false;
         }
 #endif
@@ -195,7 +197,7 @@ class TimerObjectReactor {
         int fd = dot.get([](const TimerObject& t){ return t._fd; });
 #ifdef __linux__
         if (::epoll_ctl(_epfd, EPOLL_CTL_DEL, fd, 0) < 0) {
-            std::cout << "Epoll control error at TimerObjectReactor.unregisterTimer: " << std::strerror(errno) << std::endl;
+            Logger::pLOG->error("Epoll control error at TimerObjectReactor.unregisterTimer: {}", std::strerror(errno));
             ret = false;
         }
 

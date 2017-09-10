@@ -47,16 +47,16 @@ struct Observer : tbb::task_scheduler_observer {
 		// The thread name is a meaningful C language string, whose length is
 		// restricted to 16 characters, including the terminating null byte ('\0')
 		std::string s = "TBB-TID-" + std::to_string(tid);
-		std::cout << s << std::endl;
+		Logger::pLOG->info("Created {}", s);
 
 		if (pthread_setname_np(pid, s.data()))
-			std::cout << "Could not set tbb names" << std::endl;
+			Logger::pLOG->warn("Could not set name for {}", s);
 
 		struct sched_param param = {};
 		param.sched_priority = _rt_prio;
 
 		if (pthread_setschedparam(pid, SCHED_FIFO, &param))
-			std::cout << "Could not set realtime parameter" << std::endl;
+			Logger::pLOG->warn("Could not set realtime parameter for {}", s);
 #endif
 	}
 
@@ -64,7 +64,7 @@ struct Observer : tbb::task_scheduler_observer {
 #ifdef __linux__
 		char tn[20];
 		pthread_getname_np(pthread_self(), &tn[0], sizeof(tn));
-		std::cout << "TBB-Exit: " << tn << std::endl;
+		Logger::pLOG->info("TBB-Exit: {}", tn);
 #endif
 	}
 };
@@ -83,13 +83,13 @@ int main() {
   	Logger::pLOG->info("TID of main: {}", syscall(SYS_gettid));
 
 	// Wait for all instantiation processes to finish
-	std::this_thread::sleep_for(std::chrono::seconds(5));
+	std::this_thread::sleep_for(std::chrono::seconds(3));
 
 	Logger::pLOG->info("TBB threads, max available: {}", tbb::task_scheduler_init::default_num_threads());
 
 	runDOAccessExamples();
 	runDOReactorExamples();
-	runDOTimerExamples();
+    runDOTimerExamples();
 	runModuleUsageExamples();
 	runDOSerializationExamples();
 	runTBBUsageExamples();
@@ -102,8 +102,6 @@ int main() {
 	std::cout << "Enter \'q\' for quit tests!" << std::endl;
 	char c;
 	std::cin >> c;
-
-//	std::this_thread::sleep_for(std::chrono::seconds(45));
 
 	exit(0);
 }

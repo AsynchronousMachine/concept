@@ -7,46 +7,49 @@
 #include <rapidjson/filewritestream.h>
 #include <rapidjson/prettywriter.h>
 
+#include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 #include "../modules/global_modules.hpp"
 #include "../maker/maker_reflection.hpp"
 
 void runDOSerializationExamples() {
-    std::cout << "===================================================================" << std::endl;
-    std::cout << "Run DataObject de-/serialization samples ..." << std::endl;
+    Logger::pLOG->trace("===================================================================");
+    Logger::pLOG->trace("Run DataObject de-/serialization samples ...");
 
     // Non standard test for the public de-/serialization interface of a DataObject
     {
-        std::cout << "Non standard test for the public de-/serialization interface of a DataObject ..." << std::endl;
+        Logger::pLOG->trace("Non standard test for the public de-/serialization interface of a DataObject ...");
 
         rapidjson::Document rjdoc(rapidjson::kObjectType);
         rapidjson::Value rjval;
 
         serModule.doInt.serialize(rjval, rjdoc.GetAllocator());
-        std::cout << "serModule.doInt " << rjval.GetInt() << std::endl;
+        Logger::pLOG->trace("serModule.doInt {}", rjval.GetInt());
 
         rjval.SetInt(rjval.GetInt() + 1);
 
         serModule.doInt.deserialize(rjval);
 
         serModule.doInt.serialize(rjval, rjdoc.GetAllocator());
-        std::cout << "serModule.doInt " << rjval.GetInt() << std::endl;
+        Logger::pLOG->trace("serModule.doInt {}", rjval.GetInt());
 
         // Optionally you will add the json value to a json document to form a higher order data structure.
         // Naming the json value is mandatory."SerializeModule.serModule.doInt"
-        rjdoc.AddMember("serModule.doInt", rjval, rjdoc.GetAllocator());
-        // A"SerializeModule.serModule.doInt"lternate interface for AddMember
+        rjdoc.AddMember("SerializeModule.serModule.doInt", rjval, rjdoc.GetAllocator());
+        // A SerializeModule.serModule.doInt alternate interface for AddMember
         // rapidjson::Value rjkey;
-        // rjkey.SetString("serModule.doInt", rjdoc.GetAllocator());
+        // rjkey.SetString("SerializeModule.serModule.doInt", rjdoc.GetAllocator());
         // rjdoc.AddMember(rjkey, rjval, rjdoc.GetAllocator());
+        // A SerializeModule.serModule.doInt alternate interface for AddMember, too
+        // const char* name = "SerializeModule.serModule.doInt";
+        // rjdoc.AddMember(rapidjson::StringRef(name), rjval, rjdoc.GetAllocator());
+        // std::cout << "serModule.doInt from json document " << rjdoc["serModule.doInt"].GetInt() << std::endl;
 
-        //std::cout << "serModule.doInt from json document " << rjdoc["serModule.doInt"].GetInt() << std::endl;
-
-        std::cout << "Stringify and output the created DOM:" << std::endl;
+        Logger::pLOG->trace("Stringify and output the created DOM:");
         rapidjson::StringBuffer sb;
         rapidjson::PrettyWriter<rapidjson::StringBuffer> pw(sb);
         rjdoc.Accept(pw);
-        std::cout << sb.GetString() << std::endl;
+        Logger::pLOG->trace("{}", sb.GetString());
     }
 
     // But as depicted before this is not the typical usage for de-/serialization.
@@ -54,14 +57,14 @@ void runDOSerializationExamples() {
     // involved DataObjects must be wellknown.
     // For this reason a reflection interface is also available.
     {
-        std::cout << std::endl << "Typical usage for the public de-/serialization interface of a DataObject ..." << std::endl;
+        Logger::pLOG->trace("Typical usage for the public de-/serialization interface of a DataObject ...");
 
         rapidjson::Document rjdoc(rapidjson::kObjectType);
         rapidjson::Value rjval(rapidjson::kObjectType);
 
-        std::cout << "This is for humans:" << std::endl;
+        Logger::pLOG->trace("This is for humans:");
         for(const auto& m : print_modules) {
-            std::cout << m.first << std::endl << m.second << std::endl;
+            Logger::pLOG->trace("{}\n{}", m.first, m.second);
         }
 
         // Wellknown name by reflection gives access to generic interface to DataObject
@@ -80,27 +83,27 @@ void runDOSerializationExamples() {
         boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doMyComplexDOType"));
         rjdoc.AddMember("SerializeModule.serModule.doMyComplexDOType", rjval, rjdoc.GetAllocator());
 
-        std::cout << "Stringify and output the created DOM:" << std::endl;
+        Logger::pLOG->trace("Stringify and output the created DOM:");
         rapidjson::StringBuffer sb;
         rapidjson::PrettyWriter<rapidjson::StringBuffer> pw(sb);
         rjdoc.Accept(pw);
-        std::cout << sb.GetString() << std::endl;
+        Logger::pLOG->trace("{}", sb.GetString());
 
         // Wellknown name by reflection gives access to generic interface to DataObject
         rapidjson::Value& rjdoint = rjdoc["SerializeModule.serModule.doInt"];
         rjdoint.SetInt(10);
         boost::apply_visitor([&](auto& d){ d.deserialize(rjdoint); }, name_dataobjects.at("SerializeModule.serModule.doInt"));
 
-        std::cout << "Deserialized serModule.doInt " << serModule.doInt.get([](int i) {return i;}) << std::endl;
+        Logger::pLOG->trace("Deserialized serModule.doInt {}", serModule.doInt.get([](int i) {return i;}));
 
         rapidjson::Value& rjdoMCDOT = rjdoc["SerializeModule.serModule.doMyComplexDOType"];
         rjdoMCDOT["amount outputs"].SetInt(20);
         boost::apply_visitor([&](auto& d){ d.deserialize(rjdoMCDOT); }, name_dataobjects.at("SerializeModule.serModule.doMyComplexDOType"));
 
-        std::cout << "Deserialized serModule.doMyComplexDOType.amount_outputs " << serModule.doMyComplexDOType.get([](const MyComplexDOType& d) {return d.outputCounter;}) << std::endl;
+        Logger::pLOG->trace("Deserialized serModule.doMyComplexDOType.amount_outputs {}", serModule.doMyComplexDOType.get([](const MyComplexDOType& d) {return d.outputCounter;}));
     }
 
-    std::cout << "===================================================================" << std::endl;
+    Logger::pLOG->trace("===================================================================");
     std::cout << "Enter \'n\' for next test!" << std::endl;
     char c;
     std::cin >> c;
