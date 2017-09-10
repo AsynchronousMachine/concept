@@ -5,7 +5,11 @@
 
 #pragma once
 
+#ifdef __linux__
 #include <syslog.h>
+#else // Windows
+#include <stdio.h>
+#endif
 
 #include <memory>
 #include <exception>
@@ -44,6 +48,7 @@ class Logger {
 #endif
 
             info("+++Syslog is enabled+++");
+
 #ifdef SPDLOG_DEBUG_ON
             _syslog->set_level(spdlog::level::debug);
 #endif
@@ -51,9 +56,13 @@ class Logger {
         catch (const std::exception& ex)
         {
             // Due to the early stage initialization, refer __attribute__((init_priority(1000))), std::cout is not valid yet
+#ifdef __linux__
             ::openlog(name.data(), LOG_PERROR | LOG_NDELAY, LOG_USER);
             ::syslog(LOG_ALERT, "---Initialization of logger failed: %s---", ex.what());
             ::closelog();
+#else // Windows
+            //::puts("---Initialization of logger failed---");
+#endif
 
             std::this_thread::sleep_for(std::chrono::seconds(3));
             throw; // Rethrows the exception object of type std::exception, without logger nothing makes sense
