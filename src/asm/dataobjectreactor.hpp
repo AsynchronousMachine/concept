@@ -37,7 +37,7 @@ class DataObjectReactor {
         boost::thread_group _tg;
         std::function<void(unsigned inst)> _f;
 
-        Threadpool(unsigned thrd_cnt, std::function<void(unsigned inst)> f) : _f(f) {
+        Threadpool(unsigned thrd_cnt, const std::function<void(unsigned inst)>& f) : _f(f) {
             unsigned cores = boost::thread::hardware_concurrency();
 
             Logger::pLOG->info("Found {} cores for DOR", cores);
@@ -46,7 +46,7 @@ class DataObjectReactor {
                 thrd_cnt = cores;
 
             for (unsigned i = 0; i < thrd_cnt; ++i) {
-                boost::thread *t = _tg.create_thread([this, i](){ Threadpool::_f(i); });
+                boost::thread* t = _tg.create_thread([this, i](){ Threadpool::_f(i); });
 
                 //The thread name is a meaningful C language string, whose length is
                 //restricted to 16 characters, including the terminating null byte ('\0')
@@ -95,7 +95,7 @@ class DataObjectReactor {
                 _tbbExecutionQueue.pop(f); // Pop of concurrent_bounded_queue waits if queue empty
                 f();
             }
-        } catch(tbb::user_abort abortException) {
+        } catch(const tbb::user_abort& abortException) {
             Logger::pLOG->info("Abort DOR-THRD-{}", inst);
             _run_state = false;
         }
@@ -103,7 +103,7 @@ class DataObjectReactor {
     }
 
   public:
-    DataObjectReactor(unsigned thrd_cnt = 0) : _run_state(true), _tp(thrd_cnt, [this](unsigned inst){ DataObjectReactor::run(inst); }) {}
+    explicit DataObjectReactor(unsigned thrd_cnt = 0) : _run_state(true), _tp(thrd_cnt, [this](unsigned inst){ DataObjectReactor::run(inst); }) {}
 
     // Non-copyable
     DataObjectReactor(const DataObjectReactor&) = delete;

@@ -17,7 +17,7 @@ namespace Asm {
 		ip::tcp::endpoint _endpoint;
 
 	public:
-		TCP_SyncClient(std::string ip_address, int port)
+		TCP_SyncClient(const std::string& ip_address, int port)
 			: _endpoint(ip::address::from_string(ip_address), port)
 		{};
 

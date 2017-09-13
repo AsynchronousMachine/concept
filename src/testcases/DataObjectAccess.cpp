@@ -84,11 +84,9 @@ static ComplexStruct csInst;
 static Asm::DataObject<int> doInt(10);
 static Asm::DataObject<std::string> doString("11");
 static Asm::DataObject<ComplexStruct> doStruct(csInst);
-static Asm::DataObject<ComplexStruct> doStruct2(ComplexStruct());
 static Asm::DataObject<ComplexStruct> doStruct3(ComplexStruct{});
 static Asm::DataObject<ComplexClass> doClass(ComplexClass{ 1, 2, "step1" });
 static Asm::DataObject<ComplexClass> doClass2(ComplexClass{});
-static Asm::DataObject<ComplexClass> doClass3(ComplexClass());
 
 void runDOAccessExamples() {
     Logger::pLOG->trace("===================================================================");

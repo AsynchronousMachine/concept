@@ -27,7 +27,7 @@ class Logger {
     std::shared_ptr<spdlog::logger> _syslog;
 
   public:
-    Logger(const std::string& name) {
+    explicit Logger(const std::string& name) {
         try
         {
 #ifdef SPDLOG_TRACE_ON

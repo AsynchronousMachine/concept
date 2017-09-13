@@ -31,7 +31,7 @@ $(TARGET)_release: $(FILES)
 	$(STRIP) $@
 
 clean:
-	-$(RM) $(TARGET)_release $(TARGET)_debug ValgrindOut.xml cachegrind.out.*
+	-$(RM) $(TARGET)_release $(TARGET)_debug CppCheck* cachegrind*
 
 valgrind: $(TARGET)_debug
 	@valgrind --version

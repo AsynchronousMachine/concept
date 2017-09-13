@@ -94,7 +94,7 @@ class TimerObjectReactor {
     }
 
   public:
-    TimerObjectReactor(DataObjectReactor& dor) : _epfd(-1), _evtfd(-1), _dor(dor) {
+    explicit TimerObjectReactor(DataObjectReactor& dor) : _epfd(-1), _evtfd(-1), _dor(dor) {
 #ifdef __linux__
         if ((_evtfd = ::eventfd(0, EFD_CLOEXEC)) < 0) {
             Logger::pLOG->error("Eventfd file handle could not be created in TOR: {}", std::strerror(errno));
