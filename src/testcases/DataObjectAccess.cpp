@@ -378,13 +378,30 @@ void runDOAccessExamples() {
     });
 
     Logger::pLOG->trace("tmp_atomic actual value with implizit cast {}", tmp_atomic);
+
     doInt.set([](std::atomic_int& i) {
         ++i;
     });
+
     doInt.get([&tmp_atomic](const int i) {
         tmp_atomic = i;
     });
-    Logger::pLOG->trace("tmp_atomic actual value after atomic inc with overloaded operator {}", tmp_atomic);
+
+    Logger::pLOG->trace("tmp_atomic actual value after atomic ++ with overloaded operator {}", tmp_atomic);
+
+    doInt.set([](std::atomic_int& i) {
+        //i.store(i.load() + 21); // Do not do this in that way
+        i.fetch_add(21); // Does everything atomic, the right way
+    });
+
+    Logger::pLOG->trace("Actual value after atomic fetch_add {}", doInt.get([](const int i) { return i; }));
+
+    doInt.set([](std::atomic_int& i) {
+        //i.store(i.load() + 21); // Do not do this in that way
+        i += 21; // Does everything atomic, the right way with overloaded operator
+    });
+
+    Logger::pLOG->trace("Actual value after atomic += with overloaded operator {}", doInt.get([](const int i) { return i; }));
 
     // Posible but should only be used if default ctor has been implemented
     Asm::DataObject<int> do72;
