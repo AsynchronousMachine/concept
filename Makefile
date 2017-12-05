@@ -1,4 +1,7 @@
-CPPFLAGS        = -std=c++1z -fdiagnostics-color=always -Wall -Wfatal-errors -Iexternal/spdlog/include -Iexternal/rapidjson/include
+CPPFLAGS        = -std=c++1z -fdiagnostics-color=always \
+                  -Wall -Wfatal-errors \
+                  -Iexternal/spdlog/include -Iexternal/rapidjson/include \
+                  -DVERSION=\"$(shell git describe --tags --always --dirty)\" -DBUILD_TIMESTAMP=\"$(shell date -Is -u)\"
 
 #Enable if e.g. custom boost include dir
 #CPPFLAGSCUSTOM  = -I/usr/local/include

@@ -6,6 +6,14 @@
 ** Hint: for Windows systems "WIN32_LEAN_AND_MEAN" has to be defined in preprocessor else you will get boost/asio/detail/socket_types.hpp(24): fatal error C1189: #error:  WinSock.h has already been included
 */
 
+#ifndef BUILD_TIMESTAMP
+#error BUILD_TIMESTAMP is undefined
+#endif
+
+#ifndef VERSION
+#error VERSION is undefined
+#endif
+
 #ifdef __linux__
 #include <pthread.h>
 #include <sys/syscall.h>
@@ -99,6 +107,7 @@ static void load_config(std::string fn, unsigned port) {
 }
 
 int main() {
+    std:.cout << "This is ASM version " << VERSION << ", build time " << BUILD_TIMESTAMP << "." << std::endl;
     Observer observer;
     tbb::task_scheduler_init tbb_init;
 
