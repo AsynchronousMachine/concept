@@ -40,7 +40,7 @@ class TcpServer {
                 boost::asio::io_service io_service;
                 boost::asio::ip::tcp::socket socket{io_service};
                 boost::asio::ip::tcp::resolver resolver{io_service};
-                boost::asio::ip::tcp::resolver::query query{"127.0.0.1", std::to_string(_port)};
+                boost::asio::ip::tcp::resolver::query query{"::1", std::to_string(_port)};
 
                 boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
@@ -66,8 +66,6 @@ class TcpServer {
                 boost::asio::ip::tcp::endpoint endpoint_peer;
                 boost::asio::ip::tcp::acceptor acceptor{io_service, endpoint};
 
-                //acceptor.set_option(boost::asio::socket_base::linger{true, 3});
-
                 while(_run_state) {
                     Logger::pLOG->trace("TcpServer wait for connection");
 
@@ -83,7 +81,13 @@ class TcpServer {
                     if(_cb)
                         _cb(socket, len, _buffer);
 
-                    socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
+                    try {
+                        socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
+                    } catch (std::exception& e) {
+                        // E.g. in the case the peer endpoint has already been closed
+                        Logger::pLOG->trace("TcpServer exception: {}", e.what());
+                    }
+
                     socket.close();
                 }
 

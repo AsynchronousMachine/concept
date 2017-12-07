@@ -27,7 +27,10 @@ void do_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
     rapidjson::StringBuffer rjsb;
     rapidjson::Writer<rapidjson::StringBuffer> rjw(rjsb);
 
-    buffer[len] = 0; //Terminate it with 0x00  definitely
+    if(len >= Asm::TcpServer::MAX_BUFFER_SIZE) // Terminate it with 0x00 definitely
+        buffer[Asm::TcpServer::MAX_BUFFER_SIZE-1] = 0;
+    else
+        buffer[len] = 0;
 
     if(rjdoc_in.ParseInsitu(&buffer[0]).HasParseError()) {
         Logger::pLOG->error("do_handler has parsing error at offset {}", rjdoc_in.GetErrorOffset());
@@ -67,7 +70,10 @@ void lo_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
 {
     rapidjson::Document rjdoc_in;
 
-    buffer[len] = 0; //Terminate it with 0x00  definitely
+    if(len >= Asm::TcpServer::MAX_BUFFER_SIZE) // Terminate it with 0x00 definitely
+        buffer[Asm::TcpServer::MAX_BUFFER_SIZE-1] = 0;
+    else
+        buffer[len] = 0;
 
     if(rjdoc_in.ParseInsitu(&buffer[0]).HasParseError()) {
         Logger::pLOG->error("lo_handler has parsing error at offset {}", rjdoc_in.GetErrorOffset());

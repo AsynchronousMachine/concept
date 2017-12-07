@@ -15,3 +15,11 @@ Refer to *src/testcases* in git branch ***master***!
 
 Thanks to all the guys who keep this projects up and running!
 
+
+# Building on Debian
+
+Required packages:
+
+* [libboost-all-dev](https://packages.debian.org/de/stretch/libboost-all-dev)
++ [libtbb-dev](https://packages.debian.org/de/stretch/libtbb-dev)
+

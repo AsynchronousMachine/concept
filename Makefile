@@ -1,4 +1,7 @@
-CPPFLAGS        = -std=c++1z -fdiagnostics-color=always -Wall -Wfatal-errors -Iexternal/spdlog/include -Iexternal/rapidjson/include
+CPPFLAGS        = -std=c++1z -fdiagnostics-color=always \
+                  -Wall -Wfatal-errors \
+                  -Iexternal/spdlog/include -Iexternal/rapidjson/include \
+                  -DVERSION=\"$(shell git describe --tags --always --dirty)\" -DBUILD_TIMESTAMP=\"$(shell date -u '+%FT%T')\"
 
 #Enable if e.g. custom boost include dir
 #CPPFLAGSCUSTOM  = -I/usr/local/include
@@ -13,7 +16,7 @@ TARGET          = asm
 STRIP           ?= strip -s
 ECHO            ?= echo
 
-.PHONY: help clean
+.PHONY: help clean ctags
 
 help:
 	@$(ECHO) "Available targets are:"
@@ -22,6 +25,7 @@ help:
 	@$(ECHO) "make clean"
 	@$(ECHO) "make valgrind"
 	@$(ECHO) "make cachegrind"
+	@$(ECHO) "make ctags"
 
 $(TARGET)_debug: $(FILES)
 	$(CXX) $(CPPFLAGS) -Og -g -DTBB_USE_DEBUG=1 -DSPDLOG_DEBUG_ON -DSPDLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
@@ -41,4 +45,6 @@ cachegrind: $(TARGET)_release
 	@valgrind --version
 	valgrind --tool=cachegrind "./$(TARGET)_release"
 
+ctags:
+	@ctags -R .
 # E.g. run with custom lib path: LD_LIBRARY_PATH="/usr/local/lib" ./asm_xxx
