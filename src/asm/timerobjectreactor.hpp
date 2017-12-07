@@ -13,6 +13,7 @@
 #include <sys/eventfd.h>
 #endif
 
+#include <functional>
 #include <unordered_map>
 #include <thread>
 #include <chrono>
@@ -43,7 +44,7 @@ class TimerObjectReactor {
     std::thread _thrd;
 
     // Holds all epoll file descriptor associated data
-    std::unordered_map<int, DataObject<TimerObject>&> _notify;
+    std::unordered_map<int, std::reference_wrapper<DataObject<TimerObject>>> _notify;
 
     // Protects the access to epoll file descriptor associated data
     std::mutex _mtx;
@@ -83,7 +84,7 @@ class TimerObjectReactor {
                     auto itr = _notify.find(evt[i].data.fd);
                     if ( itr != _notify.end() ) {
                         lock.unlock();
-                        _dor.trigger(itr->second);
+                        _dor.trigger(itr->second.get());
                     }
                 }
             }
