@@ -107,7 +107,7 @@ static void load_config(std::string fn, unsigned port) {
 }
 
 int main() {
-    std:.cout << "This is ASM version " << VERSION << ", build time " << BUILD_TIMESTAMP << "." << std::endl;
+    std::cout << "This is ASM version " << VERSION << ", build time " << BUILD_TIMESTAMP << "." << std::endl;
     Observer observer;
     tbb::task_scheduler_init tbb_init;
 
