@@ -23,3 +23,17 @@ Required packages:
 * [libboost-all-dev](https://packages.debian.org/de/stretch/libboost-all-dev)
 + [libtbb-dev](https://packages.debian.org/de/stretch/libtbb-dev)
 
+# Getting the githook up and running
+
+First, install [`git-hooks`](https://github.com/icefox/git-hooks):
+
+```shell
+me@my-machine:~$ sudo bash -c 'curl -RLSsf1o /usr/local/bin/git-hooks https://github.com/icefox/git-hooks/raw/master/git-hooks && chmod +x /usr/local/bin/git-hooks'
+```
+
+Second, let `git-hooks` manage the git hooks:
+
+```shell
+me@my-machine:~/My/Repo/Dir: git hooks --install
+```
+
