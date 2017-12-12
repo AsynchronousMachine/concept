@@ -76,10 +76,15 @@ class TcpServer {
                     if(!_run_state)
                         break;
 
-                    size_t len = socket.read_some(boost::asio::buffer(_buffer));
+                    size_t _overAllLength = 0, _receivedLength=0;
+                    boost::system::error_code ec;
+                    do{
+                        _receivedLength = socket.read_some(boost::asio::buffer(&_buffer[_overAllLength], MAX_BUFFER_SIZE - _overAllLength), ec);
+                        _overAllLength += _receivedLength;
+                    }while(!ec && _receivedLength);
 
                     if(_cb)
-                        _cb(socket, len, _buffer);
+                        _cb(socket, _overAllLength, _buffer);
 
                     try {
                         socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
