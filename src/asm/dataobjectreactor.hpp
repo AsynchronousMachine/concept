@@ -122,7 +122,7 @@ class DataObjectReactor {
     // Announce the change of the content of a DataObject to the reactor
     template <class D>
     void trigger(DataObject<D>& d) {
-        boost::lock_guard<boost::mutex> lock(d._mtx_links);
+        boost::shared_lock_guard<boost::shared_mutex> lock(d._mtx_links);
 
         if (d._links.empty())
             return;

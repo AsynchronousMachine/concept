@@ -38,13 +38,15 @@ using enable_if_is_same = std::enable_if_t<std::is_same<DOtype, type>::value, bo
 using serializeFnct = std::function<void(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator)>;
 using deserializeFnct = std::function<void(rapidjson::Value& value)>;
 
+const serializeFnct emptySer = [](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator){ Logger::pLOG->warn("Serialize not implemented"); };
+const deserializeFnct emptyDeser = [](rapidjson::Value& value){ Logger::pLOG->warn("Deserialize not implemented"); };
+
 template <typename D>
 class DataObject {
     static_assert(!std::is_void<D>::value, "DataObjects don't support void");
 
     friend class DataObjectReactor; // This enables the reactor to traverse the links from outside
 
-  private:
     using content_t = std::conditional_t<std::is_arithmetic<D>::value, std::atomic<D>, D>;
     using mutex_t = std::conditional_t<std::is_arithmetic<D>::value, boost::null_mutex, boost::shared_mutex>;
 
@@ -58,17 +60,15 @@ class DataObject {
     std::unordered_map<std::string, std::function<void()>> _links;
 
     // Protect the map of linked DOs
-    boost::mutex _mtx_links;
+    boost::shared_mutex _mtx_links;
 
     inline D get() const {
-        // Shared lock to support concurrent access from multiple visitors in different threads
         boost::shared_lock_guard<mutex_t> lock(_mtx_content);
         return _content;
     }
 
     inline void set(D d) {
-        // Shared lock to support concurrent access from multiple visitors in different threads
-        boost::shared_lock_guard<mutex_t> lock(_mtx_content);
+        boost::lock_guard<mutex_t> lock(_mtx_content);
         _content = d;
     }
 
@@ -99,7 +99,7 @@ class DataObject {
                   !std::is_same<U, int>::value &&
                   !std::is_same<U, double>::value &&
                   !std::is_same<U, std::string>::value, bool> = true>
-    void serialize_impl(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) { }
+    void serialize_impl(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}
 
     deserializeFnct doDeserialize;
 
@@ -129,7 +129,7 @@ class DataObject {
                   !std::is_same<U, int>::value &&
                   !std::is_same<U, double>::value &&
                   !std::is_same<U, std::string>::value, bool> = true>
-    void deserialize_impl(rapidjson::Value& value) { }
+    void deserialize_impl(rapidjson::Value& value) {}
 
   public:
     DataObject(D content, bool b) : _content(content),
@@ -147,8 +147,8 @@ class DataObject {
     }
 
     DataObject(D content) : _content(content),
-                            doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}),
-                            doDeserialize([](rapidjson::Value& value) {}) {
+                            doSerialize(emptySer),
+                            doDeserialize(emptyDeser) {
         Logger::pLOG->trace("DO-CTOR with disabled ser-/deser");
     }
 
@@ -179,8 +179,8 @@ class DataObject {
         Logger::pLOG->trace("DO-CTOR with content based ser-/deser fct");
     }
 
-    DataObject() : doSerialize([](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {}),
-                   doDeserialize([](rapidjson::Value& value) {}) { Logger::pLOG->trace("DO-CTOR only for TO"); }
+    DataObject() : doSerialize(emptySer),
+                   doDeserialize(emptyDeser) { Logger::pLOG->trace("DO-CTOR only for TO"); }
 
     // Non-copyable
     DataObject(const DataObject&) = delete;
@@ -195,9 +195,24 @@ class DataObject {
 
     template <class Visitor>
     void set(Visitor visitor) {
-        // Exclusive lock for write access
         boost::lock_guard<mutex_t> lock(_mtx_content);
         visitor(_content);
+    }
+
+    void exec() {
+        boost::shared_lock_guard<boost::shared_mutex> lock(_mtx_links);
+
+        if (_links.empty())
+            return;
+
+        for (auto &p : _links)
+            p.second();
+    }
+
+    template <class Visitor>
+    void setAndExec(Visitor visitor) {
+        set(visitor);
+        exec();
     }
 
     template <class Visitor>
@@ -210,7 +225,6 @@ class DataObject {
     // as that would allow the visitor to change the data_ member
     template <class Visitor>
     auto get(Visitor visitor) const {
-        // Shared lock to support concurrent access from multiple visitors in different threads
         boost::shared_lock_guard<mutex_t> lock(_mtx_content);
         return visitor(_content);
     }
@@ -218,7 +232,7 @@ class DataObject {
     // Link a DO to that DO by registering a callback function
     template <typename D2, typename LINK>
     void registerLink(const std::string& name, DataObject<D2>& d2, LINK cb) {
-        boost::lock_guard<boost::mutex> lock(_mtx_links);
+        boost::lock_guard<boost::shared_mutex> lock(_mtx_links);
         _links.insert({ name, [cb, this, &d2] { cb(*this, d2); } });
         Logger::pLOG->trace("RegisterLink: {}", name);
         Logger::pLOG->trace("From {} to {} via {}", boost::core::demangle(typeid(*this).name()),
@@ -228,7 +242,7 @@ class DataObject {
 
     // Remove a link to that DO by name
     void unregisterLink(const std::string& name) {
-        boost::lock_guard<boost::mutex> lock(_mtx_links);
+        boost::lock_guard<boost::shared_mutex> lock(_mtx_links);
         _links.erase(name);
         Logger::pLOG->trace("UnregisterLink: {}", name);
         Logger::pLOG->trace("From {}", boost::core::demangle(typeid(*this).name()));

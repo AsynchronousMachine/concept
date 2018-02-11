@@ -1,8 +1,8 @@
+### Misc ###
 /bin
 /obj
 concept.*
 asm_*
-*.gch
 
 ### Eclipse ###
 *.bak
@@ -40,18 +40,19 @@ install_manifest.txt
 *.so
 *.o
 *.a
+*.gch
 
 ### Kate ###
 .*.kate-swp
 .swp.*
 
-### general Linux-related files ###
+### General Linux-related files ###
 *~
 .directory
 .Trash-*
 tags
 
-### Codeblocks
+### Codeblocks ###
 bin/
 obj/
 *.layout
@@ -60,3 +61,7 @@ obj/
 *.xml
 bin/
 obj/
+
+### QT ###
+*.pro
+*.pro.user
