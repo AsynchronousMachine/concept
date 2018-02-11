@@ -1,7 +1,7 @@
 /*
-** Test cases for showing almost all aspects of dealing with DataObjects.
-** The following code samples exclude the optional interface for
-** ser- and deserialization of the content of a DataObject
+** Test cases for showing the access to DataObjects.
+** The following code samples exclude the optional interface for Datalinks
+** and ser- and deserialization of the content of a DataObject
 */
 
 #include <string>

@@ -33,6 +33,7 @@
 #include "communication/TcpServer.hpp"
 
 extern void runDOAccessExamples();
+extern void runDOLinksExamples();
 extern void runDOReactorExamples();
 extern void runModuleUsageExamples();
 extern void runDOTimerExamples();
@@ -126,6 +127,7 @@ int main() {
     Logger::pLOG->info("TBB threads, max availablse: {}", tbb::task_scheduler_init::default_num_threads());
 
     runDOAccessExamples();
+    runDOLinksExamples();
     runDOReactorExamples();
     runDOTimerExamples();
     runModuleUsageExamples();
