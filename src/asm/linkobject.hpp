@@ -43,8 +43,19 @@ namespace Asm {
 			boost::get<D1&>(a1).registerLink(name, boost::get<D2&>(a2), _cb);
 		}
 
+        void set(const std::string& name, const D1& d1, D2& d2) {
+            if (_cb == nullptr)
+                return;
+
+            d1.registerLink(name, d2, _cb);
+        }
+
 		void clear(const std::string& name, const Asm::data_variant& a) {
 			boost::apply_visitor([&](auto& d1){ d1.unregisterLink(name); }, a);
 		}
+
+        void clear(const std::string& name, D1& d1) {
+            d1.unregisterLink(name);
+        }
 	};
 }
