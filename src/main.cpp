@@ -3,7 +3,8 @@
 */
 
 /*
-** Hint: for Windows systems "WIN32_LEAN_AND_MEAN" has to be defined in preprocessor else you will get boost/asio/detail/socket_types.hpp(24): fatal error C1189: #error:  WinSock.h has already been included
+** Hint: for Windows systems "WIN32_LEAN_AND_MEAN" has to be defined in preprocessor else you will get boost/asio/detail/socket_types.hpp(24): fatal
+*error C1189: #error:  WinSock.h has already been included
 */
 
 #ifndef BUILD_TIMESTAMP
@@ -19,20 +20,21 @@
 #include <sys/syscall.h>
 #endif
 
-#include <cstdlib>
-#include <iostream>
-#include <fstream>
-#include <thread>
 #include <chrono>
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
 #include <memory>
+#include <thread>
 
 #include <tbb/tbb.h>
 
-#include "logger/logger.hpp"
 #include "communication/ReceiveHandler.hpp"
 #include "communication/TcpServer.hpp"
+#include "logger/logger.hpp"
 
 extern void runDOAccessExamples();
+extern void runDOLocksExamples();
 extern void runDOLinksExamples();
 extern void runDOReactorExamples();
 extern void runModuleUsageExamples();
@@ -44,9 +46,7 @@ struct Observer : tbb::task_scheduler_observer {
     static constexpr int RT_PRIO = 30; // Realtime priority
     int _rt_prio;
 
-    Observer(bool b = true, int rt_prio = RT_PRIO) : _rt_prio(rt_prio) {
-        observe(b);
-    }
+    Observer(bool b = true, int rt_prio = RT_PRIO) : _rt_prio(rt_prio) { observe(b); }
 
     void on_scheduler_entry(bool) {
 #ifdef __linux__
@@ -88,16 +88,14 @@ static void load_config(std::string fn, unsigned port) {
         return;
     }
 
-    for (int cnt : {5, 4, 3, 2, 1, 0})
-    {
+    for (int cnt : {5, 4, 3, 2, 1, 0}) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         tcpstr.connect(query);
 
         if (tcpstr)
             break;
 
-        if (cnt == 0)
-        {
+        if (cnt == 0) {
             Logger::pLOG->error("No connection for configuration file {}: {}", fn, tcpstr.error().message());
             return;
         }
@@ -127,6 +125,7 @@ int main() {
     Logger::pLOG->info("TBB threads, max availablse: {}", tbb::task_scheduler_init::default_num_threads());
 
     runDOAccessExamples();
+    runDOLocksExamples();
     runDOLinksExamples();
     runDOReactorExamples();
     runDOTimerExamples();
