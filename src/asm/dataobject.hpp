@@ -37,10 +37,13 @@ template <typename DOtype, typename type> using enable_if_is_same = std::enable_
 using serializeFnct = std::function<void(rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator)>;
 using deserializeFnct = std::function<void(rapidjson::Value &value)>;
 
-const serializeFnct emptySer = [](rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) {
+const serializeFnct emptySer = [](rapidjson::Value&, rapidjson::Document::AllocatorType&) {
     Logger::pLOG->warn("Serialize not implemented");
 };
-const deserializeFnct emptyDeser = [](rapidjson::Value &value) { Logger::pLOG->warn("Deserialize not implemented"); };
+
+const deserializeFnct emptyDeser = [](rapidjson::Value&) {
+    Logger::pLOG->warn("Deserialize not implemented");
+};
 
 template <typename D> class DataObject {
     static_assert(!std::is_void<D>::value, "DataObjects don't support void");
@@ -48,6 +51,7 @@ template <typename D> class DataObject {
     friend class DataObjectReactor; // This enables the reactor to traverse the links from outside
 
     using content_t = std::conditional_t<std::is_arithmetic<D>::value, std::atomic<D>, D>;
+
     using mutex_t = std::conditional_t<std::is_arithmetic<D>::value, boost::null_mutex, boost::shared_mutex>;
 
     // Content for this DO
@@ -75,17 +79,17 @@ template <typename D> class DataObject {
     serializeFnct doSerialize;
 
     template <typename U = D, enable_if_is_same<U, bool> = true>
-    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) {
+    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType&) {
         value.SetBool(get());
     }
 
     template <typename U = D, enable_if_is_same<U, int> = true>
-    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) {
+    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType&) {
         value.SetInt(get());
     }
 
     template <typename U = D, enable_if_is_same<U, double> = true>
-    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) {
+    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType&) {
         value.SetDouble(get());
     }
 
@@ -94,10 +98,11 @@ template <typename D> class DataObject {
         value.SetString(get().c_str(), allocator);
     }
 
-    template <class U = D, std::enable_if_t<!std::is_same<U, bool>::value && !std::is_same<U, int>::value && !std::is_same<U, double>::value &&
-                                                !std::is_same<U, std::string>::value,
-                                            bool> = true>
-    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) {}
+    template <class U = D, std::enable_if_t<!std::is_same<U, bool>::value &&
+                                            !std::is_same<U, int>::value &&
+                                            !std::is_same<U, double>::value &&
+                                            !std::is_same<U, std::string>::value, bool> = true>
+    void serialize_impl(rapidjson::Value&, rapidjson::Document::AllocatorType&) {}
 
     deserializeFnct doDeserialize;
 
@@ -112,13 +117,14 @@ template <typename D> class DataObject {
         set(s);
     }
 
-    template <class U = D, std::enable_if_t<!std::is_same<U, bool>::value && !std::is_same<U, int>::value && !std::is_same<U, double>::value &&
-                                                !std::is_same<U, std::string>::value,
-                                            bool> = true>
-    void deserialize_impl(rapidjson::Value &value) {}
+    template <class U = D, std::enable_if_t<!std::is_same<U, bool>::value &&
+                                            !std::is_same<U, int>::value &&
+                                            !std::is_same<U, double>::value &&
+                                            !std::is_same<U, std::string>::value, bool> = true>
+    void deserialize_impl(rapidjson::Value&) {}
 
   public:
-    DataObject(D content, bool b)
+    DataObject(D content, bool)
         : _content(content), doSerialize([this](rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) {
               std::mem_fn (&DataObject<D>::serialize_impl<D>)(this, value, allocator);
           }),

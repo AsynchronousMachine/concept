@@ -66,7 +66,7 @@ void do_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
     socket.write_some(boost::asio::buffer(rjsb.GetString(), rjsb.GetSize()));
 }
 
-void lo_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<char, Asm::TcpServer::MAX_BUFFER_SIZE>& buffer)
+void lo_handler(boost::asio::ip::tcp::socket&, size_t len, std::array<char, Asm::TcpServer::MAX_BUFFER_SIZE>& buffer)
 {
     rapidjson::Document rjdoc_in;
 

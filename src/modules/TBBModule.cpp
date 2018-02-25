@@ -22,7 +22,7 @@ void TBBModule::pf(const tbb::blocked_range<size_t>& r) {
     Logger::pLOG->trace("Job done ...");
 };
 
-void TBBModule::actionInt(Asm::DataObject<int>& doSource, Asm::DataObject<MyComplexDOType>& doTarget) {
+void TBBModule::actionInt(Asm::DataObject<int>& doSource, Asm::DataObject<MyComplexDOType>&) {
 #ifdef __linux__
     Logger::pLOG->trace("TID of TBBModule::actionInt: {}", syscall(SYS_gettid));
 #endif

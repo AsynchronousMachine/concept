@@ -16,11 +16,11 @@
 class SystemModule {
   private:
 
-    void emptySer(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
+    void emptySer(rapidjson::Value&, rapidjson::Document::AllocatorType&) {
         Logger::pLOG->warn("Serialize not implemented");
     }
 
-    void emptyDeser(rapidjson::Value& value) {
+    void emptyDeser(rapidjson::Value&) {
         Logger::pLOG->warn("Deserialize not implemented");
     }
 

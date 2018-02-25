@@ -54,7 +54,7 @@ class SerializeModule {
     doDouble(1.1, true),
     doString("0-1", false),
     // You can set your own de-/serialization function as lambda expression (not highly recommended for complex datatypes)
-    doBool(false, [&](rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
+    doBool(false, [&](rapidjson::Value& value, rapidjson::Document::AllocatorType&) {
         doBool.get([&value](bool b) {
             value.SetBool(b);
         });

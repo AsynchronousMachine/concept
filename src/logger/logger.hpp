@@ -81,16 +81,20 @@ class Logger {
     Logger &operator=(Logger&&) = delete;
 
     template <typename... Args>
-    void trace(const std::string& fmt, const Args&... args) {
 #ifdef SPDLOG_TRACE_ON
+    void trace(const std::string& fmt, const Args&... args) {
         _console->trace(fmt.data(), args...);
+#else
+    void trace(const std::string&, const Args&...) {
 #endif
     }
 
     template <typename... Args>
-    void debug(const std::string& fmt, const Args&... args) {
 #ifdef SPDLOG_DEBUG_ON
+    void debug(const std::string& fmt, const Args&... args) {
         _syslog->debug(fmt.data(), args...);
+#else
+    void debug(const std::string&, const Args&...) {
 #endif
     }
 

@@ -47,7 +47,7 @@ void runDOTimerExamples() {
     Asm::DataObject<Asm::TimerObject> dataObjectTimer;
     Asm::DataObject<int> dataObjectInt;
 
-    dataObjectTimer.registerLink("doTimer->doInt", dataObjectInt, [](Asm::DataObject<Asm::TimerObject>& to, Asm::DataObject<int>& i){
+    dataObjectTimer.registerLink("doTimer->doInt", dataObjectInt, [](Asm::DataObject<Asm::TimerObject>&, Asm::DataObject<int>&){
         Logger::pLOG->trace("[doTimer->doInt] was triggered by TOR");
 #ifdef __linux__
         Logger::pLOG->trace("Tid of {} for TOR test", syscall(SYS_gettid));
