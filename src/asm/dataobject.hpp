@@ -218,7 +218,7 @@ template <typename D> class DataObject {
         Logger::pLOG->trace("From {}", boost::core::demangle(typeid(*this).name()));
     }
 
-    void serialize(rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) { return doSerialize(value, allocator); }
+    void serialize(rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) const { return doSerialize(value, allocator); }
 
     void deserialize(rapidjson::Value &value) { doDeserialize(value); }
 };
