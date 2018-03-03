@@ -19,7 +19,7 @@
 
 namespace Asm {
 
-void do_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<char, Asm::TcpServer::MAX_BUFFER_SIZE>& buffer)
+void do_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<char, Asm::TcpServer::max_buffer_size>& buffer)
 {
     rapidjson::Document rjdoc_in;
     rapidjson::Document rjdoc_out(rapidjson::kObjectType);
@@ -27,8 +27,8 @@ void do_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
     rapidjson::StringBuffer rjsb;
     rapidjson::Writer<rapidjson::StringBuffer> rjw(rjsb);
 
-    if(len >= Asm::TcpServer::MAX_BUFFER_SIZE) // Terminate it with 0x00 definitely
-        buffer[Asm::TcpServer::MAX_BUFFER_SIZE-1] = 0;
+    if(len >= Asm::TcpServer::max_buffer_size) // Terminate it with 0x00 definitely
+        buffer[Asm::TcpServer::max_buffer_size-1] = 0;
     else
         buffer[len] = 0;
 
@@ -66,12 +66,12 @@ void do_handler(boost::asio::ip::tcp::socket& socket, size_t len, std::array<cha
     socket.write_some(boost::asio::buffer(rjsb.GetString(), rjsb.GetSize()));
 }
 
-void lo_handler(boost::asio::ip::tcp::socket&, size_t len, std::array<char, Asm::TcpServer::MAX_BUFFER_SIZE>& buffer)
+void lo_handler(boost::asio::ip::tcp::socket&, size_t len, std::array<char, Asm::TcpServer::max_buffer_size>& buffer)
 {
     rapidjson::Document rjdoc_in;
 
-    if(len >= Asm::TcpServer::MAX_BUFFER_SIZE) // Terminate it with 0x00 definitely
-        buffer[Asm::TcpServer::MAX_BUFFER_SIZE-1] = 0;
+    if(len >= Asm::TcpServer::max_buffer_size) // Terminate it with 0x00 definitely
+        buffer[Asm::TcpServer::max_buffer_size-1] = 0;
     else
         buffer[len] = 0;
 

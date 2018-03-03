@@ -13,6 +13,8 @@
 #include <string>
 #include <functional>
 #include <thread>
+#include <future>
+#include <list>
 
 #include <boost/asio.hpp>
 
@@ -23,14 +25,14 @@ namespace Asm {
 class TcpServer {
 
     public:
-        static constexpr int MAX_BUFFER_SIZE = 1000000;
+        static constexpr int max_buffer_size = 1000000;
 
-        using cb_type = std::function<void(boost::asio::ip::tcp::socket&, size_t, std::array<char, MAX_BUFFER_SIZE>&)>;
+        using cb_type = std::function<void(boost::asio::ip::tcp::socket&, size_t, std::array<char, max_buffer_size>&)>;
 
     private:
-        bool _run_state;
+        bool _run_state = true;
+        cb_type _cb = nullptr;
         unsigned short _port;
-        cb_type _cb;
         std::thread _thrd;
 
         void stop() {
@@ -52,14 +54,14 @@ class TcpServer {
             }
         }
 
-        void run() {
-            std::array<char, MAX_BUFFER_SIZE> _buffer;
-
+        template<typename ThisPtr>
+        void run(ThisPtr thisptr) {
     #ifdef __linux__
             Logger::pLOG->info("TcpServer-THRD has TID-{}", syscall(SYS_gettid));
     #endif
 
             try {
+                std::list<std::future<void>> f;
                 boost::asio::io_service io_service;
                 boost::asio::ip::tcp::socket socket{io_service};
                 boost::asio::ip::tcp::endpoint endpoint{boost::asio::ip::address_v6::any(), _port};
@@ -67,6 +69,21 @@ class TcpServer {
                 boost::asio::ip::tcp::acceptor acceptor{io_service, endpoint};
 
                 while(_run_state) {
+                    // Clean up remaining futures
+                    for (auto it = f.cbegin(); it != f.cend(); ) {
+                        if (it->valid()) {
+                            auto s = it->wait_for(std::chrono::seconds(0));
+                            if (s == std::future_status::ready) {
+                                Logger::pLOG->trace("Found remaining future to clean up");
+                                it = f.erase(it);
+                                continue;
+                            }        cb_type _cb = nullptr;
+                        }
+
+                        Logger::pLOG->trace("Found pending future");
+                        ++it;
+                    }
+
                     Logger::pLOG->trace("TcpServer wait for connection");
 
                     acceptor.accept(socket, endpoint_peer);
@@ -76,24 +93,7 @@ class TcpServer {
                     if(!_run_state)
                         break;
 
-                    size_t _overAllLength = 0, _receivedLength=0;
-                    boost::system::error_code ec;
-                    do{
-                        _receivedLength = socket.read_some(boost::asio::buffer(&_buffer[_overAllLength], MAX_BUFFER_SIZE - _overAllLength), ec);
-                        _overAllLength += _receivedLength;
-                    }while(!ec && _receivedLength);
-
-                    if(_cb)
-                        _cb(socket, _overAllLength, _buffer);
-
-                    try {
-                        socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
-                    } catch (std::exception& e) {
-                        // E.g. in the case the peer endpoint has already been closed
-                        Logger::pLOG->trace("TcpServer exception: {}", e.what());
-                    }
-
-                    socket.close();
+                    f.emplace_back(std::async(std::launch::async, std::mem_fn(&TcpServer::handle_connection), thisptr, std::move(socket)));
                 }
 
                 Logger::pLOG->info("TcpServer got stop");
@@ -102,9 +102,34 @@ class TcpServer {
             }
         }
 
+        void handle_connection(boost::asio::ip::tcp::socket&& socket) {
+            size_t overAllLength = 0;
+            size_t receivedLength = 0;
+            boost::system::error_code ec;
+            std::array<char, max_buffer_size> buffer;
+
+            do{
+                receivedLength = socket.read_some(boost::asio::buffer(&buffer[overAllLength], max_buffer_size - overAllLength), ec);
+                overAllLength += receivedLength;
+            }
+            while(!ec && receivedLength);
+
+            if(_cb)
+                _cb(socket, overAllLength, buffer);
+
+            try {
+                socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
+            } catch (std::exception& e) {        cb_type _cb = nullptr;
+                // E.g. in the case the peer endpoint has already been closed
+                Logger::pLOG->trace("TcpServer exception: {}", e.what());
+            }
+
+            socket.close();
+        }
+
     public:
-        TcpServer(unsigned short port, cb_type cb) : _run_state(true), _port(port), _cb(cb) {
-            _thrd = std::thread([this]{ TcpServer::run(); });
+        TcpServer(unsigned short port, cb_type cb) : _cb(cb), _port(port) {
+            _thrd = std::thread([this]{ TcpServer::run(this); });
         };
 
         // Non-copyable
