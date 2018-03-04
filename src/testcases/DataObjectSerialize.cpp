@@ -25,25 +25,35 @@ void runDOSerializationExamples() {
 
         serModule.doInt.serialize(rjval, rjdoc.GetAllocator());
         Logger::pLOG->trace("serModule.doInt {}", rjval.GetInt());
-
         rjval.SetInt(rjval.GetInt() + 1);
-
         serModule.doInt.deserialize(rjval);
-
         serModule.doInt.serialize(rjval, rjdoc.GetAllocator());
-        Logger::pLOG->trace("serModule.doInt {}", rjval.GetInt());
+        Logger::pLOG->trace("serModule.doInt after increment {}", rjval.GetInt());
+
+        serModule.doUnsignedInt.serialize(rjval, rjdoc.GetAllocator());
+        Logger::pLOG->trace("serModule.doUnsignedInt {}", rjval.GetUint());
+        rjval.SetUint(rjval.GetUint() + 1);
+        serModule.doUnsignedInt.deserialize(rjval);
+        serModule.doUnsignedInt.serialize(rjval, rjdoc.GetAllocator());
+        Logger::pLOG->trace("serModule.doUnsignedInt after increment {}", rjval.GetUint());
+
+        serModule.doInt64.serialize(rjval, rjdoc.GetAllocator());
+        Logger::pLOG->trace("serModule.doInt64 {}", rjval.GetInt64());
+        rjval.SetInt64(rjval.GetInt64() + 1);
+        serModule.doInt64.deserialize(rjval);
+        serModule.doInt64.serialize(rjval, rjdoc.GetAllocator());
+        Logger::pLOG->trace("serModule.doInt64 after increment {}", rjval.GetInt64());
+
+        serModule.doUInt64.serialize(rjval, rjdoc.GetAllocator());
+        Logger::pLOG->trace("serModule.doInt64 {}", rjval.GetUint64());
+        rjval.SetUint64(rjval.GetUint64() + 1);
+        serModule.doUInt64.deserialize(rjval);
+        serModule.doUInt64.serialize(rjval, rjdoc.GetAllocator());
+        Logger::pLOG->trace("serModule.doUInt64 after increment {}", rjval.GetUint64());
 
         // Optionally you will add the json value to a json document to form a higher order data structure.
         // Naming the json value is mandatory."SerializeModule.serModule.doInt"
-        rjdoc.AddMember("SerializeModule.serModule.doInt", rjval, rjdoc.GetAllocator());
-        // A SerializeModule.serModule.doInt alternate interface for AddMember
-        // rapidjson::Value rjkey;
-        // rjkey.SetString("SerializeModule.serModule.doInt", rjdoc.GetAllocator());
-        // rjdoc.AddMember(rjkey, rjval, rjdoc.GetAllocator());
-        // A SerializeModule.serModule.doInt alternate interface for AddMember, too
-        // const char* name = "SerializeModule.serModule.doInt";
-        // rjdoc.AddMember(rapidjson::StringRef(name), rjval, rjdoc.GetAllocator());
-        // std::cout << "serModule.doInt from json document " << rjdoc["serModule.doInt"].GetInt() << std::endl;
+        rjdoc.AddMember("SerializeModule.serModule.doInt64", rjval, rjdoc.GetAllocator());
 
         Logger::pLOG->trace("Stringify and output the created DOM:");
         rapidjson::StringBuffer sb;

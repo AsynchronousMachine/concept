@@ -38,6 +38,9 @@ class SerializeModule {
     Asm::DataObject<std::string> doString2;
     Asm::DataObject<std::string> doString3;
     Asm::DataObject<MyComplexDOType> doMyComplexDOType;
+    Asm::DataObject<unsigned int> doUnsignedInt{42, Asm::default_serializer};
+    Asm::DataObject<int64_t> doInt64{-8000000000, Asm::default_serializer};
+    Asm::DataObject<uint64_t> doUInt64{8000000000, Asm::default_serializer};
 
     SerializeModule() :
         // No serialization at all if only one parameter is used for the content
@@ -78,6 +81,5 @@ class SerializeModule {
     // Boolean is again a dummy value for selecting the right constructor
     // This is the prefered way to do serialization on complex types
     // Let the DataObject serialize it self, it has the best knowledge what do
-    //doMyComplexDOType(MyComplexDOType{ 1, 2, "12" }, &MyComplexDOType::serializeMe, &MyComplexDOType::deserializeMe, true) {}
     doMyComplexDOType(MyComplexDOType{ 1, 2, "12" }, &MyComplexDOType::serializeMe, &MyComplexDOType::deserializeMe) {}
 };

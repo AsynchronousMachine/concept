@@ -88,6 +88,21 @@ template <typename D> class DataObject {
         value.SetInt(get());
     }
 
+    template <typename U = D, enable_if_is_same<U, unsigned int> = true>
+    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType&) {
+        value.SetUint(get());
+    }
+
+    template <typename U = D, enable_if_is_same<U, int64_t> = true>
+    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType&) {
+        value.SetInt64(get());
+    }
+
+    template <typename U = D, enable_if_is_same<U, uint64_t> = true>
+    void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType&) {
+        value.SetUint64(get());
+    }
+
     template <typename U = D, enable_if_is_same<U, double> = true>
     void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType&) {
         value.SetDouble(get());
@@ -98,17 +113,26 @@ template <typename D> class DataObject {
         value.SetString(get().c_str(), allocator);
     }
 
-    template <class U = D, std::enable_if_t<!std::is_same<U, bool>::value &&
-                                            !std::is_same<U, int>::value &&
-                                            !std::is_same<U, double>::value &&
-                                            !std::is_same<U, std::string>::value, bool> = true>
+    template <typename U = D, std::enable_if_t<!std::is_same<U, bool>::value &&
+                                               !std::is_same<U, int>::value &&
+                                               !std::is_same<U, unsigned int>::value &&
+                                               !std::is_same<U, int64_t>::value &&
+                                               !std::is_same<U, uint64_t>::value &&
+                                               !std::is_same<U, double>::value &&
+                                               !std::is_same<U, std::string>::value, bool> = true>
     void serialize_impl(rapidjson::Value&, rapidjson::Document::AllocatorType&) {}
 
     deserializeFnct doDeserialize;
 
-    template <class U = D, enable_if_is_same<U, bool> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetBool()); }
+    template <typename U = D, enable_if_is_same<U, bool> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetBool()); }
 
     template <typename U = D, enable_if_is_same<U, int> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetInt()); }
+
+    template <typename U = D, enable_if_is_same<U, unsigned int> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetUint()); }
+
+    template <typename U = D, enable_if_is_same<U, int64_t> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetInt64()); }
+
+    template <typename U = D, enable_if_is_same<U, uint64_t> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetUint64()); }
 
     template <typename U = D, enable_if_is_same<U, double> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetDouble()); }
 
@@ -117,10 +141,13 @@ template <typename D> class DataObject {
         set(s);
     }
 
-    template <class U = D, std::enable_if_t<!std::is_same<U, bool>::value &&
-                                            !std::is_same<U, int>::value &&
-                                            !std::is_same<U, double>::value &&
-                                            !std::is_same<U, std::string>::value, bool> = true>
+    template <typename U = D, std::enable_if_t<!std::is_same<U, bool>::value &&
+                                               !std::is_same<U, int>::value &&
+                                               !std::is_same<U, unsigned int>::value &&
+                                               !std::is_same<U, int64_t>::value &&
+                                               !std::is_same<U, uint64_t>::value &&
+                                               !std::is_same<U, double>::value &&
+                                               !std::is_same<U, std::string>::value, bool> = true>
     void deserialize_impl(rapidjson::Value&) {}
 
   public:
