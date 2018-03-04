@@ -77,7 +77,7 @@ class TcpServer {
                                 Logger::pLOG->trace("Found remaining future to clean up");
                                 it = f.erase(it);
                                 continue;
-                            }        cb_type _cb = nullptr;
+                            }
                         }
 
                         Logger::pLOG->trace("Found pending future");
