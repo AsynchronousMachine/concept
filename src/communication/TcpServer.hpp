@@ -25,7 +25,7 @@ namespace Asm {
 class TcpServer {
 
     public:
-        static constexpr int max_buffer_size = 1000000;
+        static constexpr int max_buffer_size = 100000;
 
         using cb_type = std::function<void(boost::asio::ip::tcp::socket&, size_t, std::array<char, max_buffer_size>&)>;
 
@@ -54,8 +54,7 @@ class TcpServer {
             }
         }
 
-        template<typename ThisPtr>
-        void run(ThisPtr thisptr) {
+        void run(auto thisptr) {
     #ifdef __linux__
             Logger::pLOG->info("TcpServer-THRD has TID-{}", syscall(SYS_gettid));
     #endif
@@ -103,8 +102,8 @@ class TcpServer {
         }
 
         void handle_connection(boost::asio::ip::tcp::socket&& socket) {
-            size_t overAllLength = 0;
-            size_t receivedLength = 0;
+            auto overAllLength = 0;
+            auto receivedLength = 0;
             boost::system::error_code ec;
             std::array<char, max_buffer_size> buffer;
 
@@ -112,14 +111,14 @@ class TcpServer {
                 receivedLength = socket.read_some(boost::asio::buffer(&buffer[overAllLength], max_buffer_size - overAllLength), ec);
                 overAllLength += receivedLength;
             }
-            while(!ec && receivedLength);
+            while(!ec && receivedLength > 0);
 
             if(_cb)
                 _cb(socket, overAllLength, buffer);
 
             try {
                 socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
-            } catch (std::exception& e) {        cb_type _cb = nullptr;
+            } catch (std::exception& e) {
                 // E.g. in the case the peer endpoint has already been closed
                 Logger::pLOG->trace("TcpServer exception: {}", e.what());
             }
