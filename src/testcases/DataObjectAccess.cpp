@@ -403,8 +403,15 @@ void runDOAccessExamples() {
 
     Logger::pLOG->trace("Actual value after atomic += with overloaded operator {}", doInt.get([](const int i) { return i; }));
 
-    // Posible but should only be used if default ctor has been implemented
-    Asm::DataObject<int> do72;
+    // Atomic long long handling
+    Asm::DataObject<int64_t> do72{-8000000000};
+    do72.set([](std::atomic_int64_t& a) { ++a; });
+    Logger::pLOG->trace("Actual value after atomic ++ with overloaded operator {}", do72.get([](const int64_t i) { return i; }));
+
+    Asm::DataObject<uint64_t> do73{9000000000};
+    do73.set([](std::atomic_uint64_t& a) { --a; });
+    Logger::pLOG->trace("Actual value after atomic -- with overloaded operator {}", do73.get([](const uint64_t i) { return i; }));
+
 
     Logger::pLOG->trace("===================================================================");
     std::cout << "Enter \'n\' for next test!" << std::endl;
