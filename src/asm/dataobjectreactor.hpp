@@ -8,10 +8,10 @@
 
 #ifdef __linux__
 #include <pthread.h>
-#include <sys/syscall.h>
-#include <sys/timerfd.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+#include <sys/syscall.h>
+#include <sys/timerfd.h>
 #endif
 
 #include <functional>
@@ -26,8 +26,7 @@
 
 namespace Asm {
 
-template <typename D>
-class DataObject;
+template <typename D> class DataObject;
 
 class DataObjectReactor {
   private:
@@ -37,7 +36,7 @@ class DataObjectReactor {
         boost::thread_group _tg;
         std::function<void(unsigned inst)> _f;
 
-        Threadpool(unsigned thrd_cnt, const std::function<void(unsigned inst)>& f) : _f(f) {
+        Threadpool(unsigned thrd_cnt, const std::function<void(unsigned inst)> &f) : _f(f) {
             unsigned cores = boost::thread::hardware_concurrency();
 
             Logger::pLOG->info("Found {} cores for DOR", cores);
@@ -46,10 +45,10 @@ class DataObjectReactor {
                 thrd_cnt = cores;
 
             for (unsigned i = 0; i < thrd_cnt; ++i) {
-                boost::thread* t = _tg.create_thread([this, i](){ Threadpool::_f(i); });
+                boost::thread *t = _tg.create_thread([this, i]() { Threadpool::_f(i); });
 
-                //The thread name is a meaningful C language string, whose length is
-                //restricted to 16 characters, including the terminating null byte ('\0')
+                // The thread name is a meaningful C language string, whose length is
+                // restricted to 16 characters, including the terminating null byte ('\0')
                 std::string s = "DOR-THRD-" + std::to_string(i);
                 Logger::pLOG->info("Created {}", s);
 
@@ -95,7 +94,7 @@ class DataObjectReactor {
                 _tbbExecutionQueue.pop(f); // Pop of concurrent_bounded_queue waits if queue empty
                 f();
             }
-        } catch(const tbb::user_abort& abortException) {
+        } catch (const tbb::user_abort &abortException) {
             Logger::pLOG->info("Abort DOR-THRD-{}", inst);
             _run_state = false;
         }
@@ -103,15 +102,15 @@ class DataObjectReactor {
     }
 
   public:
-    explicit DataObjectReactor(unsigned thrd_cnt = 0) : _run_state(true), _tp(thrd_cnt, [this](unsigned inst){ DataObjectReactor::run(inst); }) {}
+    explicit DataObjectReactor(unsigned thrd_cnt = 0) : _run_state(true), _tp(thrd_cnt, [this](unsigned inst) { DataObjectReactor::run(inst); }) {}
 
     // Non-copyable
-    DataObjectReactor(const DataObjectReactor&) = delete;
-    DataObjectReactor &operator=(const DataObjectReactor&) = delete;
+    DataObjectReactor(const DataObjectReactor &) = delete;
+    DataObjectReactor &operator=(const DataObjectReactor &) = delete;
 
     // Non-movable
-    DataObjectReactor(DataObjectReactor&&) = delete;
-    DataObjectReactor &operator=(DataObjectReactor&&) = delete;
+    DataObjectReactor(DataObjectReactor &&) = delete;
+    DataObjectReactor &operator=(DataObjectReactor &&) = delete;
 
     ~DataObjectReactor() {
         Logger::pLOG->info("Delete DOR");
@@ -120,8 +119,7 @@ class DataObjectReactor {
     }
 
     // Announce the change of the content of a DataObject to the reactor
-    template <class D>
-    void trigger(DataObject<D>& d) {
+    template <class D> void trigger(DataObject<D> &d) {
         boost::shared_lock_guard<boost::shared_mutex> lock(d._mtx_links);
 
         if (d._links.empty())
@@ -130,6 +128,8 @@ class DataObjectReactor {
         for (auto &p : d._links)
             _tbbExecutionQueue.push(p.second);
     }
-};
 
+    // Push job to the reactor directly
+    void trigger(std::function<void()> f) { _tbbExecutionQueue.push(f); }
+};
 }
