@@ -6,7 +6,7 @@ CPPFLAGS        = -std=c++1z -fdiagnostics-color=always \
 #Enable if e.g. custom boost include dir
 #CPPFLAGSCUSTOM  = -I/usr/local/include
 
-LDLIBS          = -lboost_system -lboost_timer -lboost_thread  -lpthread -ltbb -lstdc++fs
+LDLIBS          = -lboost_system -lboost_timer -lboost_chrono -lboost_thread  -lpthread -ltbb -lstdc++fs
 
 #Enable if e.g. custom boost lib dir
 #LDFLAGSCUSTOM   = -L/usr/local/lib

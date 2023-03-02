@@ -125,10 +125,10 @@ int main() {
 
     Logger::pLOG->info("TBB threads, max availablse: {}", tbb::task_scheduler_init::default_num_threads());
 
-    //    runDOAccessExamples();
+        runDOAccessExamples();
     //    runDOLocksExamples();
     //    runDOLinksExamples();
-    runReactorExamples();
+    //    runReactorExamples();
     //    runDOReactorExamples();
     //    runDOTimerExamples();
     //    runModuleUsageExamples();
