@@ -27,7 +27,7 @@ void TBBModule::actionInt(Asm::DataObject<int>& doSource, Asm::DataObject<MyComp
     Logger::pLOG->trace("TID of TBBModule::actionInt: {}", syscall(SYS_gettid));
 #endif
 
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, 16, tbb::task_scheduler_init::default_num_threads()),
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, 16, tbb::info::default_concurrency()), // tbb::task_scheduler_init::default_num_threads()), # Gone with OneAPI
                       [this](const tbb::blocked_range<size_t>& r) { TBBModule::pf(r); },
                       tbb::simple_partitioner());
 

@@ -1,20 +1,19 @@
-CPPFLAGS        = -std=c++1z -fdiagnostics-color=always \
-                  -Wall -Wfatal-errors \
-                  -Iexternal/spdlog/include -Iexternal/rapidjson/include \
-                  -DVERSION=\"$(shell git describe --tags --always --dirty)\" -DBUILD_TIMESTAMP=\"$(shell date -u '+%FT%T')\"
+CPPFLAGS        += -fdiagnostics-color=always -Wall \
+                   -Iexternal/spdlog/include -Iexternal/rapidjson/include \
+                   -DVERSION=\"$(shell git describe --tags --always --dirty)\" -DBUILD_TIMESTAMP=\"$(shell date -u '+%FT%T')\"
 
-#Enable if e.g. custom boost include dir
-#CPPFLAGSCUSTOM  = -I/usr/local/include
+#Enable if e.g. custom boost or tbb include dir
+CPPFLAGSCUSTOM  = -I/opt/local/include
 
-LDLIBS          = -lboost_system -lboost_timer -lboost_thread  -lpthread -ltbb -lstdc++fs
+LDLIBS          = -lboost_system -lboost_chrono -lboost_thread  -lpthread -ltbb -lstdc++fs
 
-#Enable if e.g. custom boost lib dir
-#LDFLAGSCUSTOM   = -L/usr/local/lib
+#Enable if e.g. custom boost or tbb lib dir
+LDFLAGSCUSTOM   = -L/opt/local/lib
 
 FILES           = src/asm/asm.cpp src/maker/maker_reflection.cpp src/communication/ReceiveHandler.cpp src/logger/logger.cpp src/modules/*.cpp src/testcases/*.cpp src/main.cpp
 TARGET          = asm
-STRIP           ?= strip -s
-ECHO            ?= echo
+STRIP           = strip -s
+ECHO            = echo
 
 .PHONY: help clean ctags
 

@@ -18,6 +18,7 @@
 #ifdef __linux__
 #include <pthread.h>
 #include <sys/syscall.h>
+#include <syslog.h>
 #endif
 
 #include <chrono>
@@ -73,7 +74,10 @@ struct Observer : tbb::task_scheduler_observer {
 #ifdef __linux__
         char tn[20];
         pthread_getname_np(pthread_self(), &tn[0], sizeof(tn));
-        Logger::pLOG->info("TBB-Exit: {}", tn);
+        // Logger already destructed
+        ::openlog("Asm", LOG_PERROR | LOG_NDELAY, LOG_USER); 
+        ::syslog(LOG_INFO, "TBB-Exit: %s", tn);
+        ::closelog();
 #endif
     }
 };
@@ -108,7 +112,7 @@ static void load_config(std::string fn, unsigned port) {
 int main() {
     std::cout << "This is ASM version " << VERSION << ", build time " << BUILD_TIMESTAMP << "." << std::endl;
     Observer observer;
-    tbb::task_scheduler_init tbb_init;
+    //tbb::task_scheduler_init tbb_init; # Gone with OneAPI
 
     Logger::pLOG->trace("Trace log active");
     Logger::pLOG->debug("Debug log active");
@@ -122,7 +126,7 @@ int main() {
     // Wait for all previous instantiation processes to finish
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
-    Logger::pLOG->info("TBB threads, max availablse: {}", tbb::task_scheduler_init::default_num_threads());
+    Logger::pLOG->info("TBB threads, max availablse: {}", tbb::info::default_concurrency()); //tbb::task_scheduler_init::default_num_threads()); # Gone with OneAPI
 
     runDOAccessExamples();
     runDOLocksExamples();

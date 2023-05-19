@@ -116,13 +116,6 @@ class TcpServer {
             if(_cb)
                 _cb(socket, overAllLength, buffer);
 
-            try {
-                socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
-            } catch (std::exception& e) {
-                // E.g. in the case the peer endpoint has already been closed
-                Logger::pLOG->trace("TcpServer exception: {}", e.what());
-            }
-
             socket.close();
         }
 

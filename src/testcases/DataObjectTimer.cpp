@@ -54,19 +54,26 @@ void runDOTimerExamples() {
 #endif
     });
 
+    Logger::pLOG->trace("Register link from TimerObject to DataObject");
+
     // Add TimerObject and let it trigger
     Asm::pTOR->registerTimer(dataObjectTimer);
+    Logger::pLOG->trace("Add TimerObject to reactor");
 
     // Let timer start
     dataObjectTimer.set([](Asm::TimerObject& to){ to.setRelativeInterval(500,0); });
+    Logger::pLOG->trace("Let TimerObject run with 500ms intervalUnr");
 
     boost::this_thread::sleep_for(boost::chrono::seconds(3));
 
     dataObjectTimer.set([](Asm::TimerObject& to){ to.stop(); });
+    Logger::pLOG->trace("Stop TimerObject");
 
     Asm::pTOR->unregisterTimer(dataObjectTimer);
+    Logger::pLOG->trace("Unregister TimerObject");
 
     dataObjectTimer.unregisterLink("doTimer->doInt");
+    Logger::pLOG->trace("Unregister link");
 
     Logger::pLOG->trace("===================================================================");
     std::cout << "Enter \'n\' for next test!" << std::endl;
