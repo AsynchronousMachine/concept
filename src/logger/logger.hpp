@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <exception>
+#include <iostream>
 
 // Adjust settings for spdlog, refer to, spdlog/tweakme.h
 #define SPDLOG_FINAL final
@@ -69,8 +70,12 @@ class Logger {
         }
     }
 
-    // Necessary if someone want to inherit from that
-    virtual ~Logger() = default;
+    // Logger can not used anymore
+    ~Logger() {
+        ::openlog("Asm", LOG_PERROR | LOG_NDELAY, LOG_USER);
+        ::syslog(LOG_ALERT, "---Logger destructed---");
+        ::closelog();
+    }
 
     // Non-copyable
     Logger(const Logger&) = delete;

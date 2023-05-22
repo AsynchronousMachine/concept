@@ -69,26 +69,29 @@ class TcpServer {
             boost::asio::ip::tcp::acceptor acceptor{io_service, endpoint};
 
             while (_run_state) {
-                //                    // Clean up remaining futures
-                //                    for (auto it = f.cbegin(); it != f.cend(); ) {
-                //                        if (it->valid()) {
-                //                            auto s = it->wait_for(std::chrono::seconds(0));
-                //                            if (s == std::future_status::ready) {
-                //                                Logger::pLOG->trace("Found remaining future to clean up");
-                //                                it = f.erase(it);
-                //                                continue;
-                //                            }
-                //                        }
+                                    // Clean up remaining futures
+                                    for (auto it = f.cbegin(); it != f.cend(); ) {
+                                        if (it->valid()) {
+                                            auto s = it->wait_for(std::chrono::seconds(0));
+                                            if (s == std::future_status::ready) {
+                                                Logger::pLOG->trace("Found remaining future to clean up");
+                                                it = f.erase(it);
+                                                continue;
+                                            }
+                                        }
 
-                //                        Logger::pLOG->trace("Found pending future");
-                //                        ++it;
-                //                    }
+                                        Logger::pLOG->trace("Found pending future");
+                                        ++it;
+                                    }
 
                 Logger::pLOG->trace("TcpServer wait for connection");
 
                 acceptor.accept(socket, endpoint_peer);
 
                 Logger::pLOG->trace("TcpServer got connection from {} {}", endpoint_peer.address().to_string(), endpoint_peer.port());
+
+        }
+
 
                 if (!_run_state)
                     break;
