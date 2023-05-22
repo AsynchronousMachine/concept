@@ -120,17 +120,13 @@ class TcpServer {
         if (_cb)
             _cb(socket, overAllLength, buffer);
 
-        //        try {
-        //            socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
-        //            socket.close();
-        //        } catch (std::exception &e) {
-        //            // E.g. in the case the endpoint has already been closed
-        //            Logger::pLOG->trace("TcpServer exception: {}", e.what());
-        //        }
-
-        // Swallow all faults from entpoints
-        socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
-        socket.close(ec);
+        try {
+            socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
+            socket.close();
+        } catch (std::exception &e) {
+            // E.g. in the case the endpoint has already been closed
+            Logger::pLOG->trace("TcpServer exception: {}", e.what());
+        }
     }
 
   public:

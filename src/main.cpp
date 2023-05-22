@@ -125,15 +125,15 @@ int main() {
 
     Logger::pLOG->info("TBB threads, max availablse: {}", tbb::task_scheduler_init::default_num_threads());
 
-        runDOAccessExamples();
-    //    runDOLocksExamples();
-    //    runDOLinksExamples();
-    //    runReactorExamples();
-    //    runDOReactorExamples();
-    //    runDOTimerExamples();
-    //    runModuleUsageExamples();
-    //    runDOSerializationExamples();
-    //    runTBBUsageExamples();
+    runDOAccessExamples();
+    runDOLocksExamples();
+    runDOLinksExamples();
+    runReactorExamples();
+    runDOReactorExamples();
+    runDOTimerExamples();
+    runModuleUsageExamples();
+    runDOSerializationExamples();
+    runTBBUsageExamples();
 
     // Should be treaded as singletons
     std::unique_ptr<Asm::TcpServer> pDOServer = std::make_unique<Asm::TcpServer>(9600, Asm::do_handler);
