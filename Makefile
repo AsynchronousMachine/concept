@@ -1,4 +1,4 @@
-CPPFLAGS        += -fdiagnostics-color=always -Wall \
+CPPFLAGS        += -std=c++17 -fconcepts -fdiagnostics-color=always -Wall \
                    -Iexternal/spdlog/include -Iexternal/rapidjson/include \
                    -DVERSION=\"$(shell git describe --tags --always --dirty)\" -DBUILD_TIMESTAMP=\"$(shell date -u '+%FT%T')\"
 

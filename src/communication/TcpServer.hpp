@@ -10,6 +10,7 @@
 #endif
 
 #include <functional>
+#include <memory>
 #include <future>
 #include <iostream>
 #include <list>
@@ -28,7 +29,7 @@ class TcpServer {
   public:
     static constexpr int max_buffer_size = 100000;
 
-    using cb_type = std::function<void(boost::asio::ip::tcp::socket &, size_t, std::array<char, max_buffer_size> &)>;
+    using cb_type = std::function<void(boost::asio::ip::tcp::socket&, size_t, std::array<char, max_buffer_size>&)>;
 
   private:
     bool _run_state = true;
@@ -61,46 +62,28 @@ class TcpServer {
 #endif
 
         try {
-            // std::list<std::future<void>> f;
             boost::asio::io_service io_service;
             boost::asio::ip::tcp::socket socket{io_service};
             boost::asio::ip::tcp::endpoint endpoint{boost::asio::ip::address_v6::any(), _port};
             boost::asio::ip::tcp::endpoint endpoint_peer;
             boost::asio::ip::tcp::acceptor acceptor{io_service, endpoint};
-
+        
             while (_run_state) {
-                                    // Clean up remaining futures
-                                    for (auto it = f.cbegin(); it != f.cend(); ) {
-                                        if (it->valid()) {
-                                            auto s = it->wait_for(std::chrono::seconds(0));
-                                            if (s == std::future_status::ready) {
-                                                Logger::pLOG->trace("Found remaining future to clean up");
-                                                it = f.erase(it);
-                                                continue;
-                                            }
-                                        }
-
-                                        Logger::pLOG->trace("Found pending future");
-                                        ++it;
-                                    }
-
-                Logger::pLOG->trace("TcpServer wait for connection");
+                Logger::pLOG->trace("TcpServer wait for connection, with socket id {}", (void*)&socket);
 
                 acceptor.accept(socket, endpoint_peer);
 
                 Logger::pLOG->trace("TcpServer got connection from {} {}", endpoint_peer.address().to_string(), endpoint_peer.port());
 
-        }
-
-
                 if (!_run_state)
                     break;
 
-                boost::asio::ip::tcp::socket s{std::move(socket)};
-                Asm::pDOR->trigger([thisptr, &s] { std::invoke(&TcpServer::handle_connection, thisptr, std::move(s)); });
+                std::shared_ptr<boost::asio::ip::tcp::socket>  sock{std::make_shared<boost::asio::ip::tcp::socket>(std::move(socket))};
+                Logger::pLOG->trace("Make shared socket with id {}", (void*)(sock.get()));
+                
+                Asm::pDOR->trigger([thisptr, sock]() mutable { std::invoke(&Asm::TcpServer::handle_connection, thisptr, sock); });
 
                 Logger::pLOG->info("TcpServer job enqueued");
-                // f.emplace_back(std::async(std::launch::async, std::mem_fn(&TcpServer::handle_connection), thisptr, std::move(socket)));
             }
 
             Logger::pLOG->info("TcpServer got stop");
@@ -109,31 +92,23 @@ class TcpServer {
         }
     }
 
-    void handle_connection(boost::asio::ip::tcp::socket &&socket) {
+    void handle_connection(std::shared_ptr<boost::asio::ip::tcp::socket> socket) {
         auto overAllLength = 0;
         auto receivedLength = 0;
         boost::system::error_code ec;
         std::array<char, max_buffer_size> buffer;
-
+        
         do {
-            receivedLength = socket.read_some(boost::asio::buffer(&buffer[overAllLength], max_buffer_size - overAllLength), ec);
+            receivedLength = socket->read_some(boost::asio::buffer(&buffer[overAllLength], max_buffer_size - overAllLength), ec);
             overAllLength += receivedLength;
         } while (!ec && receivedLength > 0);
 
         if (_cb)
-            _cb(socket, overAllLength, buffer);
+            _cb(*socket, overAllLength, buffer);
 
-        //        try {
-        //            socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
-        //            socket.close();
-        //        } catch (std::exception &e) {
-        //            // E.g. in the case the endpoint has already been closed
-        //            Logger::pLOG->trace("TcpServer exception: {}", e.what());
-        //        }
-
-        // Swallow all faults from entpoints
-        socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
-        socket.close(ec);
+        // Swallow all faults from end points
+        socket->close(ec);
+        Logger::pLOG->trace("Closed socket with id {}", (void*)(socket.get()));
     }
 
   public:
@@ -155,4 +130,6 @@ class TcpServer {
         _thrd.join();
     }
 };
+
 }
+

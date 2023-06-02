@@ -113,7 +113,6 @@ static void load_config(std::string fn, unsigned port) {
 int main() {
     std::cout << "This is ASM version " << VERSION << ", build time " << BUILD_TIMESTAMP << "." << std::endl;
     Observer observer;
-    //tbb::task_scheduler_init tbb_init; # Gone with OneAPI
 
     Logger::pLOG->trace("Trace log active");
     Logger::pLOG->debug("Debug log active");
@@ -127,17 +126,17 @@ int main() {
     // Wait for all previous instantiation processes to finish
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
-    Logger::pLOG->info("TBB threads, max availablse: {}", tbb::info::default_concurrency()); //tbb::task_scheduler_init::default_num_threads()); # Gone with OneAPI
-
-        runDOAccessExamples();
-    //    runDOLocksExamples();
-    //    runDOLinksExamples();
-    //    runReactorExamples();
-    //    runDOReactorExamples();
-    //    runDOTimerExamples();
-    //    runModuleUsageExamples();
-    //    runDOSerializationExamples();
-    //    runTBBUsageExamples();
+    Logger::pLOG->info("TBB threads, max availablse: {}", tbb::info::default_concurrency()); 
+    
+    runDOAccessExamples();
+    runDOLocksExamples();
+    runDOLinksExamples();
+    runReactorExamples();
+    runDOReactorExamples();
+    runDOTimerExamples();
+    runModuleUsageExamples();
+    runDOSerializationExamples();
+    runTBBUsageExamples();
 
     // Should be treaded as singletons
     std::unique_ptr<Asm::TcpServer> pDOServer = std::make_unique<Asm::TcpServer>(9600, Asm::do_handler);
