@@ -5,76 +5,39 @@
 
 #pragma once
 
-#ifdef __linux__
 #include <syslog.h>
-#else // Windows
-#include <stdio.h>
-#endif
 
-#include <memory>
-#include <exception>
-#include <iostream>
+#include <string_view>
 
-// Adjust settings for spdlog, refer to, spdlog/tweakme.h
-#define SPDLOG_FINAL final
-#define SPDLOG_PREVENT_CHILD_FD
-#define SPDLOG_ENABLE_SYSLOG
-#include <spdlog/spdlog.h>
+#define FMT_HEADER_ONLY
+
+#include <fmt/format.h>
 
 namespace Logger {
 
 class Logger {
-    std::shared_ptr<spdlog::logger> _console;
-    std::shared_ptr<spdlog::logger> _syslog;
+
+  private:
+	  const std::string _name;
+	  
+	  void log(const int prio, const std::string& s) {
+	      ::syslog(prio, "%s", s.data());
+	  }
 
   public:
-    explicit Logger(const std::string& name) {
-        try
-        {
-#ifdef SPDLOG_TRACE_ON
-            // Create console logger
-            _console = spdlog::stdout_color_mt(name);
-            _console->set_pattern("[%Y-%m-%d %T][%n] %v");
-            _console->set_level(spdlog::level::trace);
-            _console->trace("+++Tracing on stdout is enabled+++");
+    explicit Logger(const std::string& name) : _name(name) {
+        // Due to the early stage initialization, refer __attribute__((init_priority(1000))), std::cout is not valid yet
+#ifdef LOG_TRACE_ON        
+        ::openlog(_name.data(), LOG_PERROR | LOG_NDELAY, LOG_USER);
+#else
+        ::openlog(_name.data(),          0 | LOG_NDELAY, LOG_USER);
 #endif
-
-#ifdef __linux__
-            // Create Linux syslog logger
-            _syslog = spdlog::syslog_logger("syslog", name);
-#else // Windows
-            // Create Windows syslog logger
-            // _syslog = spdlog::rotating_logger_mt(name, "syslog", 1024 * 1024 * 5, 10);
-            // _syslog->set_pattern("[%Y-%m-%d %T][%n] %v");
-#endif
-
-            info("+++Syslog is enabled+++");
-
-#ifdef SPDLOG_DEBUG_ON
-            _syslog->set_level(spdlog::level::debug);
-#endif
-        }
-        catch (const std::exception& ex)
-        {
-            // Due to the early stage initialization, refer __attribute__((init_priority(1000))), std::cout is not valid yet
-#ifdef __linux__
-            ::openlog(name.data(), LOG_PERROR | LOG_NDELAY, LOG_USER);
-            ::syslog(LOG_ALERT, "---Initialization of logger failed: %s---", ex.what());
-            ::closelog();
-#else // Windows
-            //::puts("---Initialization of logger failed---");
-#endif
-
-            std::this_thread::sleep_for(std::chrono::seconds(3));
-            throw; // Rethrows the exception object of type std::exception, without logger nothing makes sense
-        }
+        log(LOG_NOTICE, "+++Syslog is enabled+++");
     }
 
-    // Logger can not used anymore
     ~Logger() {
-        ::openlog("Asm", LOG_PERROR | LOG_NDELAY, LOG_USER);
-        ::syslog(LOG_ALERT, "---Logger destructed---");
-        ::closelog();
+        log(LOG_NOTICE, "---Logger destructed---");
+        // ::closelog(); Closing is defered to proccess's end
     }
 
     // Non-copyable
@@ -86,44 +49,41 @@ class Logger {
     Logger &operator=(Logger&&) = delete;
 
     template <typename... Args>
-#ifdef SPDLOG_TRACE_ON
-    void trace(const std::string& fmt, const Args&... args) {
-        _console->trace(fmt.data(), args...);
+#ifdef LOG_TRACE_ON
+    void trace(fmt::string_view fmt, const Args&... args) {
+        log(LOG_DEBUG, fmt::vformat(fmt, fmt::make_format_args(args...)));
 #else
-    void trace(const std::string&, const Args&...) {
+    void trace(fmt::string_view, const Args&... args) {
 #endif
     }
 
     template <typename... Args>
-#ifdef SPDLOG_DEBUG_ON
-    void debug(const std::string& fmt, const Args&... args) {
-        _syslog->debug(fmt.data(), args...);
+#ifdef LOG_DEBUG_ON
+    void debug(fmt::string_view fmt, const Args&... args) {
+        log(LOG_DEBUG, fmt::vformat(fmt, fmt::make_format_args(args...)));
 #else
-    void debug(const std::string&, const Args&...) {
+    void debug(fmt::string_view fmt, const Args&... args) {
 #endif
     }
-
+    
     template <typename... Args>
     void info(const std::string& fmt, const Args&... args) {
-        _syslog->info(fmt.data(), args...);
-
-        // If SPDLOG_TRACE_ON output info at console, too
-        trace(fmt.data(), args...);
+        log(LOG_INFO, fmt::vformat(fmt, fmt::make_format_args(args...)));
     }
 
     template <typename... Args>
     void warn(const std::string& fmt, const Args&... args) {
-        _syslog->warn(fmt.data(), args...);
+        log(LOG_WARNING, fmt::vformat(fmt, fmt::make_format_args(args...)));
     }
 
     template <typename... Args>
     void error(const std::string& fmt, const Args&... args) {
-        _syslog->error(fmt.data(), args...);
+        log(LOG_ERR, fmt::vformat(fmt, fmt::make_format_args(args...)));
     }
 
     template <typename... Args>
     void critical(const std::string& fmt, const Args&... args) {
-        _syslog->critical(fmt.data(), args...);
+        log(LOG_CRIT, fmt::vformat(fmt, fmt::make_format_args(args...)));
     }
 };
 

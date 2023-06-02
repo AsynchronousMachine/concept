@@ -1,7 +1,7 @@
-CPPFLAGS        += -std=c++17 -fconcepts -fdiagnostics-color=always -Wall \
-                   -Iexternal/spdlog/include -Iexternal/rapidjson/include \
+CPPFLAGS        += -std=c++20 -fdiagnostics-color=always -Wall \
+                   -Iexternal/rapidjson/include \
                    -DVERSION=\"$(shell git describe --tags --always --dirty)\" -DBUILD_TIMESTAMP=\"$(shell date -u '+%FT%T')\"
-
+                   
 #Enable if e.g. custom boost or tbb include dir
 CPPFLAGSCUSTOM  = -I/opt/local/include
 
@@ -27,7 +27,7 @@ help:
 	@$(ECHO) "make ctags"
 
 $(TARGET)_debug: $(FILES)
-	$(CXX) $(CPPFLAGS) -Og -g -DTBB_USE_DEBUG=1 -DSPDLOG_DEBUG_ON -DSPDLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
+	$(CXX) $(CPPFLAGS) -Og -g -DTBB_USE_DEBUG=1 -DLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
 
 $(TARGET)_release: $(FILES)
 	$(CXX) $(CPPFLAGS) -Ofast $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)

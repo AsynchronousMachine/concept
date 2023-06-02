@@ -12,7 +12,7 @@ Refer to *src/testcases* in git branch ***master***!
 * [Boost](http://www.boost.org)
 * [Threading Building Blocks](https://github.com/oneapi-src/oneTBB)
 * [RapidJSON](http://rapidjson.org/)
-* [spdlog](https://github.com/gabime/spdlog)
+* [fmt](https://hackingcpp.com/cpp/libs/fmt.html)
 
 Thanks to all the guys who keep this projects up and running!
 

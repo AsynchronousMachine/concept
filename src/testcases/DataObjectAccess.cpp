@@ -358,7 +358,7 @@ void runDOAccessExamples() {
         return &const_cast<std::atomic<int>&>(i);
     });
 
-    Logger::pLOG->trace("Value before: {}", *tmp51);
+    Logger::pLOG->trace("Value before: {}", tmp51->load());
     *tmp51 = 32;
     do71.get([](const int i) {
         Logger::pLOG->trace("Misused by return of address of reference {}", i);

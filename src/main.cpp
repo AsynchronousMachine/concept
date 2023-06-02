@@ -75,10 +75,7 @@ struct Observer : tbb::task_scheduler_observer {
 #ifdef __linux__
         char tn[20];
         pthread_getname_np(pthread_self(), &tn[0], sizeof(tn));
-        // Logger already destructed
-        ::openlog("Asm", LOG_PERROR | LOG_NDELAY, LOG_USER); 
-        ::syslog(LOG_INFO, "TBB-Exit: %s", tn);
-        ::closelog();
+        ::syslog(LOG_NOTICE, "TBB-Exit: %s", tn); // Rely on still open syslog
 #endif
     }
 };
