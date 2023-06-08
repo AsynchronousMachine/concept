@@ -1,13 +1,12 @@
-CPPFLAGS        += -std=c++20 -fdiagnostics-color=always -Wall \
-                   -Iexternal/rapidjson/include \
+CPPFLAGS        += -std=c++23 -fdiagnostics-color=always -Wall \
                    -DVERSION=\"$(shell git describe --tags --always --dirty)\" -DBUILD_TIMESTAMP=\"$(shell date -u '+%FT%T')\"
                    
-#Enable if e.g. custom boost or tbb include dir
+#Enable if e.g. custom boost, rapidjson, fmt or tbb include dir
 CPPFLAGSCUSTOM  = -I/opt/local/include
 
-LDLIBS          = -lboost_system -lboost_chrono -lboost_thread  -lpthread -ltbb -lstdc++fs
+LDLIBS          = -lboost_system -lboost_chrono -lboost_thread -lpthread -ltbb -lstdc++fs
 
-#Enable if e.g. custom boost or tbb lib dir
+#Enable if e.g. custom boost, rapidjson, fmt or tbb lib dir
 LDFLAGSCUSTOM   = -L/opt/local/lib
 
 FILES           = src/asm/asm.cpp src/maker/maker_reflection.cpp src/communication/ReceiveHandler.cpp src/logger/logger.cpp src/modules/*.cpp src/testcases/*.cpp src/main.cpp
@@ -27,14 +26,14 @@ help:
 	@$(ECHO) "make ctags"
 
 $(TARGET)_debug: $(FILES)
-	$(CXX) $(CPPFLAGS) -Og -g -DTBB_USE_DEBUG=1 -DLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
+	$(CXX) $(CPPFLAGS) -g -Og -DTBB_USE_DEBUG=1 -DLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
 
 $(TARGET)_release: $(FILES)
-	$(CXX) $(CPPFLAGS) -Ofast $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
+	$(CXX) $(CPPFLAGS) -O0 -DLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
 	$(STRIP) $@
 
 clean:
-	-$(RM) $(TARGET)_release $(TARGET)_debug CppCheck* cachegrind*
+	-$(RM) $(TARGET)_release $(TARGET)_debug CppCheck* cachegrind* system-dump.json
 
 valgrind: $(TARGET)_debug
 	@valgrind --version
@@ -46,4 +45,5 @@ cachegrind: $(TARGET)_release
 
 ctags:
 	@ctags -R .
-# E.g. run with custom lib path: LD_LIBRARY_PATH="/usr/local/lib" ./asm_xxx
+	
+# E.g. run with custom lib path: LD_LIBRARY_PATH="/opt/local/lib" ./asm_xxx
