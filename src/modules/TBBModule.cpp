@@ -35,7 +35,7 @@ void TBBModule::actionInt(Asm::DataObject<int>& doSource, Asm::DataObject<MyComp
 }
 
 TBBModule::TBBModule() :
-    DOcomplexInOut(MyComplexDOType{ 0, 0, "" }),
+    DOcomplexInOut(MyComplexDOType{ .inputCounter=0, .outputCounter=0, .message="Default" }),
     // The callback function for a Link can only be set in the constructor
     // Guideline: the Link is defined in the same module where its target DataObject is,
     // the same applies to the implementation of the callback function

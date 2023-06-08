@@ -2,7 +2,9 @@
 
 #include <string>
 #include <iostream>
-#include <experimental/filesystem>
+#include <filesystem>
+
+#include <boost/core/demangle.hpp>
 
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/filewritestream.h>
@@ -28,27 +30,34 @@ class SystemModule {
         if (value.IsBool() && value.GetBool()) {
             Logger::pLOG->trace("Dump <system-dump.json> to disk");
             using namespace rapidjson;
-            Document doc; // Null
+            Document doc;
             doc.SetObject();
 
             std::string key;
             Value json_key(kStringType);
             Value json_value;
 
-            //iterate over all public DOs
+            Logger::pLOG->trace("Iterate over all public DOs");
             for (auto map_iter : name_dataobjects) {
-                boost::apply_visitor([&](auto& d) {
-                    d.serialize(json_value, doc.GetAllocator());
-                }, map_iter.second);
+                try {
+                    Logger::pLOG->trace("Serialize DO {}", map_iter.first);
+                    boost::apply_visitor([&](auto& d) {
+                        d.serialize(json_value, doc.GetAllocator());
+                    }, map_iter.second);
+                } catch (const std::exception& e) {
+                    Logger::pLOG->error("Serialize exeption: {}", e.what());
+                    Logger::pLOG->error("Handling DO {} / {}", map_iter.first, boost::core::demangle(typeid(map_iter.second).name()));
+                }                    
+                    
                 if (!json_value.IsNull()) {
                     key = map_iter.first;
-                    //json_key.SetString(StringRef(*key.c_str)); // always the last key!!!
-                    json_key.SetString(key.c_str(), doc.GetAllocator());
+                    json_key.SetString(key.data(), doc.GetAllocator());
                     doc.AddMember(json_key, json_value, doc.GetAllocator());
                 }
             }
 
-            std::FILE* fp = std::fopen("system-dump.json", "wb"); // non-Windows use "w"
+            Logger::pLOG->trace("Try to write <system-dump.json>");
+            std::FILE* fp = std::fopen("system-dump.json", "wb"); 
             char writeBuffer[1000000];
             FileWriteStream os(fp, writeBuffer, sizeof(writeBuffer));
             PrettyWriter<FileWriteStream> writer(os);
@@ -61,11 +70,12 @@ class SystemModule {
         if (value.IsBool() && value.GetBool()) {
             Logger::pLOG->trace("Try to read <system-dump.json> from disk");
 
-            if (!std::experimental::filesystem::exists("system-dump.json"))
+            if (!std::filesystem::exists("system-dump.json"))
                 return;
 
+            Logger::pLOG->trace("Try to open <system-dump.json>");
             using namespace rapidjson;
-            std::FILE* fp = std::fopen("system-dump.json", "rb"); // non-Windows use "r"
+            std::FILE* fp = std::fopen("system-dump.json", "rb");
             char readBuffer[65536];
             FileReadStream is(fp, readBuffer, sizeof(readBuffer));
             Document doc;
@@ -78,17 +88,15 @@ class SystemModule {
                 return;
             }
 
-            //iterate over all DO-keys from json file
+            Logger::pLOG->trace("Iterate over all DO-keys from json file");
             for (Value::ConstMemberIterator itr = doc.MemberBegin(); itr != doc.MemberEnd(); ++itr) {
-                //const char* doName = itr->name.GetString();
                 Value& v = doc[itr->name.GetString()];
                 try {
-                    boost::apply_visitor([&](auto& d) {
-                        d.deserialize(v);
-                    }, name_dataobjects.at(itr->name.GetString()));
+                    Logger::pLOG->trace("Deserialize DO {}", itr->name.GetString());
+                    boost::apply_visitor([&](auto& d) { d.deserialize(v); }, name_dataobjects.at(itr->name.GetString()));
                 } catch (const std::exception& e) {
                     Logger::pLOG->error("Deserialize exeption: {}", e.what());
-                    Logger::pLOG->error(">Missing {}", itr->name.GetString());
+                    Logger::pLOG->error("Handling DO {}", itr->name.GetString());
                 }
 
             }
@@ -103,8 +111,8 @@ class SystemModule {
         Logger::pLOG->trace("This is for humans:");
 
         for(const auto& m : print_modules) {
-            rjvalue.SetString(m.second.c_str(), allocator);
-            value.AddMember(rapidjson::StringRef(m.first.c_str()), rjvalue, allocator);
+            rjvalue.SetString(m.second.data(), allocator);
+            value.AddMember(rapidjson::StringRef(m.first.data()), rjvalue, allocator);
 
             Logger::pLOG->trace("{}", m.first);
             Logger::pLOG->trace("{}", m.second);

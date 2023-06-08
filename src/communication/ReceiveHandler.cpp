@@ -43,24 +43,24 @@ void do_handler(boost::asio::ip::tcp::socket &socket, size_t len, std::array<cha
         if (name_dataobjects.find(doName) != name_dataobjects.end()) {
             auto doInstance = name_dataobjects.at(doName);
             if (itr->value.IsNull()) {
-                Logger::pLOG->trace("do_handler got read request");
+                Logger::pLOG->trace("do_handler got read request for {}", doName);
                 boost::apply_visitor([&](auto &d) { d.serialize(rjval_out, rjdoc_out.GetAllocator()); }, doInstance);
                 rjdoc_out.AddMember(rapidjson::StringRef(doName), rjval_out, rjdoc_out.GetAllocator());
             } else {
-                Logger::pLOG->trace("do_handler got write request");
+                Logger::pLOG->trace("do_handler got write request for {}", doName);
                 boost::apply_visitor([&](auto &d) { d.deserialize(const_cast<rapidjson::Value &>(itr->value)); }, doInstance);
             }
         }
     }
 
-    Logger::pLOG->trace("Direct access to the DataObjects of the test case:");
-    inModule.DOintOutput.get([](const int i) { Logger::pLOG->trace("inModule.DOintOutput got: {}", i); });
-    inModule.DOstringOutput.get([](const std::string s) { Logger::pLOG->trace("inModuleDOstringOutput got: {}", s); });
+    Logger::pLOG->info("Direct access to the DataObjects of the test case:");
+    inModule.DOintOutput.get([](const int i) { Logger::pLOG->info("inModule.DOintOutput got: {}", i); });
+    inModule.DOstringOutput.get([](const std::string s) { Logger::pLOG->info("inModuleDOstringOutput got: {}", s); });
 
     rjdoc_out.Accept(rjw);
 
-    Logger::pLOG->trace("Stringify and output the created DOM:");
-    Logger::pLOG->trace("{}", rjsb.GetString());
+    Logger::pLOG->info("Stringify and output the created DOM:");
+    Logger::pLOG->info("{}", rjsb.GetString());
 
     // Swallow all faults from entpoints
     socket.write_some(boost::asio::buffer(rjsb.GetString(), rjsb.GetSize()), ec);
@@ -87,7 +87,7 @@ void lo_handler(boost::asio::ip::tcp::socket &, size_t len, std::array<char, Asm
             const rapidjson::Value &v = itr->value;
             if (v.IsArray()) {
                 if (v.GetArray().Size() == 3) {
-                    Logger::pLOG->trace("link_handler got set request");
+                    Logger::pLOG->info("link_handler got set request");
                     boost::apply_visitor(
                         [&](auto &l) {
                             l.set(v.GetArray()[0].GetString(), name_dataobjects.at(v.GetArray()[1].GetString()),
@@ -95,7 +95,7 @@ void lo_handler(boost::asio::ip::tcp::socket &, size_t len, std::array<char, Asm
                         },
                         linkInstance);
                 } else {
-                    Logger::pLOG->trace("link_handler got clear request");
+                    Logger::pLOG->info("link_handler got clear request");
                     boost::apply_visitor([&](auto &l) { l.clear(v.GetArray()[0].GetString(), name_dataobjects.at(v.GetArray()[1].GetString())); },
                                          linkInstance);
                 }

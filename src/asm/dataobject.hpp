@@ -76,7 +76,7 @@ template <typename D> class DataObject {
         _content = d;
     }
 
-    serializeFnct doSerialize;
+    serializeFnct doSerialize = emptySer;
 
     template <typename U = D, enable_if_is_same<U, bool> = true>
     void serialize_impl(rapidjson::Value &value, rapidjson::Document::AllocatorType&) {
@@ -113,58 +113,68 @@ template <typename D> class DataObject {
         value.SetString(get().c_str(), allocator);
     }
 
-    template <typename U = D, std::enable_if_t<!std::is_same<U, bool>::value &&
-                                               !std::is_same<U, int>::value &&
+    template <typename U = D, std::enable_if_t<!std::is_same<U,         bool>::value &&
+                                               !std::is_same<U,          int>::value &&
                                                !std::is_same<U, unsigned int>::value &&
-                                               !std::is_same<U, int64_t>::value &&
-                                               !std::is_same<U, uint64_t>::value &&
-                                               !std::is_same<U, double>::value &&
-                                               !std::is_same<U, std::string>::value, bool> = true>
-    void serialize_impl(rapidjson::Value&, rapidjson::Document::AllocatorType&) {}
+                                               !std::is_same<U,      int64_t>::value &&
+                                               !std::is_same<U,     uint64_t>::value &&
+                                               !std::is_same<U,       double>::value &&
+                                               !std::is_same<U,  std::string>::value, bool> = true>
+    void serialize_impl(rapidjson::Value&, rapidjson::Document::AllocatorType&)
+    {
+        Logger::pLOG->warn("Impl. serialize fct not implemented");
+    }
 
-    deserializeFnct doDeserialize;
+    deserializeFnct doDeserialize = emptyDeser;
 
-    template <typename U = D, enable_if_is_same<U, bool> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetBool()); }
+    template <typename U = D, enable_if_is_same<U,         bool> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetBool()); }
 
-    template <typename U = D, enable_if_is_same<U, int> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetInt()); }
+    template <typename U = D, enable_if_is_same<U,          int> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetInt()); }
 
     template <typename U = D, enable_if_is_same<U, unsigned int> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetUint()); }
 
-    template <typename U = D, enable_if_is_same<U, int64_t> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetInt64()); }
+    template <typename U = D, enable_if_is_same<U,      int64_t> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetInt64()); }
 
-    template <typename U = D, enable_if_is_same<U, uint64_t> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetUint64()); }
+    template <typename U = D, enable_if_is_same<U,     uint64_t> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetUint64()); }
 
-    template <typename U = D, enable_if_is_same<U, double> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetDouble()); }
+    template <typename U = D, enable_if_is_same<U,       double> = true> void deserialize_impl(rapidjson::Value &value) { set(value.GetDouble()); }
 
-    template <typename U = D, enable_if_is_same<U, std::string> = true> void deserialize_impl(rapidjson::Value &value) {
+    template <typename U = D, enable_if_is_same<U,  std::string> = true> void deserialize_impl(rapidjson::Value &value)
+    {
         std::string s{value.GetString()};
         set(s);
     }
 
-    template <typename U = D, std::enable_if_t<!std::is_same<U, bool>::value &&
-                                               !std::is_same<U, int>::value &&
+    template <typename U = D, std::enable_if_t<!std::is_same<U,         bool>::value &&
+                                               !std::is_same<U,          int>::value &&
                                                !std::is_same<U, unsigned int>::value &&
-                                               !std::is_same<U, int64_t>::value &&
-                                               !std::is_same<U, uint64_t>::value &&
-                                               !std::is_same<U, double>::value &&
-                                               !std::is_same<U, std::string>::value, bool> = true>
-    void deserialize_impl(rapidjson::Value&) {}
+                                               !std::is_same<U,      int64_t>::value &&
+                                               !std::is_same<U,     uint64_t>::value &&
+                                               !std::is_same<U,       double>::value &&
+                                               !std::is_same<U,  std::string>::value, bool> = true>
+    void deserialize_impl(rapidjson::Value&)
+    {
+        Logger::pLOG->warn("Impl. deserialize fct not implemented");
+    }
 
   public:
     DataObject(D content, bool)
         : _content(content), doSerialize([this](rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) {
               std::mem_fn (&DataObject<D>::serialize_impl<D>)(this, value, allocator);
           }),
-          doDeserialize([this](rapidjson::Value &value) { std::mem_fn (&DataObject<D>::deserialize_impl<D>)(this, value); }) {
-        Logger::pLOG->trace("DO-CTOR with implicit trival ser-/deser fct");
+          doDeserialize([this](rapidjson::Value &value) { std::mem_fn (&DataObject<D>::deserialize_impl<D>)(this, value); })
+    {
+        Logger::pLOG->trace("DO-CTOR with implicit trival ser-/deser fct {}", boost::core::demangle(typeid(*this).name()));
     }
 
-    DataObject(D content, serializeFnct ptr, deserializeFnct ptr2) : _content(content), doSerialize(ptr), doDeserialize(ptr2) {
-        Logger::pLOG->trace("DO-CTOR with explicit ser-/deser fct");
+    DataObject(D content, serializeFnct ptr, deserializeFnct ptr2) : _content(content), doSerialize(ptr), doDeserialize(ptr2)
+    {
+        Logger::pLOG->trace("DO-CTOR with explicit ser-/deser fct {}", boost::core::demangle(typeid(*this).name()));
     }
 
-    DataObject(D content) : _content(content), doSerialize(emptySer), doDeserialize(emptyDeser) {
-        Logger::pLOG->trace("DO-CTOR with disabled ser-/deser");
+    DataObject(D content) : _content(content), doSerialize(emptySer), doDeserialize(emptyDeser)
+    {
+        Logger::pLOG->trace("DO-CTOR with empty ser-/deser {}", boost::core::demangle(typeid(*this).name()));
     }
 
     template <typename MemFun, typename MemFun2, typename ThisPtr>
@@ -172,8 +182,9 @@ template <typename D> class DataObject {
         : _content(content), doSerialize([thisptr, ser](rapidjson::Value &value, rapidjson::Document::AllocatorType &allocator) {
               std::mem_fn(ser)(thisptr, value, allocator);
           }),
-          doDeserialize([thisptr, deser](rapidjson::Value &value) { std::mem_fn(deser)(thisptr, value); }) {
-        Logger::pLOG->trace("DO-CTOR with instance based ser-/deser fct");
+          doDeserialize([thisptr, deser](rapidjson::Value &value) { std::mem_fn(deser)(thisptr, value); })
+    {
+        Logger::pLOG->trace("DO-CTOR with instance based ser-/deser fct {}", boost::core::demangle(typeid(*this).name()));
     }
 
     template <typename MemFun, typename MemFun2>
@@ -185,11 +196,15 @@ template <typename D> class DataObject {
           doDeserialize([&, deser](rapidjson::Value &value) {
               boost::lock_guard<mutex_t> lock(_mtx_content);
               std::mem_fn(deser)(&_content, value);
-          }) {
-        Logger::pLOG->trace("DO-CTOR with content based ser-/deser fct");
+          })
+    {
+        Logger::pLOG->trace("DO-CTOR with content based ser-/deser fct {}", boost::core::demangle(typeid(*this).name()));
     }
 
-    DataObject() : doSerialize(emptySer), doDeserialize(emptyDeser) { Logger::pLOG->trace("DO-CTOR only for TO"); }
+    DataObject() : doSerialize(emptySer), doDeserialize(emptyDeser)
+    {
+        Logger::pLOG->trace("DO-CTOR only for TO {}", boost::core::demangle(typeid(*this).name()));
+    }
 
     // Non-copyable
     DataObject(const DataObject &) = delete;
