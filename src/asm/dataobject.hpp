@@ -14,6 +14,7 @@
 #include <functional>
 #include <type_traits>
 #include <unordered_map>
+//#include <variant>
 
 #include <boost/core/demangle.hpp>
 #include <boost/thread/lock_guard.hpp>
@@ -21,7 +22,6 @@
 #include <boost/thread/null_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
 #include <boost/thread/shared_mutex.hpp>
-#include <boost/variant.hpp>
 
 #include <rapidjson/document.h>
 

@@ -17,7 +17,9 @@ void runTBBUsageExamples() {
 
 	// Establish a Link for testing purpose
 	// InputModule.inModule.DOintOutput |---> TBBModule.tbbModule.DOcomplexInOut
-	tbbModule.LinkInt.set("TBB-Int", name_dataobjects.at("InputModule.inModule.DOintOutput"), name_dataobjects.at("TBBModule.tbbModule.DOcomplexInOut"));
+	auto DOfrom = name_dataobjects.at("InputModule.inModule.DOintOutput");
+	auto DOto = name_dataobjects.at("TBBModule.tbbModule.DOcomplexInOut");
+	tbbModule.LinkInt.set("TBB-Int", DOfrom, DOto);
 
 	// Change content of DataObject and announce the change, eventually there are Links available to execute within the DataObjectReactor
 	inModule.DOintOutput.setAndTrigger([](std::atomic<int>& i) { i = 10; }, *Asm::pDOR);

@@ -5,6 +5,7 @@
 */
 
 #include <string>
+#include <variant>
 
 #include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
@@ -40,8 +41,9 @@ void runModuleUsageExamples() {
 	outModule.LinkString.set("String", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"), name_dataobjects.at("OutputModule.outModule.DOstringInput"));
 
 	// Set value and trigger chain
-	boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([](std::atomic<int> &i) { i = 556; }, *Asm::pDOR);
-	// wait till reactor has processed
+	auto doInt = std::get<Asm::DataObject<int>*>(name_dataobjects.at("InputModule.inModule.DOintOutput"));
+	doInt->setAndTrigger([](std::atomic<int> &i) { i = 556; }, *Asm::pDOR);
+	// Wait till reactor has processed
 	boost::this_thread::sleep_for(boost::chrono::seconds(3));
 	printline();
 
@@ -52,7 +54,7 @@ void runModuleUsageExamples() {
 
 	for (int ii = 1; ii < 3; ii++)
 	{
-		boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([&](std::atomic<int> &i) { i = std::pow(10, ii); }, *Asm::pDOR);
+		std::get<Asm::DataObject<int>*>(name_dataobjects.at("InputModule.inModule.DOintOutput"))->setAndTrigger([&](std::atomic<int> &i) { i = std::pow(10, ii); }, *Asm::pDOR);
 		// Wait till reactor has processed
 		boost::this_thread::sleep_for(boost::chrono::seconds(3));
 		printline();
@@ -64,7 +66,8 @@ void runModuleUsageExamples() {
 	outModule.LinkInt.clear("Int", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 	outModule.LinkString.clear("String", name_dataobjects.at("ProcessModule.processModule.DOcomplexInOut"));
 
-	boost::get<Asm::DataObject<int> &>(name_dataobjects.at("InputModule.inModule.DOintOutput")).setAndTrigger([](std::atomic<int> &i) { i = 557; }, *Asm::pDOR.get());
+	auto doInt2 = std::get<Asm::DataObject<int>*>(name_dataobjects.at("InputModule.inModule.DOintOutput"));
+	doInt2->setAndTrigger([](std::atomic<int> &i) { i = 557; }, *Asm::pDOR.get());
 	// Wait till reactor has processed
 	boost::this_thread::sleep_for(boost::chrono::seconds(3));
 	printline();

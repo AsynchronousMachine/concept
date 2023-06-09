@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/variant.hpp>
+#include <variant>
 
 #include "../asm/dataobject.hpp"
 #include "../asm/linkobject.hpp"
@@ -8,10 +8,10 @@
 
 namespace Asm {
 
-using link_variant = boost::variant<
-                     Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<int> >&, 
-                     Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<std::string> >&, 
-                     Asm::LinkObject<Asm::DataObject<int>, Asm::DataObject<MyComplexDOType> >&, 
-                     Asm::LinkObject<Asm::DataObject<std::string>, Asm::DataObject<MyComplexDOType> >&
+using link_variant = std::variant<
+                     Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<int>>*, 
+                     Asm::LinkObject<Asm::DataObject<MyComplexDOType>, Asm::DataObject<std::string>>*, 
+                     Asm::LinkObject<Asm::DataObject<int>, Asm::DataObject<MyComplexDOType>>*, 
+                     Asm::LinkObject<Asm::DataObject<std::string>, Asm::DataObject<MyComplexDOType>>*
                      >;
 }

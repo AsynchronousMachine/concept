@@ -3,6 +3,7 @@
 */
 
 #include <iostream>
+#include <variant>
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -44,11 +45,11 @@ void do_handler(boost::asio::ip::tcp::socket &socket, size_t len, std::array<cha
             auto doInstance = name_dataobjects.at(doName);
             if (itr->value.IsNull()) {
                 Logger::pLOG->trace("do_handler got read request for {}", doName);
-                boost::apply_visitor([&](auto &d) { d.serialize(rjval_out, rjdoc_out.GetAllocator()); }, doInstance);
+                std::visit([&](auto &d) { d->serialize(rjval_out, rjdoc_out.GetAllocator()); }, doInstance);
                 rjdoc_out.AddMember(rapidjson::StringRef(doName), rjval_out, rjdoc_out.GetAllocator());
             } else {
                 Logger::pLOG->trace("do_handler got write request for {}", doName);
-                boost::apply_visitor([&](auto &d) { d.deserialize(const_cast<rapidjson::Value &>(itr->value)); }, doInstance);
+                std::visit([&](auto &d) { d->deserialize(const_cast<rapidjson::Value &>(itr->value)); }, doInstance);
             }
         }
     }
@@ -87,17 +88,16 @@ void lo_handler(boost::asio::ip::tcp::socket &, size_t len, std::array<char, Asm
             const rapidjson::Value &v = itr->value;
             if (v.IsArray()) {
                 if (v.GetArray().Size() == 3) {
-                    Logger::pLOG->info("link_handler got set request");
-                    boost::apply_visitor(
-                        [&](auto &l) {
-                            l.set(v.GetArray()[0].GetString(), name_dataobjects.at(v.GetArray()[1].GetString()),
-                                  name_dataobjects.at(v.GetArray()[2].GetString()));
-                        },
-                        linkInstance);
+                    Logger::pLOG->trace("link_handler got set request");
+                    auto from = name_dataobjects.at(v.GetArray()[1].GetString());
+                    auto to   = name_dataobjects.at(v.GetArray()[2].GetString());
+                    std::visit([&](auto l) { l->set(v.GetArray()[0].GetString(), from, to); }, linkInstance);
+                } else if (v.GetArray().Size() == 2){
+                    Logger::pLOG->trace("link_handler got clear request");
+                    auto from = name_dataobjects.at(v.GetArray()[1].GetString());
+                    std::visit([&](auto l) { l->clear(v.GetArray()[0].GetString(), from); }, linkInstance);
                 } else {
-                    Logger::pLOG->info("link_handler got clear request");
-                    boost::apply_visitor([&](auto &l) { l.clear(v.GetArray()[0].GetString(), name_dataobjects.at(v.GetArray()[1].GetString())); },
-                                         linkInstance);
+                    Logger::pLOG->warn("link_handler got wrong request");
                 }
             }
         }

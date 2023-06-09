@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <filesystem>
+#include <variant>
 
 #include <boost/core/demangle.hpp>
 
@@ -41,8 +42,8 @@ class SystemModule {
             for (auto map_iter : name_dataobjects) {
                 try {
                     Logger::pLOG->trace("Serialize DO {}", map_iter.first);
-                    boost::apply_visitor([&](auto& d) {
-                        d.serialize(json_value, doc.GetAllocator());
+                    std::visit([&](auto& d) {
+                        d->serialize(json_value, doc.GetAllocator());
                     }, map_iter.second);
                 } catch (const std::exception& e) {
                     Logger::pLOG->error("Serialize exeption: {}", e.what());
@@ -93,7 +94,7 @@ class SystemModule {
                 Value& v = doc[itr->name.GetString()];
                 try {
                     Logger::pLOG->trace("Deserialize DO {}", itr->name.GetString());
-                    boost::apply_visitor([&](auto& d) { d.deserialize(v); }, name_dataobjects.at(itr->name.GetString()));
+                    std::visit([&](auto& d) { d->deserialize(v); }, name_dataobjects.at(itr->name.GetString()));
                 } catch (const std::exception& e) {
                     Logger::pLOG->error("Deserialize exeption: {}", e.what());
                     Logger::pLOG->error("Handling DO {}", itr->name.GetString());

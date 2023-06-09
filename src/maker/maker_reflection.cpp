@@ -2,7 +2,7 @@
 #include "../modules/global_modules.hpp"
 
 // Get out the module name for humans
-const id_string_map module_name {
+const id_string_map module_names {
 	{&inModule, "InputModule.inModule"},
 	{&outModule, "OutputModule.outModule"},
 	{&processModule, "ProcessModule.processModule"},
@@ -43,29 +43,29 @@ const print_module_map print_modules {
 };
 
 const name_dataobject_map name_dataobjects {
-	{"InputModule.inModule.DOintOutput", inModule.DOintOutput},
-	{"InputModule.inModule.DOstringOutput", inModule.DOstringOutput},
-	{"OutputModule.outModule.DOintInput", outModule.DOintInput},
-	{"OutputModule.outModule.DOstringInput", outModule.DOstringInput},
-	{"ProcessModule.processModule.DOcomplexInOut", processModule.DOcomplexInOut},
-	{"SerializeModule.serModule.doInt", serModule.doInt},
-	{"SerializeModule.serModule.doDouble", serModule.doDouble},
-	{"SerializeModule.serModule.doString", serModule.doString},
-	{"SerializeModule.serModule.doBool", serModule.doBool},
-	{"SerializeModule.serModule.doString2", serModule.doString2},
-	{"SerializeModule.serModule.doString3", serModule.doString3},
-	{"SerializeModule.serModule.doMyComplexDOType", serModule.doMyComplexDOType},
-	{"SystemModule.sysModule.serializeAll", sysModule.serializeAll},
-	{"SystemModule.sysModule.deserializeAll", sysModule.deserializeAll},
-	{"SystemModule.sysModule.printModules", sysModule.printModules},
-	{"TBBModule.tbbModule.DOcomplexInOut", tbbModule.DOcomplexInOut},
+	{"InputModule.inModule.DOintOutput", &inModule.DOintOutput},
+	{"InputModule.inModule.DOstringOutput", &inModule.DOstringOutput},
+	{"OutputModule.outModule.DOintInput", &outModule.DOintInput},
+	{"OutputModule.outModule.DOstringInput", &outModule.DOstringInput},
+	{"ProcessModule.processModule.DOcomplexInOut", &processModule.DOcomplexInOut},
+	{"SerializeModule.serModule.doInt", &serModule.doInt},
+	{"SerializeModule.serModule.doDouble", &serModule.doDouble},
+	{"SerializeModule.serModule.doString", &serModule.doString},
+	{"SerializeModule.serModule.doBool", &serModule.doBool},
+	{"SerializeModule.serModule.doString2", &serModule.doString2},
+	{"SerializeModule.serModule.doString3", &serModule.doString3},
+	{"SerializeModule.serModule.doMyComplexDOType", &serModule.doMyComplexDOType},
+	{"SystemModule.sysModule.serializeAll", &sysModule.serializeAll},
+	{"SystemModule.sysModule.deserializeAll", &sysModule.deserializeAll},
+	{"SystemModule.sysModule.printModules", &sysModule.printModules},
+	{"TBBModule.tbbModule.DOcomplexInOut", &tbbModule.DOcomplexInOut},
 };
 
 const name_link_map name_links {
-	{"OutputModule.outModule.LinkInt", outModule.LinkInt},
-	{"OutputModule.outModule.LinkString", outModule.LinkString},
-	{"ProcessModule.processModule.LinkInt", processModule.LinkInt},
-	{"ProcessModule.processModule.LinkString", processModule.LinkString},
-	{"TBBModule.tbbModule.LinkInt", tbbModule.LinkInt},
+	{"OutputModule.outModule.LinkInt", &outModule.LinkInt},
+	{"OutputModule.outModule.LinkString", &outModule.LinkString},
+	{"ProcessModule.processModule.LinkInt", &processModule.LinkInt},
+	{"ProcessModule.processModule.LinkString", &processModule.LinkString},
+	{"TBBModule.tbbModule.LinkInt", &tbbModule.LinkInt},
 };
 

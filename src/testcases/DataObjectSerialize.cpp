@@ -1,6 +1,7 @@
 /*
 ** Test cases for dealing with DataObjects regarding de-/serialization.
 */
+#include <variant>
 
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/document.h>
@@ -78,19 +79,19 @@ void runDOSerializationExamples() {
         }
 
         // Wellknown name by reflection gives access to generic interface to DataObject
-        boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doInt"));
+        std::visit([&](auto& d) { d->serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doInt"));
         rjdoc.AddMember("SerializeModule.serModule.doInt", rjval, rjdoc.GetAllocator());
-        boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doDouble"));
+        std::visit([&](auto& d) { d->serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doDouble"));
         rjdoc.AddMember("SerializeModule.serModule.doDouble", rjval, rjdoc.GetAllocator());
-        boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doString"));
+        std::visit([&](auto& d) { d->serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doString"));
         rjdoc.AddMember("SerializeModule.serModule.doString", rjval, rjdoc.GetAllocator());
-        boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doBool"));
+        std::visit([&](auto& d) { d->serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doBool"));
         rjdoc.AddMember("SerializeModule.serModule.doBool", rjval, rjdoc.GetAllocator());
-        boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doString2"));
+        std::visit([&](auto& d) { d->serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doString2"));
         rjdoc.AddMember("SerializeModule.serModule.doString2", rjval, rjdoc.GetAllocator());
-        boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doString3"));
+        std::visit([&](auto& d) { d->serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doString3"));
         rjdoc.AddMember("SerializeModule.serModule.doString3", rjval, rjdoc.GetAllocator());
-        boost::apply_visitor([&](auto& d) { d.serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doMyComplexDOType"));
+        std::visit([&](auto& d) { d->serialize(rjval, rjdoc.GetAllocator()); }, name_dataobjects.at("SerializeModule.serModule.doMyComplexDOType"));
         rjdoc.AddMember("SerializeModule.serModule.doMyComplexDOType", rjval, rjdoc.GetAllocator());
 
         Logger::pLOG->trace("Stringify and output the created DOM:");
@@ -102,13 +103,13 @@ void runDOSerializationExamples() {
         // Wellknown name by reflection gives access to generic interface to DataObject
         rapidjson::Value& rjdoint = rjdoc["SerializeModule.serModule.doInt"];
         rjdoint.SetInt(10);
-        boost::apply_visitor([&](auto& d){ d.deserialize(rjdoint); }, name_dataobjects.at("SerializeModule.serModule.doInt"));
+        std::visit([&](auto& d){ d->deserialize(rjdoint); }, name_dataobjects.at("SerializeModule.serModule.doInt"));
 
         Logger::pLOG->trace("Deserialized serModule.doInt {}", serModule.doInt.get([](int i) {return i;}));
 
         rapidjson::Value& rjdoMCDOT = rjdoc["SerializeModule.serModule.doMyComplexDOType"];
         rjdoMCDOT["amount outputs"].SetInt(20);
-        boost::apply_visitor([&](auto& d){ d.deserialize(rjdoMCDOT); }, name_dataobjects.at("SerializeModule.serModule.doMyComplexDOType"));
+        std::visit([&](auto& d){ d->deserialize(rjdoMCDOT); }, name_dataobjects.at("SerializeModule.serModule.doMyComplexDOType"));
 
         Logger::pLOG->trace("Deserialized serModule.doMyComplexDOType.amount_outputs {}", serModule.doMyComplexDOType.get([](const MyComplexDOType& d) {return d.outputCounter;}));
     }

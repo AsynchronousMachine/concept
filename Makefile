@@ -1,4 +1,4 @@
-CPPFLAGS        += -std=c++23 -fdiagnostics-color=always -Wall \
+CPPFLAGS        += -std=c++23 -fdiagnostics-color=always -Wfatal-errors -Wall \
                    -DVERSION=\"$(shell git describe --tags --always --dirty)\" -DBUILD_TIMESTAMP=\"$(shell date -u '+%FT%T')\"
                    
 #Enable if e.g. custom boost, rapidjson, fmt or tbb include dir
@@ -26,7 +26,7 @@ help:
 	@$(ECHO) "make ctags"
 
 $(TARGET)_debug: $(FILES)
-	$(CXX) $(CPPFLAGS) -g -Og -DTBB_USE_DEBUG=1 -DLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
+	$(CXX) $(CPPFLAGS) -g -Og -DLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)
 
 $(TARGET)_release: $(FILES)
 	$(CXX) $(CPPFLAGS) -O0 -DLOG_TRACE_ON $(CPPFLAGSCUSTOM) $(LDFLAGS) $(LDFLAGSCUSTOM) -o $@ $? $(LDLIBS)

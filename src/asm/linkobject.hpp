@@ -1,8 +1,7 @@
 #pragma once
 
 #include <functional>
-
-#include <boost/variant.hpp>
+#include <variant>
 
 #include "../maker/maker_do.hpp"
 
@@ -21,8 +20,10 @@ namespace Asm {
 	public:
 		template <typename MemFun, typename ThisPtr>
 		LinkObject(MemFun memfun, ThisPtr thisptr) : _cb([thisptr, memfun](D1& d1, D2& d2) { std::mem_fn(memfun)(thisptr, d1, d2); }) {}
+		
 		LinkObject(cb_type cb) : _cb(cb) {}
-		// Only important for boost::variant; don't use this constructor: linking is not possible!
+		
+		// Only important for std::variant; don't use this constructor: linking is not possible!
 		LinkObject() : _cb(nullptr) {}
 
 		// Non-copyable
@@ -37,10 +38,10 @@ namespace Asm {
 		virtual ~LinkObject() = default;
 
 		void set(const std::string& name, const Asm::data_variant& a1, const Asm::data_variant& a2) {
-			if (_cb == nullptr)
-				return;
+			  if (_cb == nullptr)
+				    return;
 
-			boost::get<D1&>(a1).registerLink(name, boost::get<D2&>(a2), _cb);
+			  std::get<D1*>(a1)->registerLink(name, *std::get<D2*>(a2), _cb);
 		}
 
         void set(const std::string& name, D1& d1, D2& d2) {
@@ -51,7 +52,7 @@ namespace Asm {
         }
 
 		void clear(const std::string& name, const Asm::data_variant& a) {
-			boost::apply_visitor([&](auto& d1){ d1.unregisterLink(name); }, a);
+			  std::visit([&](auto d1){ d1->unregisterLink(name); }, a);
 		}
 
         void clear(const std::string& name, D1& d1) {
