@@ -15,6 +15,7 @@
 #include "../logger/logger.hpp"
 #include "../asm/asm.hpp"
 #include "../maker/maker_reflection.hpp"
+#include "../datatypes/MyComplexDOType.hpp"
 
 class SystemModule {
   private:
@@ -47,7 +48,7 @@ class SystemModule {
                     }, map_iter.second);
                 } catch (const std::exception& e) {
                     Logger::pLOG->error("Serialize exeption: {}", e.what());
-                    Logger::pLOG->error("Handling DO {} / {}", map_iter.first, boost::core::demangle(typeid(map_iter.second).name()));
+                    Logger::pLOG->error("Tried handling DO {} / {}", map_iter.first, boost::core::demangle(typeid(map_iter.second).name()));
                 }                    
                     
                 if (!json_value.IsNull()) {
@@ -97,7 +98,7 @@ class SystemModule {
                     std::visit([&](auto& d) { d->deserialize(v); }, name_dataobjects.at(itr->name.GetString()));
                 } catch (const std::exception& e) {
                     Logger::pLOG->error("Deserialize exeption: {}", e.what());
-                    Logger::pLOG->error("Handling DO {}", itr->name.GetString());
+                    Logger::pLOG->error("Tried handling DO {}", itr->name.GetString());
                 }
 
             }

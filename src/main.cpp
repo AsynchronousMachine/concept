@@ -2,11 +2,6 @@
 ** Global entry for all test cases
 */
 
-/*
-** Hint: for Windows systems "WIN32_LEAN_AND_MEAN" has to be defined in preprocessor else you will get boost/asio/detail/socket_types.hpp(24): fatal
-*error C1189: #error:  WinSock.h has already been included
-*/
-
 #ifndef BUILD_TIMESTAMP
 #error BUILD_TIMESTAMP is undefined
 #endif

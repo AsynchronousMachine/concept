@@ -16,11 +16,10 @@ private:
 	// Afterwards the Link will be executed within the DataObjectReactor
 	void actionInt(Asm::DataObject<int>& doSource, Asm::DataObject<MyComplexDOType>& doTarget);
 	// This is the TBB task to execute in parallel
-  void pf(const tbb::blocked_range<size_t>& r);
+    void pf(const tbb::blocked_range<size_t>& r);
 
 public:
 	TBBModule();
-
 	// DataObject, here in this sample the target
 	Asm::DataObject<MyComplexDOType> DOcomplexInOut;
 	// LinkObject towing source DataObject<int> and target DataObject<MyComplexDOType> together
